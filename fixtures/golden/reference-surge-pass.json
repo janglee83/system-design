@@ -1,0 +1,26 @@
+{
+  "id": "reference-surge-pass",
+  "description": "11 s run, 8,000 rps base, 3x for 1.5 s from 4 s; LB x2 and 5 web servers pass every goal.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 5}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 8000, "surge": {"factor": 3, "atMs": 4000, "durationMs": 1500}},
+    "durationMs": 11000,
+    "seed": 1
+  },
+  "expect": {
+    "p95": {"<=": 100},
+    "availability": {">=": 0.999},
+    "costPerMonth": {"==": 162.5},
+    "requestsTotal": {">=": 110000, "<=": 114000}
+  }
+}

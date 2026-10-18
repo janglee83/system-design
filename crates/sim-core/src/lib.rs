@@ -100,3 +100,5 @@ pub mod simulate;
 pub use simulate::simulate;
 mod faults;
 mod traces;
+
+pub mod fixture;

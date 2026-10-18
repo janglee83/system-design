@@ -1,0 +1,33 @@
+---
+source: crates/sim-core/tests/golden.rs
+expression: result.metrics
+---
+{
+  "p50": 1001.5544859784204,
+  "p95": 1001.5544859784204,
+  "p99": 1001.5544859784204,
+  "availability": 0.4015032884434701,
+  "throughputRps": 7051.0,
+  "costPerMonth": 162.5,
+  "spofCount": 0,
+  "exposedBackends": 0,
+  "peakBusy": 1.0,
+  "peakDbConnections": 0.0,
+  "cacheOps": 0.0,
+  "requestsTotal": 175615.0,
+  "requestsOk": 70510.0,
+  "requestsRejected": 38961.0,
+  "requestsTimedOut": 66144.0,
+  "requestsUnreachable": 0.0,
+  "duplicateIds": null,
+  "outOfOrderIds": null,
+  "lostUpdates": null,
+  "writeConflicts": null,
+  "duplicateWrites": null,
+  "staleReads": null,
+  "peakQueueDepth": null,
+  "lostMessages": null,
+  "statusFlaps": null,
+  "staleOnline": null,
+  "inboxWritesPerSec": null
+}
