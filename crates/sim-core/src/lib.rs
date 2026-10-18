@@ -16,6 +16,8 @@ mod tests {
 pub mod types;
 pub use types::*;
 
+pub mod rng;
+
 #[cfg(test)]
 mod type_tests {
     use super::*;
