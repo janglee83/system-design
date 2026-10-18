@@ -30,6 +30,7 @@
 - No `HashMap`/`HashSet` anywhere in `sim-core`; use `Vec` sorted by id or `BTreeMap`/`BTreeSet`.
 - Same `SimInput` → byte-identical `serde_json` output natively and under WASM.
 - Default `durationMs` is `10_000`; tick is 10 ms; one timeline frame every 100 ms.
+- World parameters are never read from constants inside components or the engine: they come from a resolved `Calibration` (defaults + `SimInput.calibration` overrides) and per-node config overrides (`rpsPerInstance`, `serviceMs`, `costPerMonth`). Only engine mechanics (`TICK_MS`, `FRAME_EVERY_TICKS`, `TRACE_TARGET`) are constants.
 - Engine never emits prose: events and validation issues carry codes plus params.
 - JSON field names are camelCase; enum values are kebab-case (`"web-server"`, `"db-primary-down"`), goal ops are `"<="`, `">="`, `"=="`.
 - Performance budgets: under 50 ms per 10-node, 10 s run through WASM in Node including the boundary; `sim-cli check` on 100 golden-sized fixtures under 2 s on 8 cores.
@@ -318,7 +319,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `crates/sim-core/src/lib.rs`
 
 **Interfaces:**
-- Produces (all `pub`, re-exported from `sim_core`): `EdgeKind`, `ConfigValue`, `Config`, `Node`, `Edge`, `Graph`, `Profile`, `Surge`, `Workload`, `FaultKind`, `Fault`, `SimInput`, `Metrics`, `Timeline`, `TIMELINE_FIELDS`, `RequestClass`, `TraceAction`, `TraceOutcome`, `TraceStep`, `Trace`, `SimEvent`, `SimResult`, `ValidationIssue`, `GraphLimits`, `GoalOp`, `Goal`, `GoalResult`, `Verdict`. Field names exactly as in the code below.
+- Produces (all `pub`, re-exported from `sim_core`): `EdgeKind`, `ConfigValue`, `Config`, `Node`, `Edge`, `Graph`, `Profile`, `Surge`, `Workload`, `FaultKind`, `Fault`, `CalibrationOverrides`, `SimInput` (with `calibration: Option<CalibrationOverrides>`), `Metrics`, `Timeline`, `TIMELINE_FIELDS`, `RequestClass`, `TraceAction`, `TraceOutcome`, `TraceStep`, `Trace`, `SimEvent`, `SimResult`, `ValidationIssue`, `GraphLimits`, `GoalOp`, `Goal`, `GoalResult`, `Verdict`. Field names exactly as in the code below.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -354,6 +355,18 @@ mod type_tests {
         assert_eq!(input.graph.nodes[0].replicas, 1);
         assert_eq!(input.graph.nodes[1].config.get("cpu"), Some(&ConfigValue::Num(2.0)));
         assert_eq!(input.graph.edges[0].kind, EdgeKind::Http);
+        assert_eq!(input.calibration, None);
+    }
+
+    #[test]
+    fn calibration_overrides_are_optional_per_field() {
+        let json = r#"{"graph":{"nodes":[],"edges":[]},"workload":{"baseRps":1},
+                       "calibration":{"webRpsPerVcpu":3000,"edgeDelayDbMs":5}}"#;
+        let input: SimInput = serde_json::from_str(json).unwrap();
+        let c = input.calibration.unwrap();
+        assert_eq!(c.web_rps_per_vcpu, Some(3000.0));
+        assert_eq!(c.edge_delay_db_ms, Some(5.0));
+        assert_eq!(c.web_cost_per_vcpu, None);
     }
 
     #[test]
@@ -529,6 +542,33 @@ pub struct Fault {
 }
 }
 
+// Each field overrides the same-named field of `calibration::Calibration` for one run.
+// Missing fields keep the defaults. Validation rejects unusable values (see Task 4).
+exported! {
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalibrationOverrides {
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_rps_per_vcpu: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_service_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_queue_per_gb: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_cost_per_vcpu: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_rps_per_replica: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_service_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_queue_seconds: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_cost_per_replica: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub pg_qps_per_instance: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub pg_service_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub pg_queue_seconds: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub pg_cost_per_instance: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub pg_failover_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_http_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_db_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_cache_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_msg_ms: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub max_utilization_for_latency: Option<f64>,
+}
+}
+
 fn default_duration() -> u32 { 10_000 }
 
 exported! {
@@ -543,6 +583,9 @@ pub struct SimInput {
     pub duration_ms: u32,
     #[serde(default)]
     pub seed: u32,
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub calibration: Option<CalibrationOverrides>,
 }
 }
 
@@ -674,6 +717,9 @@ pub struct ValidationIssue {
     pub code: String,
     pub node_id: Option<String>,
     pub edge_id: Option<String>,
+    /// Config or calibration field the issue is about, when relevant.
+    #[serde(default)]
+    pub field: Option<String>,
     pub blocking: bool,
 }
 }
@@ -722,7 +768,7 @@ pub struct Verdict { pub passed: bool, pub score: u32, pub stars: u8, pub goals:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `./dev cargo test -p sim-core type_tests`
-Expected: 3 passed.
+Expected: 4 passed.
 
 - [ ] **Step 5: Generate the TypeScript types**
 
@@ -1053,22 +1099,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 4: Calibration constants and the first four components
+### Task 4: Calibration (overridable world parameters) and the first four components
 
 **Files:**
 - Create: `crates/sim-core/src/calibration.rs`, `crates/sim-core/src/components/mod.rs`, `crates/sim-core/src/components/client.rs`, `crates/sim-core/src/components/lb.rs`, `crates/sim-core/src/components/web_server.rs`, `crates/sim-core/src/components/postgres.rs`
 - Modify: `crates/sim-core/src/lib.rs`
 
 **Interfaces:**
-- Consumes: `Node`, `EdgeKind`, `ConfigValue` (Task 1).
+- Consumes: `Node`, `EdgeKind`, `ConfigValue`, `CalibrationOverrides` (Task 1).
 - Produces:
-  - `pub enum Role { Client, Balancer, Service, Database }` (serde kebab-case)
-  - `pub struct Capacity { pub rps: f64, pub service_ms: f64, pub max_queue: f64 }` (per instance)
-  - `pub enum FieldKind { Number, Choice }`, `pub struct ConfigField { key: String, kind: FieldKind, default: ConfigValue, min: Option<f64>, max: Option<f64>, options: Vec<String> }`
-  - `pub struct ComponentMeta { kind: String, label_key: String, category: String, role: Role, accepts: Vec<EdgeKind>, is_entry: bool, fields: Vec<ConfigField> }`
-  - `pub trait ComponentModel: Sync` with `kind() -> &'static str`, `meta() -> ComponentMeta`, `instances(&Node) -> u32`, `capacity_per_instance(&Node) -> Capacity`, `cost_per_month(&Node) -> f64`
-  - `pub fn get(kind: &str) -> Option<&'static dyn ComponentModel>`, `pub fn list_components() -> Vec<ComponentMeta>`, `pub fn num(node: &Node, key: &str, default: f64) -> f64`
-  - `calibration::*` constants listed below.
+  - Engine mechanics constants: `TICK_MS`, `FRAME_EVERY_TICKS`, `TRACE_TARGET`.
+  - `pub struct Calibration` (fields listed in Step 3, same names as `CalibrationOverrides` without `Option`), `impl Default`, `Calibration::resolve(Option<&CalibrationOverrides>) -> Calibration`, `Calibration::edge_delay_ms(&self, EdgeKind) -> f64`, `pub fn invalid_overrides(&CalibrationOverrides) -> Vec<&'static str>` (camelCase field names).
+  - `pub enum Role { Client, Balancer, Service, Database }`, `pub struct Capacity { rps, service_ms, max_queue }` (per instance), `FieldKind`, `ConfigField`, `ComponentMeta`.
+  - `pub trait ComponentModel: Sync` with `kind()`, `meta()`, `instances(&Node) -> u32`, `capacity_per_instance(&Node, &Calibration) -> Capacity`, `cost_per_month(&Node, &Calibration) -> f64`.
+  - `pub fn get(kind) -> Option<&'static dyn ComponentModel>`, `pub fn list_components() -> Vec<ComponentMeta>`, `pub fn num(&Node, key, default) -> f64`, `pub fn num_or_zero(&Node, key, default) -> f64`.
+  - Per-node overrides: `pub const NODE_OVERRIDE_KEYS: [&str; 3] = ["rpsPerInstance", "serviceMs", "costPerMonth"]`, `pub fn effective_capacity(&dyn ComponentModel, &Node, &Calibration) -> Capacity`, `pub fn effective_cost(&dyn ComponentModel, &Node, &Calibration) -> f64` (`costPerMonth` is the price of **one** instance).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1078,6 +1123,7 @@ Create `crates/sim-core/src/components/mod.rs` with only:
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::calibration::Calibration;
     use crate::types::{ConfigValue, EdgeKind, Node};
 
     fn node(kind: &str, replicas: u32, config: &[(&str, f64)]) -> Node {
@@ -1088,6 +1134,10 @@ mod tests {
             replicas,
             config: config.iter().map(|(k, v)| (k.to_string(), ConfigValue::Num(*v))).collect(),
         }
+    }
+
+    fn cal() -> Calibration {
+        Calibration::default()
     }
 
     #[test]
@@ -1102,8 +1152,8 @@ mod tests {
         let web = get("web-server").unwrap();
         let n = node("web-server", 3, &[("cpu", 2.0), ("memoryGb", 4.0)]);
         assert_eq!(web.instances(&n), 3);
-        assert_eq!(web.cost_per_month(&n), 135.0);
-        let cap = web.capacity_per_instance(&n);
+        assert_eq!(web.cost_per_month(&n, &cal()), 135.0);
+        let cap = web.capacity_per_instance(&n, &cal());
         assert_eq!(cap.rps, 18_000.0);
         assert_eq!(cap.max_queue, 8_000.0);
         assert_eq!(web.meta().accepts, vec![EdgeKind::Http]);
@@ -1113,8 +1163,28 @@ mod tests {
     fn web_server_defaults_to_one_cpu_two_gb() {
         let web = get("web-server").unwrap();
         let n = node("web-server", 1, &[]);
-        assert_eq!(web.capacity_per_instance(&n).rps, 9_000.0);
-        assert_eq!(web.cost_per_month(&n), 22.5);
+        assert_eq!(web.capacity_per_instance(&n, &cal()).rps, 9_000.0);
+        assert_eq!(web.cost_per_month(&n, &cal()), 22.5);
+    }
+
+    #[test]
+    fn run_level_calibration_changes_capacity_and_cost() {
+        let web = get("web-server").unwrap();
+        let n = node("web-server", 2, &[]);
+        let slow = Calibration { web_rps_per_vcpu: 3_000.0, web_cost_per_vcpu: 40.0, ..Calibration::default() };
+        assert_eq!(web.capacity_per_instance(&n, &slow).rps, 3_000.0);
+        assert_eq!(web.cost_per_month(&n, &slow), 80.0);
+    }
+
+    #[test]
+    fn node_level_overrides_win_over_calibration() {
+        let web = get("web-server").unwrap();
+        let n = node("web-server", 3, &[("rpsPerInstance", 1_234.0), ("serviceMs", 7.0), ("costPerMonth", 10.0)]);
+        let cap = effective_capacity(web, &n, &cal());
+        assert_eq!((cap.rps, cap.service_ms), (1_234.0, 7.0));
+        assert_eq!(effective_cost(web, &n, &cal()), 30.0, "price of one instance x 3");
+        let plain = node("web-server", 3, &[]);
+        assert_eq!(effective_cost(web, &plain, &cal()), 67.5);
     }
 
     #[test]
@@ -1122,7 +1192,7 @@ mod tests {
         let pg = get("postgres").unwrap();
         let n = node("postgres", 1, &[("readReplicas", 2.0)]);
         assert_eq!(pg.instances(&n), 3);
-        assert_eq!(pg.cost_per_month(&n), 540.0);
+        assert_eq!(pg.cost_per_month(&n, &cal()), 540.0);
         assert_eq!(pg.meta().role, Role::Database);
         assert_eq!(pg.meta().accepts, vec![EdgeKind::Db]);
     }
@@ -1131,11 +1201,11 @@ mod tests {
     fn lb_is_an_entry_point_and_client_accepts_nothing() {
         let lb = get("lb").unwrap();
         assert!(lb.meta().is_entry);
-        assert_eq!(lb.cost_per_month(&node("lb", 2, &[])), 50.0);
+        assert_eq!(lb.cost_per_month(&node("lb", 2, &[]), &cal()), 50.0);
         let client = get("client").unwrap();
         assert!(client.meta().accepts.is_empty());
         assert_eq!(client.meta().role, Role::Client);
-        assert_eq!(client.cost_per_month(&node("client", 1, &[])), 0.0);
+        assert_eq!(client.cost_per_month(&node("client", 1, &[]), &cal()), 0.0);
     }
 
     #[test]
@@ -1150,20 +1220,68 @@ mod tests {
 }
 ```
 
-Add to `lib.rs`: `pub mod calibration;` and `pub mod components;` and `pub use components::list_components;`.
+Create `crates/sim-core/src/calibration.rs` with only:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{CalibrationOverrides, EdgeKind};
+
+    #[test]
+    fn defaults_are_the_parity_fitted_values() {
+        let c = Calibration::default();
+        assert_eq!(c.web_rps_per_vcpu, 9_000.0);
+        assert_eq!(c.web_cost_per_vcpu, 22.5);
+        assert_eq!(c.edge_delay_ms(EdgeKind::Db), 0.8);
+    }
+
+    #[test]
+    fn resolve_applies_only_the_given_fields() {
+        let o = CalibrationOverrides { web_rps_per_vcpu: Some(3_000.0), edge_delay_http_ms: Some(40.0), ..Default::default() };
+        let c = Calibration::resolve(Some(&o));
+        assert_eq!(c.web_rps_per_vcpu, 3_000.0);
+        assert_eq!(c.edge_delay_ms(EdgeKind::Http), 40.0);
+        assert_eq!(c.web_cost_per_vcpu, 22.5);
+        assert_eq!(Calibration::resolve(None), Calibration::default());
+    }
+
+    #[test]
+    fn invalid_overrides_are_named() {
+        let o = CalibrationOverrides {
+            web_rps_per_vcpu: Some(0.0),
+            pg_cost_per_instance: Some(-1.0),
+            lb_service_ms: Some(f64::NAN),
+            max_utilization_for_latency: Some(1.0),
+            edge_delay_db_ms: Some(0.0), // zero delay is allowed
+            ..Default::default()
+        };
+        assert_eq!(
+            invalid_overrides(&o),
+            vec!["webRpsPerVcpu", "lbServiceMs", "pgCostPerInstance", "maxUtilizationForLatency"]
+        );
+        assert!(invalid_overrides(&CalibrationOverrides::default()).is_empty());
+    }
+}
+```
+
+Add to `lib.rs`: `pub mod calibration;`, `pub mod components;`, `pub use calibration::Calibration;`, `pub use components::list_components;`.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `./dev cargo test -p sim-core components::`
-Expected: compile errors (`list_components`, `get`, `Role`, `num` not found; `calibration.rs` missing).
+Run: `./dev cargo test -p sim-core components:: calibration::`
+Expected: compile errors (`Calibration`, `list_components`, `get`, `Role`, `num`, `effective_capacity` not found).
 
-- [ ] **Step 3: Write `crates/sim-core/src/calibration.rs`**
+- [ ] **Step 3: Implement `calibration.rs` above its tests**
 
 ```rust
-//! Every tunable number in one place. Values are teaching-scale estimates chosen so the
-//! classic lessons behave the right way (a 1-vCPU web server handles ~8K rps comfortably and
-//! falls over at 3x). Values marked "Parity" were fitted to reference runs captured from
-//! syscraft.app during development (see fixtures/parity); the product never contacts that site. Change a number here, then rerun the golden fixtures.
+//! World parameters of the simulation. Defaults are teaching-scale estimates; values marked
+//! "Parity" were fitted to reference runs captured during development (fixtures/parity).
+//! Every run may override any field through `SimInput.calibration`, and nodes may override
+//! capacity and price through their config. Engine mechanics below are fixed.
+
+use crate::types::{CalibrationOverrides, EdgeKind};
+use serde::{Deserialize, Serialize};
 
 /// Virtual time step. 1,000 ticks simulate 10 s.
 pub const TICK_MS: f64 = 10.0;
@@ -1172,53 +1290,157 @@ pub const FRAME_EVERY_TICKS: u32 = 10;
 /// Target number of sampled request traces per run.
 pub const TRACE_TARGET: u32 = 300;
 
-/// Network delay added per hop, by edge kind (same-region, same-AZ estimates).
-pub const EDGE_DELAY_HTTP_MS: f64 = 0.5;
-pub const EDGE_DELAY_DB_MS: f64 = 0.8;
-pub const EDGE_DELAY_CACHE_MS: f64 = 0.3;
-pub const EDGE_DELAY_MSG_MS: f64 = 1.0;
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Calibration {
+    pub web_rps_per_vcpu: f64,
+    pub web_service_ms: f64,
+    pub web_queue_per_gb: f64,
+    pub web_cost_per_vcpu: f64,
+    pub lb_rps_per_replica: f64,
+    pub lb_service_ms: f64,
+    pub lb_queue_seconds: f64,
+    pub lb_cost_per_replica: f64,
+    pub pg_qps_per_instance: f64,
+    pub pg_service_ms: f64,
+    pub pg_queue_seconds: f64,
+    pub pg_cost_per_instance: f64,
+    pub pg_failover_ms: f64,
+    pub edge_delay_http_ms: f64,
+    pub edge_delay_db_ms: f64,
+    pub edge_delay_cache_ms: f64,
+    pub edge_delay_msg_ms: f64,
+    pub max_utilization_for_latency: f64,
+}
 
-/// Queueing latency uses service / (1 - utilization); utilization is capped here so
-/// latency stays finite and the queue itself carries the overload.
-pub const MAX_UTILIZATION_FOR_LATENCY: f64 = 0.95;
+impl Default for Calibration {
+    fn default() -> Self {
+        Calibration {
+            // Parity: run 807734e1 showed 53.33% CPU at 4,800 rps per 1-vCPU instance.
+            web_rps_per_vcpu: 9_000.0,
+            web_service_ms: 2.0,
+            // Queued requests one GB of memory holds before the process rejects work.
+            web_queue_per_gb: 2_000.0,
+            // Parity: 5 x 1-vCPU web servers + 2 LB replicas cost $162.5/month.
+            web_cost_per_vcpu: 22.5,
+            lb_rps_per_replica: 60_000.0,
+            lb_service_ms: 0.2,
+            lb_queue_seconds: 0.05,
+            lb_cost_per_replica: 25.0,
+            pg_qps_per_instance: 5_000.0,
+            pg_service_ms: 3.0,
+            pg_queue_seconds: 0.5,
+            pg_cost_per_instance: 180.0,
+            // Time from losing the primary to a replica accepting writes.
+            pg_failover_ms: 600.0,
+            // Same-region, same-AZ network delay per hop.
+            edge_delay_http_ms: 0.5,
+            edge_delay_db_ms: 0.8,
+            edge_delay_cache_ms: 0.3,
+            edge_delay_msg_ms: 1.0,
+            // Latency uses service / (1 - utilization); capped so latency stays finite and the
+            // queue itself carries the overload.
+            max_utilization_for_latency: 0.95,
+        }
+    }
+}
 
-/// Load balancer: a managed L7 balancer node.
-pub const LB_RPS_PER_REPLICA: f64 = 60_000.0;
-pub const LB_SERVICE_MS: f64 = 0.2;
-pub const LB_QUEUE_SECONDS: f64 = 0.05;
-pub const LB_COST_PER_REPLICA: f64 = 25.0;
+macro_rules! apply_overrides {
+    ($cal:ident, $o:ident, $($field:ident),* $(,)?) => {
+        $( if let Some(v) = $o.$field { $cal.$field = v; } )*
+    };
+}
 
-/// Web server: a stateless app server. Cost is per vCPU per month.
-/// Parity: Syscraft run 807734e1 showed 53.33% CPU at 4,800 rps per 1-vCPU instance.
-pub const WEB_RPS_PER_VCPU: f64 = 9_000.0;
-pub const WEB_SERVICE_MS: f64 = 2.0;
-/// How many queued requests fit in one GB of memory before the process rejects work.
-pub const WEB_QUEUE_PER_GB: f64 = 2_000.0;
-/// Parity: 5 x 1-vCPU web + 2 LB replicas cost $162.5/month in the reference run.
-pub const WEB_COST_PER_VCPU: f64 = 22.5;
-pub const WEB_DEFAULT_CPU: f64 = 1.0;
-pub const WEB_DEFAULT_MEMORY_GB: f64 = 2.0;
+impl Calibration {
+    /// Defaults with the given overrides applied. Call `invalid_overrides` first.
+    pub fn resolve(overrides: Option<&CalibrationOverrides>) -> Calibration {
+        let mut c = Calibration::default();
+        if let Some(o) = overrides {
+            apply_overrides!(
+                c, o,
+                web_rps_per_vcpu, web_service_ms, web_queue_per_gb, web_cost_per_vcpu,
+                lb_rps_per_replica, lb_service_ms, lb_queue_seconds, lb_cost_per_replica,
+                pg_qps_per_instance, pg_service_ms, pg_queue_seconds, pg_cost_per_instance,
+                pg_failover_ms, edge_delay_http_ms, edge_delay_db_ms, edge_delay_cache_ms,
+                edge_delay_msg_ms, max_utilization_for_latency,
+            );
+        }
+        c
+    }
 
-/// PostgreSQL: one primary plus optional read replicas, each a mid-size instance.
-pub const PG_QPS_PER_INSTANCE: f64 = 5_000.0;
-pub const PG_SERVICE_MS: f64 = 3.0;
-pub const PG_QUEUE_SECONDS: f64 = 0.5;
-pub const PG_COST_PER_INSTANCE: f64 = 180.0;
-/// Time from losing the primary to a replica accepting writes.
-pub const PG_FAILOVER_MS: f64 = 600.0;
+    pub fn edge_delay_ms(&self, kind: EdgeKind) -> f64 {
+        match kind {
+            EdgeKind::Http => self.edge_delay_http_ms,
+            EdgeKind::Db => self.edge_delay_db_ms,
+            EdgeKind::Cache => self.edge_delay_cache_ms,
+            EdgeKind::Msg => self.edge_delay_msg_ms,
+        }
+    }
+}
+
+/// camelCase names of overrides that cannot be used: non-finite values, capacities that are
+/// not positive, times/costs/queues that are negative, a utilization cap outside (0, 1).
+/// Order: positive-only fields, then non-negative fields in declaration order, then the cap.
+pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
+    let positive = [
+        ("webRpsPerVcpu", o.web_rps_per_vcpu),
+        ("lbRpsPerReplica", o.lb_rps_per_replica),
+        ("pgQpsPerInstance", o.pg_qps_per_instance),
+    ];
+    let non_negative = [
+        ("webServiceMs", o.web_service_ms),
+        ("webQueuePerGb", o.web_queue_per_gb),
+        ("webCostPerVcpu", o.web_cost_per_vcpu),
+        ("lbServiceMs", o.lb_service_ms),
+        ("lbQueueSeconds", o.lb_queue_seconds),
+        ("lbCostPerReplica", o.lb_cost_per_replica),
+        ("pgServiceMs", o.pg_service_ms),
+        ("pgQueueSeconds", o.pg_queue_seconds),
+        ("pgCostPerInstance", o.pg_cost_per_instance),
+        ("pgFailoverMs", o.pg_failover_ms),
+        ("edgeDelayHttpMs", o.edge_delay_http_ms),
+        ("edgeDelayDbMs", o.edge_delay_db_ms),
+        ("edgeDelayCacheMs", o.edge_delay_cache_ms),
+        ("edgeDelayMsgMs", o.edge_delay_msg_ms),
+    ];
+    let mut bad = Vec::new();
+    for (name, value) in positive {
+        if let Some(v) = value {
+            if !(v.is_finite() && v > 0.0) {
+                bad.push(name);
+            }
+        }
+    }
+    for (name, value) in non_negative {
+        if let Some(v) = value {
+            if !(v.is_finite() && v >= 0.0) {
+                bad.push(name);
+            }
+        }
+    }
+    if let Some(v) = o.max_utilization_for_latency {
+        if !(v.is_finite() && v > 0.0 && v < 1.0) {
+            bad.push("maxUtilizationForLatency");
+        }
+    }
+    bad
+}
 ```
 
 - [ ] **Step 4: Implement the component framework above the tests in `components/mod.rs`**
 
 ```rust
 //! Component registry. Each kind lives in its own file; adding a kind means one new file and
-//! one line in REGISTRY.
+//! one line in REGISTRY. Components read world parameters from `Calibration`, never from
+//! constants, so every number is overridable per run.
 
 mod client;
 mod lb;
-mod postgres;
+pub mod postgres;
 mod web_server;
 
+use crate::calibration::Calibration;
 use crate::types::{ConfigValue, EdgeKind, Node};
 use serde::{Deserialize, Serialize};
 
@@ -1305,8 +1527,8 @@ pub trait ComponentModel: Sync {
     fn instances(&self, node: &Node) -> u32 {
         node.replicas.max(1)
     }
-    fn capacity_per_instance(&self, node: &Node) -> Capacity;
-    fn cost_per_month(&self, node: &Node) -> f64;
+    fn capacity_per_instance(&self, node: &Node, cal: &Calibration) -> Capacity;
+    fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64;
 }
 
 /// Sorted by kind so listings are stable.
@@ -1337,6 +1559,34 @@ pub fn num_or_zero(node: &Node, key: &str, default: f64) -> f64 {
     }
 }
 
+/// Config keys any node may set to override its own capacity and price.
+pub const NODE_OVERRIDE_KEYS: [&str; 3] = ["rpsPerInstance", "serviceMs", "costPerMonth"];
+
+/// Capacity after per-node overrides `rpsPerInstance` (> 0) and `serviceMs` (>= 0).
+/// Invalid values are rejected by validation before a run, so they are ignored here.
+pub fn effective_capacity(model: &dyn ComponentModel, node: &Node, cal: &Calibration) -> Capacity {
+    let mut cap = model.capacity_per_instance(node, cal);
+    if let Some(v) = node.config.get("rpsPerInstance").and_then(ConfigValue::as_f64) {
+        if v.is_finite() && v > 0.0 {
+            cap.rps = v;
+        }
+    }
+    if let Some(v) = node.config.get("serviceMs").and_then(ConfigValue::as_f64) {
+        if v.is_finite() && v >= 0.0 {
+            cap.service_ms = v;
+        }
+    }
+    cap
+}
+
+/// Monthly cost after the per-node override `costPerMonth` (price of ONE instance).
+pub fn effective_cost(model: &dyn ComponentModel, node: &Node, cal: &Calibration) -> f64 {
+    match node.config.get("costPerMonth").and_then(ConfigValue::as_f64) {
+        Some(v) if v.is_finite() && v >= 0.0 => v * f64::from(model.instances(node)),
+        _ => model.cost_per_month(node, cal),
+    }
+}
+
 pub(crate) fn meta(
     kind: &str,
     category: &str,
@@ -1363,6 +1613,7 @@ pub(crate) fn meta(
 
 ```rust
 use super::{meta, Capacity, ComponentMeta, ComponentModel, Role};
+use crate::calibration::Calibration;
 use crate::types::Node;
 
 pub struct Client;
@@ -1374,10 +1625,10 @@ impl ComponentModel for Client {
     fn meta(&self) -> ComponentMeta {
         meta("client", "general", Role::Client, &[], false, vec![])
     }
-    fn capacity_per_instance(&self, _node: &Node) -> Capacity {
+    fn capacity_per_instance(&self, _node: &Node, _cal: &Calibration) -> Capacity {
         Capacity { rps: f64::INFINITY, service_ms: 0.0, max_queue: 0.0 }
     }
-    fn cost_per_month(&self, _node: &Node) -> f64 {
+    fn cost_per_month(&self, _node: &Node, _cal: &Calibration) -> f64 {
         0.0
     }
 }
@@ -1387,7 +1638,7 @@ impl ComponentModel for Client {
 
 ```rust
 use super::{meta, Capacity, ComponentMeta, ComponentModel, ConfigField, Role};
-use crate::calibration::*;
+use crate::calibration::Calibration;
 use crate::types::{EdgeKind, Node};
 
 pub struct LoadBalancer;
@@ -1406,15 +1657,15 @@ impl ComponentModel for LoadBalancer {
             vec![ConfigField::choice("algorithm", "round-robin", &["round-robin", "least-conn"])],
         )
     }
-    fn capacity_per_instance(&self, _node: &Node) -> Capacity {
+    fn capacity_per_instance(&self, _node: &Node, cal: &Calibration) -> Capacity {
         Capacity {
-            rps: LB_RPS_PER_REPLICA,
-            service_ms: LB_SERVICE_MS,
-            max_queue: LB_RPS_PER_REPLICA * LB_QUEUE_SECONDS,
+            rps: cal.lb_rps_per_replica,
+            service_ms: cal.lb_service_ms,
+            max_queue: cal.lb_rps_per_replica * cal.lb_queue_seconds,
         }
     }
-    fn cost_per_month(&self, node: &Node) -> f64 {
-        LB_COST_PER_REPLICA * f64::from(self.instances(node))
+    fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {
+        cal.lb_cost_per_replica * f64::from(self.instances(node))
     }
 }
 ```
@@ -1423,8 +1674,11 @@ impl ComponentModel for LoadBalancer {
 
 ```rust
 use super::{meta, num, Capacity, ComponentMeta, ComponentModel, ConfigField, Role};
-use crate::calibration::*;
+use crate::calibration::Calibration;
 use crate::types::{EdgeKind, Node};
+
+const DEFAULT_CPU: f64 = 1.0;
+const DEFAULT_MEMORY_GB: f64 = 2.0;
 
 pub struct WebServer;
 
@@ -1440,22 +1694,22 @@ impl ComponentModel for WebServer {
             &[EdgeKind::Http],
             false,
             vec![
-                ConfigField::number("cpu", WEB_DEFAULT_CPU, 1.0, 16.0),
-                ConfigField::number("memoryGb", WEB_DEFAULT_MEMORY_GB, 1.0, 64.0),
+                ConfigField::number("cpu", DEFAULT_CPU, 1.0, 16.0),
+                ConfigField::number("memoryGb", DEFAULT_MEMORY_GB, 1.0, 64.0),
             ],
         )
     }
-    fn capacity_per_instance(&self, node: &Node) -> Capacity {
-        let cpu = num(node, "cpu", WEB_DEFAULT_CPU);
-        let mem = num(node, "memoryGb", WEB_DEFAULT_MEMORY_GB);
+    fn capacity_per_instance(&self, node: &Node, cal: &Calibration) -> Capacity {
+        let cpu = num(node, "cpu", DEFAULT_CPU);
+        let mem = num(node, "memoryGb", DEFAULT_MEMORY_GB);
         Capacity {
-            rps: WEB_RPS_PER_VCPU * cpu,
-            service_ms: WEB_SERVICE_MS,
-            max_queue: WEB_QUEUE_PER_GB * mem,
+            rps: cal.web_rps_per_vcpu * cpu,
+            service_ms: cal.web_service_ms,
+            max_queue: cal.web_queue_per_gb * mem,
         }
     }
-    fn cost_per_month(&self, node: &Node) -> f64 {
-        WEB_COST_PER_VCPU * num(node, "cpu", WEB_DEFAULT_CPU) * f64::from(self.instances(node))
+    fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {
+        cal.web_cost_per_vcpu * num(node, "cpu", DEFAULT_CPU) * f64::from(self.instances(node))
     }
 }
 ```
@@ -1464,7 +1718,7 @@ impl ComponentModel for WebServer {
 
 ```rust
 use super::{meta, num_or_zero, Capacity, ComponentMeta, ComponentModel, ConfigField, Role};
-use crate::calibration::*;
+use crate::calibration::Calibration;
 use crate::types::{EdgeKind, Node};
 
 /// One primary (takes writes and reads) plus `readReplicas` read-only replicas.
@@ -1494,31 +1748,29 @@ impl ComponentModel for Postgres {
     fn instances(&self, node: &Node) -> u32 {
         1 + Self::read_replicas(node)
     }
-    fn capacity_per_instance(&self, _node: &Node) -> Capacity {
+    fn capacity_per_instance(&self, _node: &Node, cal: &Calibration) -> Capacity {
         Capacity {
-            rps: PG_QPS_PER_INSTANCE,
-            service_ms: PG_SERVICE_MS,
-            max_queue: PG_QPS_PER_INSTANCE * PG_QUEUE_SECONDS,
+            rps: cal.pg_qps_per_instance,
+            service_ms: cal.pg_service_ms,
+            max_queue: cal.pg_qps_per_instance * cal.pg_queue_seconds,
         }
     }
-    fn cost_per_month(&self, node: &Node) -> f64 {
-        PG_COST_PER_INSTANCE * f64::from(self.instances(node))
+    fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {
+        cal.pg_cost_per_instance * f64::from(self.instances(node))
     }
 }
 ```
 
-Make `Postgres` reachable from the engine: in `components/mod.rs` change `mod postgres;` to `pub mod postgres;`.
-
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `./dev cargo test -p sim-core components::`
-Expected: 6 passed.
+Run: `./dev cargo test -p sim-core components:: calibration::`
+Expected: 11 passed (8 in `components::`, 3 in `calibration::`).
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add crates/sim-core/src
-git commit -m "feat(sim-core): add calibration and client, lb, web-server, postgres components
+git commit -m "feat(sim-core): add overridable calibration and client, lb, web-server, postgres components
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1535,7 +1787,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: `Graph`, `GraphLimits`, `ValidationIssue` (Task 1); `components::get`, `ComponentModel::instances`, `ComponentMeta::accepts` (Task 4).
 - Produces: `pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<ValidationIssue>`, `pub fn has_blocking(issues: &[ValidationIssue]) -> bool`, `pub mod codes` with the string constants below. Test helpers (cfg(test) only): `test_util::{node, edge, graph, web_tier}`.
 
-Issue codes (all blocking unless noted): `node.duplicate-id`, `node.unknown-kind`, `edge.unknown-node`, `edge.not-accepted`, `graph.no-client`, `client.no-path`, `graph.cycle`, `node.unreachable` (non-blocking), `limits.too-many-nodes`, `limits.too-many-instances`, `limits.kind-not-allowed`.
+Issue codes (all blocking unless noted): `node.duplicate-id`, `node.unknown-kind`, `edge.unknown-node`, `edge.not-accepted`, `graph.no-client`, `client.no-path`, `graph.cycle`, `node.unreachable` (non-blocking), `config.invalid` (a per-node override in `NODE_OVERRIDE_KEYS` that is not a finite number, or `rpsPerInstance` ≤ 0, or `serviceMs`/`costPerMonth` < 0; `field` names the key), `limits.too-many-nodes`, `limits.too-many-instances`, `limits.kind-not-allowed`. (`calibration.invalid` is checked in `simulate`, Task 6.)
 
 - [ ] **Step 1: Add shared test helpers**
 
@@ -1589,6 +1841,7 @@ pub fn input(graph: Graph, base_rps: f64) -> SimInput {
         faults: vec![],
         duration_ms: 10_000,
         seed: 1,
+        calibration: None,
     }
 }
 ```
@@ -1683,6 +1936,20 @@ mod tests {
     }
 
     #[test]
+    fn invalid_per_node_overrides_are_blocking_and_name_the_field() {
+        let mut g = web_tier(1, 1);
+        g.nodes[2].config.insert("rpsPerInstance".into(), crate::types::ConfigValue::Num(0.0));
+        g.nodes[2].config.insert("costPerMonth".into(), crate::types::ConfigValue::Str("cheap".into()));
+        g.nodes[2].config.insert("serviceMs".into(), crate::types::ConfigValue::Num(4.0)); // valid
+        let issues = validate_graph(&g, None);
+        let fields: Vec<&str> = issues.iter().filter(|i| i.code == codes::CONFIG_INVALID)
+            .map(|i| i.field.as_deref().unwrap()).collect();
+        assert_eq!(fields, vec!["costPerMonth", "rpsPerInstance"]);
+        assert!(issues.iter().all(|i| i.node_id.as_deref() == Some("web")));
+        assert!(has_blocking(&issues));
+    }
+
+    #[test]
     fn limits_are_enforced() {
         let g = web_tier(2, 5); // 3 nodes, 7 instances (client not counted)
         let limits = GraphLimits {
@@ -1711,7 +1978,7 @@ Expected: compile errors (`validate_graph`, `codes` not found).
 ```rust
 //! Structural checks run before every simulation. Issues carry codes, never prose.
 
-use crate::components;
+use crate::components::{self, NODE_OVERRIDE_KEYS};
 use crate::types::{Graph, GraphLimits, Node, ValidationIssue};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -1724,6 +1991,8 @@ pub mod codes {
     pub const CLIENT_NO_PATH: &str = "client.no-path";
     pub const CYCLE: &str = "graph.cycle";
     pub const UNREACHABLE: &str = "node.unreachable";
+    pub const CONFIG_INVALID: &str = "config.invalid";
+    pub const CALIBRATION_INVALID: &str = "calibration.invalid";
     pub const TOO_MANY_NODES: &str = "limits.too-many-nodes";
     pub const TOO_MANY_INSTANCES: &str = "limits.too-many-instances";
     pub const KIND_NOT_ALLOWED: &str = "limits.kind-not-allowed";
@@ -1734,7 +2003,34 @@ fn issue(code: &str, node: Option<&str>, edge: Option<&str>, blocking: bool) -> 
         code: code.into(),
         node_id: node.map(String::from),
         edge_id: edge.map(String::from),
+        field: None,
         blocking,
+    }
+}
+
+pub(crate) fn field_issue(code: &str, node: Option<&str>, field: &str) -> ValidationIssue {
+    ValidationIssue {
+        code: code.into(),
+        node_id: node.map(String::from),
+        edge_id: None,
+        field: Some(field.into()),
+        blocking: true,
+    }
+}
+
+/// Per-node overrides must be usable numbers. Keys are checked in sorted order.
+fn check_node_overrides(n: &Node, issues: &mut Vec<ValidationIssue>) {
+    let mut keys = NODE_OVERRIDE_KEYS;
+    keys.sort_unstable();
+    for key in keys {
+        let Some(value) = n.config.get(key) else { continue };
+        let ok = match value.as_f64() {
+            Some(v) if v.is_finite() => if key == "rpsPerInstance" { v > 0.0 } else { v >= 0.0 },
+            _ => false,
+        };
+        if !ok {
+            issues.push(field_issue(codes::CONFIG_INVALID, Some(&n.id), key));
+        }
     }
 }
 
@@ -1753,6 +2049,7 @@ pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<Valida
         if components::get(&n.kind).is_none() {
             issues.push(issue(codes::UNKNOWN_KIND, Some(&n.id), None, true));
         }
+        check_node_overrides(n, &mut issues);
     }
 
     // Adjacency over edges whose endpoints exist.
@@ -1870,7 +2167,7 @@ fn check_limits(graph: &Graph, limits: &GraphLimits, issues: &mut Vec<Validation
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `./dev cargo test -p sim-core validate::`
-Expected: 8 passed.
+Expected: 9 passed.
 
 - [ ] **Step 6: Commit**
 
@@ -1895,7 +2192,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>>` (Err holds only blocking issues).
   - `pub(crate) struct Engine<'a>` with `Engine::new(&'a SimInput) -> Engine<'a>`, `run(&mut self)`, `finish(self) -> SimResult`, and these fields used by Tasks 7–8: `nodes: Vec<NodeRt>`, `events: Vec<SimEvent>`, `rate_multiplier: f64`, `now_ms: f64`, `input: &'a SimInput`.
   - `pub(crate) struct NodeRt` with fields `id, kind, role, is_entry, cap, instances_total, instances_up, primary_up, promote_at_ms: Option<f64>, children: Vec<(usize, EdgeKind)>, queue`, per-tick `wait_ms, lat_ms, fail_reject_r, fail_reject_w, fail_down_r, fail_down_w`.
-  - `pub(crate) fn edge_delay_ms(kind: EdgeKind) -> f64`, `Engine::targets(&self, i: usize) -> Vec<(usize, EdgeKind)>`.
+  - `pub(crate) cal: Calibration` on `Engine` (the resolved world parameters; use `self.cal.edge_delay_ms(kind)`, `self.cal.pg_failover_ms`, …), `Engine::targets(&self, i: usize) -> Vec<(usize, EdgeKind)>`.
+  - `simulate` rejects invalid `input.calibration` with one blocking `calibration.invalid` issue per bad field (`field` = camelCase name).
 
 **Model summary (read before coding):** each 10 ms tick: (1) the client emits a Poisson number of requests, split read/write by `writeRatio`; (2) a forward pass over nodes in topological order runs each node's queue (capacity = per-instance rps × instances up) and forwards what it served to its targets, split equally (a balancer skips children with no instance up; a database is terminal); (3) a reverse pass computes, for every node, the probability that a read/write entering it succeeds (`ok`), the same ignoring queue rejections (`okd`, so we can tell "down" from "rejected"), and the expected end-to-end latency below it; (4) the client books generated requests as ok / rejected / unreachable / timed out (latency above `clientTimeoutMs`) and records latency in the histogram. A node's queue is capped at `min(maxQueue × instances, capacity × timeout)`; overflow is rejected.
 
@@ -2025,6 +2323,46 @@ mod tests {
         assert_eq!(r.timeline.data.len(), 3 * 5, "exactly one frame");
     }
 
+    #[test]
+    fn slower_hardware_override_makes_the_scaled_design_fail() {
+        let mut i = surge(input(web_tier(2, 5), 8_000.0));
+        i.calibration = Some(CalibrationOverrides { web_rps_per_vcpu: Some(3_000.0), ..Default::default() });
+        let m = simulate(&i).unwrap().metrics;
+        assert!(m.availability < 0.95, "{m:?}");
+    }
+
+    #[test]
+    fn empty_overrides_equal_defaults() {
+        let base = input(web_tier(2, 3), 5_000.0);
+        let mut with_empty = base.clone();
+        with_empty.calibration = Some(CalibrationOverrides::default());
+        assert_eq!(simulate(&base).unwrap().metrics, simulate(&with_empty).unwrap().metrics);
+    }
+
+    #[test]
+    fn per_node_overrides_change_only_that_node() {
+        let mut g = web_tier(2, 2);
+        g.nodes[2].config.insert("costPerMonth".into(), ConfigValue::Num(100.0));
+        g.nodes[2].config.insert("rpsPerInstance".into(), ConfigValue::Num(500.0));
+        let m = simulate(&input(g, 2_000.0)).unwrap().metrics;
+        assert_eq!(m.cost_per_month, 50.0 + 200.0);
+        assert!(m.availability < 0.9, "2 x 500 rps cannot serve 2,000 rps: {m:?}");
+    }
+
+    #[test]
+    fn invalid_calibration_is_rejected_with_field_names() {
+        let mut i = input(web_tier(1, 1), 100.0);
+        i.calibration = Some(CalibrationOverrides {
+            web_rps_per_vcpu: Some(-5.0),
+            max_utilization_for_latency: Some(2.0),
+            ..Default::default()
+        });
+        let err = simulate(&i).unwrap_err();
+        let fields: Vec<&str> = err.iter().map(|e| e.field.as_deref().unwrap()).collect();
+        assert_eq!(fields, vec!["webRpsPerVcpu", "maxUtilizationForLatency"]);
+        assert!(err.iter().all(|e| e.code == "calibration.invalid" && e.blocking));
+    }
+
     // Review focus 3: very large numbers.
     #[test]
     fn huge_numbers_finish_with_finite_metrics() {
@@ -2055,12 +2393,18 @@ Expected: compile errors (`simulate` function and `engine.rs` missing).
 ```rust
 //! Public entry point: validate, run the tick engine, return the result.
 
+use crate::calibration::invalid_overrides;
 use crate::engine::Engine;
 use crate::types::{SimInput, SimResult, ValidationIssue};
-use crate::validate::{has_blocking, validate_graph};
+use crate::validate::{codes, field_issue, has_blocking, validate_graph};
 
 pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>> {
-    let issues = validate_graph(&input.graph, None);
+    let mut issues = validate_graph(&input.graph, None);
+    if let Some(o) = &input.calibration {
+        for field in invalid_overrides(o) {
+            issues.push(field_issue(codes::CALIBRATION_INVALID, None, field));
+        }
+    }
     if has_blocking(&issues) {
         return Err(issues.into_iter().filter(|i| i.blocking).collect());
     }
@@ -2076,7 +2420,7 @@ pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>> {
 //! Fixed-tick fluid queueing model. Read the "Model summary" in the plan before changing it.
 
 use crate::calibration::*;
-use crate::components::{self, Capacity, Role};
+use crate::components::{self, effective_capacity, effective_cost, Capacity, Role};
 use crate::histogram::Histogram;
 use crate::rng::Pcg32;
 use crate::types::*;
@@ -2120,7 +2464,7 @@ pub(crate) struct NodeRt {
 }
 
 impl NodeRt {
-    fn new(n: &Node) -> NodeRt {
+    fn new(n: &Node, cal: &Calibration) -> NodeRt {
         let model = components::get(&n.kind).expect("graph was validated");
         let meta = model.meta();
         let instances = model.instances(n);
@@ -2129,8 +2473,8 @@ impl NodeRt {
             kind: n.kind.clone(),
             role: meta.role,
             is_entry: meta.is_entry,
-            cap: model.capacity_per_instance(n),
-            cost: model.cost_per_month(n),
+            cap: effective_capacity(model, n, cal),
+            cost: effective_cost(model, n, cal),
             instances_total: instances,
             instances_up: instances,
             primary_up: true,
@@ -2170,6 +2514,8 @@ struct Totals {
 
 pub(crate) struct Engine<'a> {
     pub input: &'a SimInput,
+    /// Resolved world parameters (defaults + input.calibration).
+    pub(crate) cal: Calibration,
     pub nodes: Vec<NodeRt>,
     pub events: Vec<SimEvent>,
     /// Multiplies client traffic; faults such as traffic-surge-3x change it.
@@ -2184,15 +2530,6 @@ pub(crate) struct Engine<'a> {
     timeline: Vec<f32>,
     peak_busy: f64,
     peak_db_connections: f64,
-}
-
-pub(crate) fn edge_delay_ms(kind: EdgeKind) -> f64 {
-    match kind {
-        EdgeKind::Http => EDGE_DELAY_HTTP_MS,
-        EdgeKind::Db => EDGE_DELAY_DB_MS,
-        EdgeKind::Cache => EDGE_DELAY_CACHE_MS,
-        EdgeKind::Msg => EDGE_DELAY_MSG_MS,
-    }
 }
 
 /// Kahn's algorithm; ties broken by index (= node id order) for determinism.
@@ -2223,7 +2560,8 @@ impl<'a> Engine<'a> {
         sorted.sort_by(|a, b| a.id.cmp(&b.id));
         let index: BTreeMap<&str, usize> =
             sorted.iter().enumerate().map(|(i, n)| (n.id.as_str(), i)).collect();
-        let mut nodes: Vec<NodeRt> = sorted.iter().map(|n| NodeRt::new(n)).collect();
+        let cal = Calibration::resolve(input.calibration.as_ref());
+        let mut nodes: Vec<NodeRt> = sorted.iter().map(|n| NodeRt::new(n, &cal)).collect();
 
         let mut edges: Vec<&Edge> = input.graph.edges.iter().collect();
         edges.sort_by(|a, b| (&a.from, &a.to, &a.id).cmp(&(&b.from, &b.to, &b.id)));
@@ -2238,6 +2576,7 @@ impl<'a> Engine<'a> {
 
         Engine {
             input,
+            cal,
             nodes,
             events: Vec::new(),
             rate_multiplier: 1.0,
@@ -2333,6 +2672,7 @@ impl<'a> Engine<'a> {
 
     fn serve(&mut self, i: usize, timeout_s: f64) {
         let now = self.now_ms;
+        let max_util = self.cal.max_utilization_for_latency;
         let n = &mut self.nodes[i];
         n.served_read = 0.0;
         n.served_write = 0.0;
@@ -2377,11 +2717,7 @@ impl<'a> Engine<'a> {
         n.rejected = rejected;
         n.busy = if per_tick > 0.0 { served / per_tick } else { 0.0 };
 
-        let rho = if per_tick > 0.0 {
-            (arriving / per_tick).min(MAX_UTILIZATION_FOR_LATENCY)
-        } else {
-            MAX_UTILIZATION_FOR_LATENCY
-        };
+        let rho = if per_tick > 0.0 { (arriving / per_tick).min(max_util) } else { max_util };
         n.wait_ms = if cap_rps > 0.0 { n.queue / cap_rps * 1000.0 } else { 0.0 };
         n.lat_ms = n.cap.service_ms / (1.0 - rho) + n.wait_ms;
 
@@ -2452,7 +2788,7 @@ impl<'a> Engine<'a> {
                 acc.1 += w * ch.ok_w;
                 acc.2 += w * ch.okd_r;
                 acc.3 += w * ch.okd_w;
-                acc.4 += w * (edge_delay_ms(kind) + ch.path_lat_ms);
+                acc.4 += w * (self.cal.edge_delay_ms(kind) + ch.path_lat_ms);
             }
             acc
         };
@@ -2567,7 +2903,7 @@ impl<'a> Engine<'a> {
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `./dev cargo test -p sim-core simulate::`
-Expected: 10 passed. If a threshold test fails (for example p95 of the overloaded server lands at 280 ms), do **not** loosen the test first: print the metrics with `--nocapture`, check the model against the "Model summary", and only then adjust a constant in `calibration.rs` with a comment explaining why.
+Expected: 14 passed. If a threshold test fails (for example p95 of the overloaded server lands at 280 ms), do **not** loosen the test first: print the metrics with `--nocapture`, check the model against the "Model summary", and only then adjust a constant in `calibration.rs` with a comment explaining why.
 
 - [ ] **Step 6: Run clippy**
 
@@ -2592,7 +2928,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `crates/sim-core/src/engine.rs`, `crates/sim-core/src/lib.rs` (add `mod faults;`)
 
 **Interfaces:**
-- Consumes: `Engine` fields `nodes`, `events`, `rate_multiplier`, `now_ms`, `input` (Task 6); `PG_FAILOVER_MS` (Task 4); `Pcg32` (Task 2).
+- Consumes: `Engine` fields `nodes`, `events`, `rate_multiplier`, `now_ms`, `input`, `cal` (Task 6; failover delay is `self.cal.pg_failover_ms`); `Pcg32` (Task 2).
 - Produces: `pub(crate) struct FaultQueue` with `FaultQueue::new(faults: &[Fault]) -> FaultQueue` and `due(&mut self, now_ms: f64) -> Vec<Fault>`; `impl Engine { pub(crate) fn apply_due_faults(&mut self) }`. Event codes: `fault.traffic-surge`, `instance.down`, `lb.node-down`, `db.primary-down`, `db.no-replica`, `db.promoted`, `fault.no-target`, `fault.unsupported`.
 
 Supported in 1a: `traffic-surge-3x`, `instance-down` (targets a `Service` node), `lb-node-down` (targets a `Balancer`), `db-primary-down` (targets a `Database`). Every other kind emits `fault.unsupported` and changes nothing (plan 1b implements them).
@@ -2726,7 +3062,6 @@ Expected: the new tests fail (no `db.primary-down` event, availability unchanged
 ```rust
 //! Fault injection. Faults fire at the first tick whose start time is >= atMs.
 
-use crate::calibration::PG_FAILOVER_MS;
 use crate::components::Role;
 use crate::engine::Engine;
 use crate::types::{Fault, FaultKind, SimEvent};
@@ -2808,6 +3143,7 @@ impl<'a> Engine<'a> {
 
     fn apply_fault(&mut self, f: &Fault) {
         let now = self.now_ms;
+        let failover_ms = self.cal.pg_failover_ms;
         let role = match f.kind {
             FaultKind::TrafficSurge3x => {
                 self.rate_multiplier *= 3.0;
@@ -2842,7 +3178,7 @@ impl<'a> Engine<'a> {
                 n.primary_up = false;
                 self.events.push(event(now, Some(&n.id), "db.primary-down", &[("replicas", remaining)]));
                 if n.instances_up > 0 {
-                    n.promote_at_ms = Some(now + PG_FAILOVER_MS);
+                    n.promote_at_ms = Some(now + failover_ms);
                 } else {
                     self.events.push(event(now, Some(&n.id), "db.no-replica", &[]));
                 }
@@ -2902,7 +3238,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `crates/sim-core/src/engine.rs`, `crates/sim-core/src/lib.rs` (add `mod traces;`)
 
 **Interfaces:**
-- Consumes: `Engine::targets`, `edge_delay_ms`, `NodeRt` per-tick fields (Task 6); `TRACE_TARGET` (Task 4).
+- Consumes: `Engine::targets`, `Engine.cal` (for `edge_delay_ms`), `NodeRt` per-tick fields (Task 6); `TRACE_TARGET` (Task 4).
 - Produces: `impl Engine { pub(crate) fn sample_trace(&mut self) }`; `SimResult.traces` filled with about `TRACE_TARGET` traces (ids 0, 1, 2, …). Each trace starts with a `send` step at the client and ends with `serve` (delivered/timeout), `reject` or `down`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -2989,7 +3325,7 @@ Expected: `about_300_traces_starting_at_the_client` and the other non-empty chec
 //! tick's queue state. Uses its own PRNG stream so traffic numbers never depend on sampling.
 
 use crate::components::Role;
-use crate::engine::{edge_delay_ms, Engine};
+use crate::engine::Engine;
 use crate::types::{RequestClass, Trace, TraceAction, TraceOutcome, TraceStep};
 
 impl<'a> Engine<'a> {
@@ -3022,7 +3358,7 @@ impl<'a> Engine<'a> {
             }
             let pick = self.trace_rng.next_u32() as usize % targets.len();
             let (next, kind) = targets[pick];
-            t += edge_delay_ms(kind);
+            t += self.cal.edge_delay_ms(kind);
             let n = &self.nodes[next];
             let (down, reject) = match class {
                 RequestClass::Read => (n.fail_down_r, n.fail_reject_r),
@@ -3320,7 +3656,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 10: Golden fixtures, property tests and snapshots
 
 **Files:**
-- Create: `crates/sim-core/src/fixture.rs`, `crates/sim-core/tests/golden.rs`, `crates/sim-core/tests/properties.rs`, `fixtures/golden/*.json` (9 files listed below), `crates/sim-core/tests/snapshots/` (generated)
+- Create: `crates/sim-core/src/fixture.rs`, `crates/sim-core/tests/golden.rs`, `crates/sim-core/tests/properties.rs`, `fixtures/golden/*.json` (10 files listed below), `crates/sim-core/tests/snapshots/` (generated)
 - Modify: `crates/sim-core/src/lib.rs`
 
 **Interfaces:**
@@ -3463,7 +3799,7 @@ Add to `lib.rs`: `pub mod fixture;`.
 Run: `./dev cargo test -p sim-core fixture::`
 Expected: 1 passed.
 
-- [ ] **Step 2: Write the nine golden fixtures**
+- [ ] **Step 2: Write the ten golden fixtures**
 
 Each file is a `Fixture`. Write them exactly:
 
@@ -3719,6 +4055,33 @@ Each file is a `Fixture`. Write them exactly:
 }
 ```
 
+`fixtures/golden/slow-hardware-surge.json` (run-level calibration override):
+
+```json
+{
+  "id": "slow-hardware-surge",
+  "description": "The scaled design that passes on default hardware fails when each vCPU only handles 3,000 rps.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 5}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 8000, "surge": {"factor": 3, "atMs": 2000, "durationMs": 6000}},
+    "calibration": {"webRpsPerVcpu": 3000},
+    "seed": 1
+  },
+  "expect": {"availability": {"<=": 0.95}, "costPerMonth": {"==": 162.5}},
+  "expectEvents": ["node.overloaded"]
+}
+```
+
 - [ ] **Step 3: Write the golden test and snapshot test**
 
 `crates/sim-core/tests/golden.rs`:
@@ -3747,7 +4110,7 @@ fn fixtures() -> Vec<Fixture> {
 #[test]
 fn all_golden_fixtures_pass() {
     let all = fixtures();
-    assert!(all.len() >= 9, "expected at least 9 golden fixtures, found {}", all.len());
+    assert!(all.len() >= 10, "expected at least 10 golden fixtures, found {}", all.len());
     let failures: Vec<String> = all
         .iter()
         .map(check_fixture)
@@ -3849,7 +4212,7 @@ proptest! {
 - [ ] **Step 5: Run the golden and property tests; create snapshots**
 
 Run: `./dev sh -c 'INSTA_UPDATE=always cargo test -p sim-core --test golden --test properties'`
-Expected: `all_golden_fixtures_pass`, `golden_metrics_snapshots`, and the 3 property tests pass; 9 files appear under `crates/sim-core/tests/snapshots/`. If a golden fixture fails, read the printed metrics: fix the engine or a calibration constant, never the fixture's expectation, unless the expectation contradicts the scenario description (then fix both and say why in the commit message).
+Expected: `all_golden_fixtures_pass`, `golden_metrics_snapshots`, and the 3 property tests pass; 10 files appear under `crates/sim-core/tests/snapshots/`. If a golden fixture fails, read the printed metrics: fix the engine or a calibration constant, never the fixture's expectation, unless the expectation contradicts the scenario description (then fix both and say why in the commit message).
 
 Run again without updating: `./dev cargo test -p sim-core`
 Expected: all tests pass and no `.snap.new` files are created.
@@ -4151,7 +4514,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces (JS names, generated by wasm-bindgen):
   - `simulate(input: object): SimRun` — throws a plain JS object `{ kind: "validation", issues: ValidationIssue[] }` when the graph is invalid, or `{ kind: "input", message }` when the input does not parse.
   - `class SimRun` with `metrics()`, `events()`, `timelineHeader()` → `{ frameMs, frames, nodeIds, fields }`, `timelineData(): Float32Array`, `traceCount(): number`, `trace(i): Trace`, `traceSummaries(): { id, class, outcome, latencyMs }[]`, `resultJson(): string`, `free()`.
-  - `validateGraph(graph, limits?)`, `grade(run, goals)`, `listComponents()`, `checkFixture(json: string)`, `simulateJson(json: string): string` (full compact `SimResult` JSON for a `Fixture` or bare `SimInput`; byte-identical to `sim-cli result`), `engineVersion(): string`.
+  - `validateGraph(graph, limits?)`, `grade(run, goals)`, `listComponents()`, `defaultCalibration()` (the `Calibration` defaults, for the UI's parameter editor), `checkFixture(json: string)`, `simulateJson(json: string): string` (full compact `SimResult` JSON for a `Fixture` or bare `SimInput`; byte-identical to `sim-cli result`), `engineVersion(): string`.
 
 - [ ] **Step 1: Create the crate**
 
@@ -4327,6 +4690,11 @@ pub fn list_components() -> Result<JsValue, JsValue> {
     to_js(&sim_core::list_components())
 }
 
+#[wasm_bindgen(js_name = defaultCalibration)]
+pub fn default_calibration() -> Result<JsValue, JsValue> {
+    to_js(&sim_core::Calibration::default())
+}
+
 #[wasm_bindgen(js_name = checkFixture)]
 pub fn check_fixture(json: &str) -> Result<JsValue, JsValue> {
     let fixture: Fixture = serde_json::from_str(json).map_err(|e| input_error(e.to_string()))?;
@@ -4368,7 +4736,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: the wasm API from Task 12; generated types in `packages/sim/src/generated/` (Task 1, Task 4, Task 10 — regenerate in Step 1).
 - Produces:
-  - `createSim(binding: WasmBinding): Sim` where `Sim = { simulate(input: SimInput): SimRun; simulateJson(json: string): string; validateGraph(graph: Graph, limits?: GraphLimits): ValidationIssue[]; grade(run: SimRun, goals: Goal[]): Verdict; listComponents(): ComponentMeta[]; checkFixture(json: string): FixtureReport; engineVersion(): string }`
+  - `createSim(binding: WasmBinding): Sim` where `Sim = { simulate(input: SimInput): SimRun; simulateJson(json: string): string; validateGraph(graph: Graph, limits?: GraphLimits): ValidationIssue[]; grade(run: SimRun, goals: Goal[]): Verdict; listComponents(): ComponentMeta[]; defaultCalibration(): Calibration; checkFixture(json: string): FixtureReport; engineVersion(): string }`
   - `class SimRun` with getters `metrics`, `events`, `timeline: TimelineView`, methods `traceSummaries()`, `trace(i)`, `resultJson()`, `free()`; every member throws `Error("SimRun already freed")` after `free()`.
   - `class TimelineView` with `frames`, `frameMs`, `nodeIds`, `fields`, `value(frame, nodeId, field)`, `series(nodeId, field): Float32Array`.
   - `class SimValidationError extends Error { issues: ValidationIssue[] }` and `class SimInputError extends Error`.
@@ -4377,7 +4745,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Regenerate TypeScript types**
 
 Run: `./dev sh -c 'rm -rf packages/sim/src/generated && TS_RS_EXPORT_DIR=/work/packages/sim/src/generated cargo test -p sim-core --features ts export_bindings'`
-Expected: `packages/sim/src/generated/` now also contains `ComponentMeta.ts`, `Role.ts`, `Fixture.ts`, `FixtureReport.ts`, `FixtureFailure.ts`.
+Expected: `packages/sim/src/generated/` now also contains `ComponentMeta.ts`, `Role.ts`, `Calibration.ts`, `CalibrationOverrides.ts`, `Fixture.ts`, `FixtureReport.ts`, `FixtureFailure.ts`. Open `SimInput.ts` and confirm `calibration?: CalibrationOverrides`.
 
 - [ ] **Step 2: Package scaffolding**
 
@@ -4582,6 +4950,33 @@ describe("SimRun", () => {
   it("lists component metadata for the palette", () => {
     expect(sim.listComponents().map((c) => c.kind)).toEqual(["client", "lb", "postgres", "web-server"]);
   });
+
+  it("exposes default calibration and applies overrides", () => {
+    const defaults = sim.defaultCalibration();
+    expect(defaults.webRpsPerVcpu).toBe(9000);
+    expect(defaults.webCostPerVcpu).toBe(22.5);
+    const input = webTier(2, 5, 8000);
+    input.workload.surge = { factor: 3, atMs: 2000, durationMs: 6000 };
+    const fast = sim.simulate(input);
+    input.calibration = { webRpsPerVcpu: 3000 };
+    const slow = sim.simulate(input);
+    expect(fast.metrics.availability).toBeGreaterThan(0.999);
+    expect(slow.metrics.availability).toBeLessThan(0.95);
+    fast.free();
+    slow.free();
+  });
+
+  it("rejects invalid calibration with the field name", () => {
+    const input = webTier(1, 1, 100);
+    input.calibration = { webRpsPerVcpu: -1 };
+    try {
+      sim.simulate(input);
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(SimValidationError);
+      expect((e as SimValidationError).issues[0]).toMatchObject({ code: "calibration.invalid", field: "webRpsPerVcpu" });
+    }
+  });
 });
 ```
 
@@ -4711,6 +5106,8 @@ export type { TraceOutcome } from "./generated/TraceOutcome";
 export type { RequestClass } from "./generated/RequestClass";
 export type { SimEvent } from "./generated/SimEvent";
 export type { ComponentMeta } from "./generated/ComponentMeta";
+export type { Calibration } from "./generated/Calibration";
+export type { CalibrationOverrides } from "./generated/CalibrationOverrides";
 export type { Fixture } from "./generated/Fixture";
 export type { FixtureReport } from "./generated/FixtureReport";
 ```
@@ -4751,6 +5148,7 @@ export interface WasmBinding {
   validateGraph(graph: unknown, limits: unknown): unknown;
   grade(run: RawRun, goals: unknown): unknown;
   listComponents(): unknown;
+  defaultCalibration(): unknown;
   checkFixture(json: string): unknown;
   engineVersion(): string;
 }
@@ -4882,7 +5280,7 @@ export class SimRun {
 import type { WasmBinding } from "./binding";
 import { rethrow } from "./errors";
 import { SimRun } from "./run";
-import type { ComponentMeta, FixtureReport, Goal, Graph, GraphLimits, SimInput, ValidationIssue, Verdict } from "./types";
+import type { Calibration, ComponentMeta, FixtureReport, Goal, Graph, GraphLimits, SimInput, ValidationIssue, Verdict } from "./types";
 
 export interface Sim {
   simulate(input: SimInput): SimRun;
@@ -4890,6 +5288,7 @@ export interface Sim {
   validateGraph(graph: Graph, limits?: GraphLimits): ValidationIssue[];
   grade(run: SimRun, goals: Goal[]): Verdict;
   listComponents(): ComponentMeta[];
+  defaultCalibration(): Calibration;
   checkFixture(json: string): FixtureReport;
   engineVersion(): string;
 }
@@ -4904,6 +5303,7 @@ export function createSim(binding: WasmBinding): Sim {
     validateGraph: (graph, limits) => call(() => binding.validateGraph(graph, limits ?? null)) as ValidationIssue[],
     grade: (run, goals) => call(() => binding.grade(run.raw(), goals)) as Verdict,
     listComponents: () => call(() => binding.listComponents()) as ComponentMeta[],
+    defaultCalibration: () => call(() => binding.defaultCalibration()) as Calibration,
     checkFixture: (json) => call(() => binding.checkFixture(json)) as FixtureReport,
     engineVersion: () => binding.engineVersion(),
   };
@@ -4955,7 +5355,7 @@ export { TimelineView } from "./timeline";
 - [ ] **Step 5: Run the tests and the type check**
 
 Run: `./dev pnpm --filter @sd/sim test`
-Expected: `pretest` rebuilds the wasm; `run.test.ts` 6 passed, `golden.test.ts` 9 passed, `cross-target.test.ts` 9 passed, `budget.test.ts` 1 passed. If cross-target fails, diff the two strings: the first differing number points at a non-`libm` math call or an unordered iteration in `sim-core`.
+Expected: `pretest` rebuilds the wasm; `run.test.ts` 8 passed, `golden.test.ts` 10 passed, `cross-target.test.ts` 10 passed, `budget.test.ts` 1 passed. If cross-target fails, diff the two strings: the first differing number points at a non-`libm` math call or an unordered iteration in `sim-core`.
 
 Run: `./dev pnpm --filter @sd/sim typecheck`
 Expected: no errors. (If `web.ts` reports missing declarations for `../wasm/web/sim_wasm.js`, run the build first: wasm-pack emits `sim_wasm.d.ts` beside it.)

@@ -134,6 +134,7 @@ createSimWorker(): SimWorker                            // same API, off the mai
 | `faults` | `Fault[]` | Injected failures, each with a start time |
 | `durationMs` | `u32` | Default `10_000` |
 | `seed` | `u32` | Drives the PRNG; same input → identical output |
+| `calibration` | `CalibrationOverrides?` | Optional overrides of world parameters (section 6.7) |
 
 `Graph`:
 
@@ -305,6 +306,28 @@ per-request simulation.
   every target.
 - CI runs every golden scenario natively **and** under WASM (Node) and asserts the two
   results are byte-identical after serialization.
+
+### 6.7 Customizable world parameters
+
+Everything that describes the simulated world (not the simulator itself) can be changed per
+run, so lessons, challenges and the Lab can model slower hardware, other cloud prices or
+slower networks.
+
+- **Run level:** `SimInput.calibration` overrides any field of `Calibration`: web rps per vCPU,
+  web service time, queue per GB, web cost per vCPU; LB rps, service time, queue seconds and
+  cost per replica; Postgres qps, service time, queue seconds, cost per instance and failover
+  time; network delay per edge kind; the utilization cap used for latency. Missing fields use
+  the defaults, which are fitted to the reference runs (`fixtures/parity`).
+- **Node level:** `node.config` may set `rpsPerInstance`, `serviceMs` and `costPerMonth`
+  (price of one instance) for that node only.
+- **Not overridable:** tick length, frame interval and trace count (engine mechanics).
+- **Validation:** non-finite, negative, or zero-where-positive values are blocking issues
+  (`calibration.invalid` with the field name, `config.invalid` with node and field).
+- **API:** `defaultCalibration()` returns the defaults so the UI can show and edit them.
+  Named presets ("default cloud", "on-prem", "cross-region network") are content/UI data,
+  not engine code.
+- Parity fixtures always run with defaults. Same input, including overrides, gives the same
+  output.
 
 ## 7. Calibration and testing
 
