@@ -1,0 +1,23 @@
+{
+  "name": "@sd/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts",
+    "./web": "./src/web.ts"
+  },
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "pretest": "node scripts/build-wasm.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "binaryen": "^123.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
