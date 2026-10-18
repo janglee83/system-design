@@ -17,6 +17,7 @@ pub mod types;
 pub use types::*;
 
 pub mod rng;
+pub mod histogram;
 
 #[cfg(test)]
 mod type_tests {
