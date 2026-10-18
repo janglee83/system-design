@@ -89,6 +89,9 @@ mod type_tests {
 pub mod validate;
 pub use validate::{has_blocking, validate_graph};
 
+pub mod grade;
+pub use grade::{grade, metric_value};
+
 #[cfg(test)]
 pub(crate) mod test_util;
 
