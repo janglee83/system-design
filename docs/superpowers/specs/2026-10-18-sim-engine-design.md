@@ -14,7 +14,10 @@ illustrations are original**. No text is copied from Syscraft or from any book.
 Decisions already made:
 
 - Audience: internal / personal use. No billing, leaderboard or quotas in early versions.
-- Stack: TypeScript everywhere. Next.js for the UI later; the engine is plain TS.
+- App: Next.js + React + TypeScript.
+- **Engine: Rust core with a TypeScript shell ("H1").** The engine is written once in Rust
+  and built to two targets: WebAssembly for the browser and Node, and a native binary for
+  fast, parallel content validation. Everything outside the engine stays TypeScript.
 - Content: bilingual VI + EN.
 - "Workflow" means both a repeatable development process (spec → plan → code → test per
   sub-project, plus a content pipeline) and, later, a multi-agent Workflow that mass-produces
@@ -32,36 +35,87 @@ Build order (each item gets its own spec → plan → implementation cycle):
 
 ## 2. Goal
 
-A pure, deterministic TypeScript library that takes an architecture graph, a workload and
-a list of faults, simulates about 10 seconds of virtual time, and returns metrics, a
-replayable timeline, sampled request traces and notable events. A separate grader turns
-results plus goals into a verdict. The library must run unchanged in the browser, in Node
-and in a Web Worker, and must be fast enough to validate hundreds of lessons in CI.
+A pure, deterministic engine that takes an architecture graph, a workload and a list of
+faults, simulates about 10 seconds of virtual time, and returns metrics, a replayable
+timeline, sampled request traces and notable events. A grader turns results plus goals
+into a verdict.
+
+Requirements:
+
+- Runs in the browser (main thread and Web Worker) and in Node through WebAssembly.
+- Runs natively from a CLI that validates many scenarios in parallel.
+- Same input produces bit-identical output on every target.
+- Fast enough that a 10-node, 10-second run feels instant in the browser.
 
 The engine must be **directionally right** (more replicas never make the bottleneck slower;
 a database with no replica cannot survive losing its primary), not accurate to the
 millisecond against real production systems.
 
-## 3. Public API
+## 3. Architecture (H1)
 
-```ts
-simulate(input: SimInput): SimResult
-validateGraph(graph: Graph, limits?: GraphLimits): ValidationIssue[]
-grade(result: SimResult, goals: Goal[]): Verdict
-listComponents(): ComponentMeta[]   // palette + inspector metadata for the UI
+```
+            ┌─────────────────────────── Rust ───────────────────────────┐
+            │  sim-core   (pure library: model, simulate, validate, grade)│
+            │     ▲                    ▲                                 │
+            │  sim-wasm (wasm-bindgen) sim-cli (native, rayon)           │
+            └─────┼────────────────────┼─────────────────────────────────┘
+                  │ .wasm + generated .d.ts                │ binary
+            ┌─────▼──────── TypeScript ──────────┐    used by content
+            │  @sd/sim  (thin wrapper: load wasm, │    pipeline and CI
+            │   Worker helper, typed-array views) │
+            │     ▲                               │
+            │  apps/web (Next.js), packages/content│
+            └─────────────────────────────────────┘
 ```
 
-All functions are pure. No I/O, no `Date`, no `Math.random`.
+- **`crates/sim-core`**: all logic. No I/O, no clock, no OS randomness, no threads.
+  `#![forbid(unsafe_code)]`. Depends only on `serde` and `libm`.
+- **`crates/sim-wasm`**: `wasm-bindgen` bindings around `sim-core`. Owns the JS ↔ WASM
+  boundary format (section 5).
+- **`crates/sim-cli`**: native binary. Reads scenario files, runs them in parallel with
+  `rayon`, prints results or a validation report as JSON. Used by the content pipeline
+  (sub-project 2) and CI.
+- **`packages/sim`** (`@sd/sim`): TypeScript wrapper. Loads the WASM module, exposes a typed
+  async API, offers a Web Worker helper so runs never block the UI, and turns raw
+  typed-array buffers into convenient views.
 
-### 3.1 `SimInput`
+### 3.1 Single source of truth for types
+
+Types are defined once as Rust structs/enums with `serde` and `tsify`. The build generates
+`.d.ts` files that `@sd/sim` re-exports. TypeScript never hand-writes engine types, so the
+two sides cannot drift. A CI check fails if the generated types are out of date.
+
+## 4. Public API
+
+Rust (`sim-core`):
+
+```rust
+pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>>;
+pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<ValidationIssue>;
+pub fn grade(result: &SimResult, goals: &[Goal]) -> Verdict;
+pub fn list_components() -> Vec<ComponentMeta>; // palette + inspector metadata for the UI
+```
+
+TypeScript (`@sd/sim`):
+
+```ts
+init(): Promise<void>                                   // loads the wasm once
+simulate(input: SimInput): SimRun                       // see section 5
+validateGraph(graph: Graph, limits?: GraphLimits): ValidationIssue[]
+grade(run: SimRun, goals: Goal[]): Verdict
+listComponents(): ComponentMeta[]
+createSimWorker(): SimWorker                            // same API, off the main thread
+```
+
+### 4.1 `SimInput`
 
 | Field | Type | Notes |
 |---|---|---|
 | `graph` | `Graph` | Nodes and edges; identical to what the canvas saves |
 | `workload` | `Workload` | Traffic shape and scenario parameters |
 | `faults` | `Fault[]` | Injected failures, each with a start time |
-| `durationMs` | `number` | Default `10_000` |
-| `seed` | `number` | Drives the PRNG; same input → identical output |
+| `durationMs` | `u32` | Default `10_000` |
+| `seed` | `u32` | Drives the PRNG; same input → identical output |
 
 `Graph`:
 
@@ -86,7 +140,7 @@ All functions are pure. No I/O, no `Date`, no `Math.random`.
 
 When `target` is omitted, the engine picks a matching node deterministically from `seed`.
 
-### 3.2 `SimResult`
+### 4.2 `SimResult`
 
 - `metrics: Metrics`
   - Core: `p50`, `p95`, `p99` (ms), `availability` (0–1), `throughputRps`,
@@ -95,19 +149,18 @@ When `target` is omitted, the engine picks a matching node deterministically fro
     `outOfOrderIds`, `lostUpdates`, `writeConflicts`, `duplicateWrites`, `staleReads`,
     `peakQueueDepth`, `lostMessages`, `statusFlaps`, `staleOnline`, `inboxWritesPerSec`.
   - Breakdowns per request class (read, write, message, heartbeat, …).
-- `timeline: TimelineFrame[]`: one frame every 100 ms, with per-node
-  `{ inFlight, queued, busy, rejected, status }` and per-edge rates. Used for animation
-  and scrubbing.
-- `traces: Trace[]`: a few hundred sampled requests. Each trace is a list of
+- `timeline`: one frame every 100 ms with per-node `{ inFlight, queued, busy, rejected,
+  status }` and per-edge rates. Used for animation and scrubbing.
+- `traces`: about 300 sampled requests. Each trace is a list of
   `{ tMs, nodeId, action, waitMs, serviceMs }` steps plus the final outcome
   (`delivered | rejected | timeout | unreachable`).
-- `events: SimEvent[]`: notable happenings with time, node and a structured code plus
-  params (e.g. `{ code: 'db.promoted', node: 'pg1', atMs: 3600 }`). The UI turns codes into
+- `events`: notable happenings with time, node and a structured code plus params
+  (e.g. `{ code: 'db.promoted', node: 'pg1', atMs: 3600 }`). The UI turns codes into
   localized text; the engine never emits prose.
 
-### 3.3 Validation
+### 4.3 Validation
 
-`validateGraph` runs before simulation and returns structured issues
+`validate_graph` runs before simulation and returns structured issues
 (`{ code, nodeId?, edgeId?, params }`):
 
 - edge kind not accepted by the target component (e.g. a cache pointing at a database)
@@ -118,20 +171,42 @@ When `target` is omitted, the engine picks a matching node deterministically fro
 
 `simulate` refuses to run a graph with blocking issues and returns them instead.
 
-### 3.4 Grading
+### 4.4 Grading
 
-```ts
-type Goal = { id, metric: MetricKey | CustomCheck, op: '<=' | '>=' | '==', value }
-type Verdict = { passed, score, stars, goals: { id, passed, measured }[] }
+```
+Goal    = { id, metric: MetricKey | CustomCheck, op: '<=' | '>=' | '==', value }
+Verdict = { passed, score, stars, goals: [{ id, passed, measured }] }
 ```
 
 Custom checks cover structural goals such as "web servers only reachable through a
 public entry point". Grading is separate from simulation so one run can be scored against
 several challenge modes, and Lab runs are not scored at all.
 
-## 4. Simulation model
+## 5. JS ↔ WASM boundary
 
-### 4.1 Main loop
+The boundary is crossed **once per run**. The format is chosen so the large parts of the
+result are not serialized.
+
+- **Input**: `SimInput` passed as a JS object, deserialized with `serde-wasm-bindgen`
+  (inputs are small).
+- **`metrics`, `events`, verdicts**: returned as plain JS objects via
+  `serde-wasm-bindgen` (small).
+- **`timeline`**: kept in WASM memory as flat `f32` columns
+  (`frames × nodes × fields`). JS receives a `Float32Array` view plus a small header
+  (frame count, node order, field order). `@sd/sim` wraps it in a typed accessor
+  (`run.timeline.node('web').busy(frameIndex)`). Views are copied out before the next run
+  so they are never invalidated.
+- **`traces`**: not converted up front. `run.trace(i)` and `run.traceSummaries()` fetch
+  on demand, because only "Follow request" and the diagnosis quiz need them.
+- **Lifetime**: `SimRun` owns the WASM-side result and exposes `free()`; the wrapper also
+  registers a `FinalizationRegistry` as a safety net.
+
+Target budget, measured in the browser for 10 nodes and 10 s of virtual time: under 50 ms
+for `simulate` including the boundary, and under 5 ms to read all of `metrics`.
+
+## 6. Simulation model
+
+### 6.1 Main loop
 
 Fixed 10 ms virtual ticks (1,000 ticks for 10 s). On every tick:
 
@@ -146,31 +221,34 @@ Fixed 10 ms virtual ticks (1,000 ticks for 10 s). On every tick:
    rejects work. Work that waits longer than `clientTimeoutMs` counts as abandoned and
    lowers availability.
 4. **Accumulate latency.** End-to-end latency is service time plus queueing time plus
-   per-edge network delay along the path. Percentiles are computed from per-class
-   latency distributions.
+   per-edge network delay along the path. Percentiles are computed from per-class latency
+   histograms (fixed log-scale buckets, so results are deterministic and cheap).
 5. **Apply faults and dynamic features** scheduled for this tick.
 6. Every 10 ticks, **record a timeline frame**.
 
-### 4.2 Component plugins
+### 6.2 Component plugins
 
-```ts
-interface ComponentModel {
-  kind: string
-  meta: ComponentMeta                     // label keys, icon, category, config schema
-  accepts: EdgeKind[]                     // valid inbound edge kinds
-  defaults: Config
-  costPerMonth(cfg: Config, replicas: number): number
-  capacity(cfg: Config): { rps: number; workers: number; memMb: number }
-  step(state: NodeState, inflow: Inflow, ctx: TickContext): StepOutput
-  onFault?(fault: Fault, state: NodeState, ctx: TickContext): SimEvent[]
+```rust
+pub trait ComponentModel {
+    fn kind(&self) -> &'static str;
+    fn meta(&self) -> ComponentMeta;          // label keys, icon, category, config schema
+    fn accepts(&self) -> &'static [EdgeKind]; // valid inbound edge kinds
+    fn defaults(&self) -> Config;
+    fn cost_per_month(&self, cfg: &Config, replicas: u32) -> f64;
+    fn capacity(&self, cfg: &Config) -> Capacity; // rps, workers, mem_mb
+    fn step(&self, state: &mut NodeState, inflow: &Inflow, ctx: &mut TickCtx) -> StepOutput;
+    fn on_fault(&self, _f: &Fault, _s: &mut NodeState, _ctx: &mut TickCtx) -> Vec<SimEvent> {
+        vec![]
+    }
 }
 ```
 
-v1 components: `client`, `lb`, `api-gateway`, `web-server`, `worker`, `redis`,
-`memcached`, `postgres`, `kv-store`, `queue`, `cdn`, `object-storage`. Adding a component
-means adding one file.
+Components are registered in a static registry. v1 components: `client`, `lb`,
+`api-gateway`, `web-server`, `worker`, `redis`, `memcached`, `postgres`, `kv-store`,
+`queue`, `cdn`, `object-storage`. Adding a component means adding one file in
+`components/` and one registry line.
 
-### 4.3 Dynamic features (evaluated per tick)
+### 6.3 Dynamic features (evaluated per tick)
 
 - **Auto scaling**: target busy %, min/max instances, cooldown.
 - **Retries**: count and backoff (fixed / exponential). Retries add load.
@@ -180,102 +258,141 @@ means adding one file.
   replica, writes fail until the end of the run.
 - **Rate limiting**: per-client requests per minute.
 
-### 4.4 Behaviors
+### 6.4 Behaviors
 
 Scenario-specific logic lives in `behaviors/` and attaches to nodes through `config`:
 
-- `id-generator`: `uuid | snowflake | db-sequence`. Produces `duplicateIds` and
+- `id_generator`: `uuid | snowflake | db-sequence`. Produces `duplicateIds` and
   `outOfOrderIds`; `db-sequence` fails against stores without auto-increment.
 - `presence`: heartbeat interval, offline-after timeout, connection drops. Produces
   `statusFlaps` and `staleOnline`.
 - `fanout`: group/friend fan-out on write. Produces `inboxWritesPerSec` and queue load.
 
-### 4.5 Sampled traces
+### 6.5 Sampled traces
 
 Every N-th request (N chosen so about 300 traces are kept) is walked hop by hop through the
 same queues, receiving the actual waiting time of each queue at that tick. This keeps
 traces faithful enough for the "which component made this slow?" quiz without paying for
 per-request simulation.
 
-### 4.6 Determinism
+### 6.6 Determinism
 
-A seeded PRNG (`mulberry32`) is the only source of randomness. Iteration order over nodes
-and edges is sorted by id. Same input produces byte-identical output.
+- One seeded PRNG (`rand_pcg::Pcg32`, or a hand-written PCG to avoid the dependency) is the
+  only source of randomness.
+- Transcendental math (`exp`, `ln`, `pow`, `sqrt`) goes through `libm`, never the
+  platform's math library, so native and WASM produce identical bits.
+- No `HashMap` iteration in the hot path; nodes and edges are stored in `Vec`s ordered by id
+  (or `BTreeMap`).
+- No fused multiply-add or fast-math flags; release builds use the same float semantics on
+  every target.
+- CI runs every golden scenario natively **and** under WASM (Node) and asserts the two
+  results are byte-identical after serialization.
 
-## 5. Calibration and testing
+## 7. Calibration and testing
 
-All tunable constants live in `calibration.ts`, each with a comment explaining the estimate
-(requests per vCPU, network delay per edge kind, failover delay, cache hit curve, memory
-per in-flight request, …).
+All tunable constants live in `calibration.rs`, each with a comment explaining the estimate
+(requests per vCPU, network delay per edge kind, failover delay, cache hit curve, memory per
+in-flight request, …).
 
-Four test layers (`vitest`, `fast-check`):
+### 7.1 Golden scenarios as language-neutral JSON
 
-1. **Component unit tests**: e.g. a 1-vCPU web server at 50% load has no queue; at 150% the
-   queue grows and rejections start once memory is exhausted; a Postgres with one replica
-   emits `db.promoted` after the failover delay when its primary goes down.
-2. **Property tests**:
-   - Determinism: the same seed gives the same result.
-   - Monotonicity: more replicas on the bottleneck never raise p95.
-   - Flow conservation: requests = served + rejected + timed out + in flight.
-   - Cost equals the sum of component costs.
-   - Bounds: 0 ≤ availability ≤ 1 and p50 ≤ p95 ≤ p99.
-3. **Golden scenarios** (about 15), asserting ranges rather than exact values, for example:
-   - One web server under a 3× surge is overloaded; LB + 5 web servers meets
-     p95 ≤ 100 ms and availability ≥ 99.9%.
-   - A cache in front of the database lowers peak database connections on a read-heavy
-     workload.
-   - UUID IDs come out of order, Snowflake IDs are unique and ordered, and database-issued
-     IDs fail on a key-value store.
-   - A heartbeat timeout shorter than a drop causes flaps; a very long one leaves departed
-     users shown online.
-   - Losing the primary with no replica drops availability; adding a replica promotes it.
-4. **Snapshots** of full results for the golden scenarios, updated deliberately with
-   `--update`.
+Golden scenarios live in `fixtures/golden/*.json` at the repo root, not inside a crate:
 
-**Performance budget:** a 10 s run with 10 nodes finishes in under 300 ms on Node. This is
-enforced by a benchmark test.
+```json
+{
+  "id": "web-tier-surge-scaled",
+  "input": { "graph": {}, "workload": {}, "faults": [], "seed": 7 },
+  "expect": {
+    "p95": { "<=": 100 },
+    "availability": { ">=": 0.999 },
+    "spofCount": { "==": 0 }
+  }
+}
+```
 
-## 6. Repository layout
+The same files are consumed by Rust tests, by the `@sd/sim` TS tests through WASM, and later
+by the content pipeline. They are the contract for the engine.
 
-pnpm workspaces monorepo:
+Initial set (about 15), asserting ranges rather than exact values, for example:
+
+- One web server under a 3× surge is overloaded; LB + 5 web servers meets
+  p95 ≤ 100 ms and availability ≥ 99.9%.
+- A cache in front of the database lowers peak database connections on a read-heavy
+  workload.
+- UUID IDs come out of order, Snowflake IDs are unique and ordered, and database-issued IDs
+  fail on a key-value store.
+- A heartbeat timeout shorter than a drop causes flaps; a very long one leaves departed
+  users shown online.
+- Losing the primary with no replica drops availability; adding a replica promotes it.
+
+### 7.2 Test layers
+
+| Layer | Rust (`sim-core`) | TypeScript (`@sd/sim`) |
+|---|---|---|
+| Unit | `cargo test`, one module per component | wrapper behavior: init, free, typed views |
+| Property | `proptest`: determinism, monotonicity (more replicas never raise p95), flow conservation (requests = served + rejected + timed out + in flight), cost equals sum of components, 0 ≤ availability ≤ 1, p50 ≤ p95 ≤ p99 | — |
+| Golden | all `fixtures/golden/*.json` | all `fixtures/golden/*.json` through WASM |
+| Snapshot | `insta` snapshots of full results | — |
+| Cross-target | native vs WASM byte-identical results | — |
+| Benchmark | `criterion`: 10 nodes, 10 s run, native | `vitest bench`: same run through WASM, including boundary |
+
+## 8. Repository layout
 
 ```
 system-design/
-├─ packages/
-│  ├─ sim/                 ← this sub-project
+├─ Cargo.toml              (workspace)
+├─ crates/
+│  ├─ sim-core/            ← this sub-project
 │  │  ├─ src/
-│  │  │  ├─ types.ts
-│  │  │  ├─ simulate.ts
-│  │  │  ├─ validate.ts
-│  │  │  ├─ grade.ts
-│  │  │  ├─ rng.ts
-│  │  │  ├─ calibration.ts
-│  │  │  ├─ components/    one file per component kind
-│  │  │  ├─ behaviors/     id-generator.ts, presence.ts, fanout.ts
-│  │  │  └─ index.ts
-│  │  ├─ test/             unit/, property/, golden/, __snapshots__/
-│  │  └─ scripts/demo.ts
+│  │  │  ├─ lib.rs
+│  │  │  ├─ types.rs           SimInput, SimResult, Graph, Fault… (serde + tsify)
+│  │  │  ├─ simulate.rs        tick loop
+│  │  │  ├─ validate.rs
+│  │  │  ├─ grade.rs
+│  │  │  ├─ rng.rs
+│  │  │  ├─ calibration.rs
+│  │  │  ├─ histogram.rs
+│  │  │  ├─ components/        one file per component kind + registry
+│  │  │  └─ behaviors/         id_generator.rs, presence.rs, fanout.rs
+│  │  ├─ tests/                unit, property, golden, snapshots
+│  │  └─ benches/
+│  ├─ sim-wasm/            ← this sub-project
+│  └─ sim-cli/             ← this sub-project
+├─ packages/
+│  ├─ sim/                 ← this sub-project (@sd/sim TS wrapper)
 │  ├─ content/             (sub-project 2)
 │  └─ ui/                  (later)
 ├─ apps/web/               (sub-project 3+)
+├─ fixtures/golden/        ← this sub-project
+├─ package.json / pnpm-workspace.yaml
 └─ docs/superpowers/specs/
 ```
 
-Tooling: TypeScript strict, vitest, fast-check, ESLint, Prettier. `packages/sim` has
-**no runtime dependencies**.
+### 8.1 Tooling and build
 
-## 7. Scope
+- Rust stable, pinned with `rust-toolchain.toml`, target `wasm32-unknown-unknown`.
+- `wasm-pack build --target bundler` for Next.js and `--target nodejs` for Node tests;
+  `wasm-opt -O3` in release.
+- `clippy -D warnings` and `rustfmt` for Rust; TypeScript strict, ESLint and Prettier for TS.
+- pnpm workspaces for JS packages. A root script `pnpm build:sim` runs the wasm build and
+  copies the output and generated `.d.ts` into `packages/sim`.
+- One `pnpm test` at the root runs `cargo test`, the cross-target check and the TS tests.
 
-**In scope:** the engine, the validator, the grader, the 12 components, the three behaviors,
-the 14 fault kinds, the four test layers, the benchmark, and a demo script.
+## 9. Scope
 
-**Out of scope:** UI, canvas, animation, lesson content, storage, AI, and AI-chosen
+**In scope:** `sim-core` (engine, validator, grader, 12 components, three behaviors, 14 fault
+kinds), `sim-wasm`, `sim-cli`, `@sd/sim`, the golden fixtures, all test layers and
+benchmarks, and a demo.
+
+**Out of scope:** UI, canvas, animation, lesson content format, storage, AI, and AI-chosen
 chaos mode.
 
-## 8. Done when
+## 10. Done when
 
-- All tests pass.
-- All golden scenarios pass.
-- The benchmark is under 300 ms.
-- `pnpm --filter sim demo` runs "1 web server → LB + 5 web servers" under a 3× surge and
-  prints metrics before and after.
+- `cargo test`, `clippy` and the TS tests all pass.
+- All golden scenarios pass natively and through WASM, with byte-identical results.
+- Benchmarks meet budget: under 50 ms per run through WASM in Node including the
+  boundary, and `sim-cli` validates 100 golden-sized scenarios in under 2 s on 8 cores.
+- `sim-cli run fixtures/golden/web-tier-surge-*.json` prints metrics for
+  "1 web server" and "LB + 5 web servers" under a 3× surge, side by side.
+- `@sd/sim` can be imported from a Next.js page and run in a Web Worker (smoke test).
