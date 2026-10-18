@@ -95,3 +95,4 @@ pub(crate) mod test_util;
 mod engine;
 pub mod simulate;
 pub use simulate::simulate;
+mod faults;

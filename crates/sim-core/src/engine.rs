@@ -2,6 +2,7 @@
 
 use crate::calibration::*;
 use crate::components::{self, effective_capacity, effective_cost, Capacity, Role};
+use crate::faults::FaultQueue;
 use crate::histogram::Histogram;
 use crate::rng::Pcg32;
 use crate::types::*;
@@ -20,7 +21,6 @@ pub(crate) struct NodeRt {
     /// Databases only: false while the primary is lost (writes fail).
     pub primary_up: bool,
     /// Databases only: when a replica will be promoted after losing the primary.
-    #[allow(dead_code)] // Set and read by fault handling (Task 7).
     pub promote_at_ms: Option<f64>,
     pub children: Vec<(usize, EdgeKind)>,
     pub queue: f64,
@@ -104,6 +104,8 @@ pub(crate) struct Engine<'a> {
     /// Multiplies client traffic; faults such as traffic-surge-3x change it.
     pub rate_multiplier: f64,
     pub now_ms: f64,
+    pub(crate) fault_queue: FaultQueue,
+    pub(crate) fault_rng: Pcg32,
     order: Vec<usize>,
     clients: Vec<usize>,
     ticks: u32,
@@ -164,6 +166,8 @@ impl<'a> Engine<'a> {
             events: Vec::new(),
             rate_multiplier: 1.0,
             now_ms: 0.0,
+            fault_queue: FaultQueue::new(&input.faults),
+            fault_rng: Pcg32::new(input.seed ^ 0x5bd1_e995),
             order,
             clients,
             ticks,
@@ -209,6 +213,7 @@ impl<'a> Engine<'a> {
     }
 
     fn tick(&mut self) {
+        self.apply_due_faults();
         let timeout_s = self.timeout_ms() / 1000.0;
         let lambda = self.rate_at(self.now_ms) * TICK_MS / 1000.0;
         let generated = self.traffic_rng.poisson(lambda);
