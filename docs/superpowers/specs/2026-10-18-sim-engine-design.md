@@ -23,6 +23,24 @@ Decisions already made:
   sub-project, plus a content pipeline) and, later, a multi-agent Workflow that mass-produces
   content and uses the content validator as its judge.
 
+### 1.1 Product-wide rules (apply to every sub-project)
+
+- **Audience:** absolute beginners. The curriculum goes from level 0 (never heard of a load
+  balancer) to 100 (can design, defend and debug large distributed systems), in levels L0–L6
+  with an exit check per level. See `.claude/agents/content-researcher.md`.
+- **Content is original.** Research draws on many public sources (papers, official docs,
+  engineering blogs, courses) and may use learning products and books, including Syscraft, as a
+  map of topics and structure. Learner-facing text, exercises, scenarios, hints and visuals are
+  written by us; nothing is copied or lightly reworded.
+- **UI:** at least equal to the reference product in features and interaction quality; layout
+  patterns may be similar, visual identity is our own.
+- **No runtime dependency on the reference site.** The product, its backend and CI never call
+  it. Parity uses reference numbers captured once during development and committed to
+  `fixtures/parity` (numbers, structure and pass/fail only; no text).
+- **Parity target:** for the same design and scenario, every goal's pass/fail matches the
+  reference exactly; measured numbers match within the tolerances in plan 1a, Task 15.
+- **Dev environment:** every build and test runs in the Docker dev container (`./dev <cmd>`).
+
 Build order (each item gets its own spec → plan → implementation cycle):
 
 1. **`sim` engine** (this document)
