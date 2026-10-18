@@ -1,0 +1,8 @@
+{
+  "name": "system-design",
+  "private": true,
+  "scripts": {
+    "build:sim": "pnpm --filter @sd/sim build:wasm",
+    "test": "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && pnpm -r test"
+  }
+}

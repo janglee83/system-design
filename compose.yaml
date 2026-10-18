@@ -1,0 +1,21 @@
+services:
+  dev:
+    build: .
+    image: system-design-dev:1
+    working_dir: /work
+    volumes:
+      - .:/work
+      - cargo-target:/work/target
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - node-modules-root:/work/node_modules
+      - node-modules-sim:/work/packages/sim/node_modules
+      - pnpm-store:/pnpm-store
+
+volumes:
+  cargo-target:
+  cargo-registry:
+  cargo-git:
+  node-modules-root:
+  node-modules-sim:
+  pnpm-store:
