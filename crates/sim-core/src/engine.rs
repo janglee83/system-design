@@ -106,6 +106,9 @@ pub(crate) struct Engine<'a> {
     pub now_ms: f64,
     pub(crate) fault_queue: FaultQueue,
     pub(crate) fault_rng: Pcg32,
+    pub(crate) trace_rng: Pcg32,
+    pub(crate) traces: Vec<Trace>,
+    trace_every: u32,
     order: Vec<usize>,
     clients: Vec<usize>,
     ticks: u32,
@@ -168,6 +171,9 @@ impl<'a> Engine<'a> {
             now_ms: 0.0,
             fault_queue: FaultQueue::new(&input.faults),
             fault_rng: Pcg32::new(input.seed ^ 0x5bd1_e995),
+            trace_rng: Pcg32::new(input.seed ^ 0x9e37_79b9),
+            traces: Vec::new(),
+            trace_every: (ticks / TRACE_TARGET).max(1),
             order,
             clients,
             ticks,
@@ -178,6 +184,10 @@ impl<'a> Engine<'a> {
             peak_busy: 0.0,
             peak_db_connections: 0.0,
         }
+    }
+
+    pub(crate) fn clients_slice(&self) -> &[usize] {
+        &self.clients
     }
 
     pub fn timeout_ms(&self) -> f64 {
@@ -206,6 +216,9 @@ impl<'a> Engine<'a> {
         for k in 0..self.ticks {
             self.now_ms = f64::from(k) * TICK_MS;
             self.tick();
+            if k % self.trace_every == 0 {
+                self.sample_trace();
+            }
             if (k + 1) % FRAME_EVERY_TICKS == 0 || k + 1 == self.ticks {
                 self.record_frame();
             }
@@ -484,7 +497,7 @@ impl<'a> Engine<'a> {
                 fields: TIMELINE_FIELDS.iter().map(|s| s.to_string()).collect(),
                 data: self.timeline,
             },
-            traces: Vec::new(),
+            traces: self.traces,
             events: self.events,
         }
     }

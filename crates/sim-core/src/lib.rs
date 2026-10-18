@@ -96,3 +96,4 @@ mod engine;
 pub mod simulate;
 pub use simulate::simulate;
 mod faults;
+mod traces;
