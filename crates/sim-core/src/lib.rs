@@ -85,3 +85,9 @@ mod type_tests {
         assert_eq!(ConfigValue::Bool(true).as_bool(), Some(true));
     }
 }
+
+pub mod validate;
+pub use validate::{has_blocking, validate_graph};
+
+#[cfg(test)]
+pub(crate) mod test_util;
