@@ -91,3 +91,7 @@ pub use validate::{has_blocking, validate_graph};
 
 #[cfg(test)]
 pub(crate) mod test_util;
+
+mod engine;
+pub mod simulate;
+pub use simulate::simulate;

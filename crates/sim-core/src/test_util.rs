@@ -30,7 +30,6 @@ pub fn web_tier(lb_replicas: u32, web_replicas: u32) -> Graph {
     )
 }
 
-#[allow(dead_code)]
 pub fn input(graph: Graph, base_rps: f64) -> SimInput {
     SimInput {
         graph,
