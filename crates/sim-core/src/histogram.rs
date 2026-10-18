@@ -46,10 +46,11 @@ impl Histogram {
     }
 
     pub fn percentile(&self, p: f64) -> f64 {
-        if self.total <= 0.0 {
+        let total: f64 = self.counts.iter().sum();
+        if total <= 0.0 {
             return 0.0;
         }
-        let target = p.clamp(0.0, 1.0) * self.total;
+        let target = p.clamp(0.0, 1.0) * total;
         let mut cumulative = 0.0;
         for (i, c) in self.counts.iter().enumerate() {
             cumulative += c;
@@ -113,5 +114,17 @@ mod tests {
         h.record(1e12, 1.0);
         assert!(h.percentile(0.0) > 0.0);
         assert!(h.percentile(1.0).is_finite());
+    }
+
+    #[test]
+    fn fractional_weights_reach_the_last_bucket_at_p100() {
+        let mut h = Histogram::new();
+        for k in 0..1000 {
+            let value = (k % 50 + 1) as f64;
+            let weight = 0.1 + (k % 7) as f64 * 0.013;
+            h.record(value, weight);
+        }
+        let p100 = h.percentile(1.0);
+        assert!(close(p100, 50.0), "p100={}, expected ~50.0", p100);
     }
 }
