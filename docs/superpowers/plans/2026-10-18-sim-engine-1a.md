@@ -5945,7 +5945,7 @@ Expected: passes (goal verdicts agree). Then run `./dev cargo run -q -p sim-cli 
 
 - [ ] **Step 5: Calibrate until parity passes**
 
-Run `./dev cargo run -q -p sim-cli -- parity fixtures/parity`. For each `FAIL … metric …` line, adjust **only** `calibration.rs` (for example `WEB_QUEUE_PER_GB`, `WEB_SERVICE_MS`, `MAX_UTILIZATION_FOR_LATENCY`), with a comment naming the parity fixture that motivated the value. After every change run `./dev cargo test --workspace` too: golden fixtures and property tests must still pass. Stop when `sim-cli parity` prints `2 passed, 0 failed`.
+Run `./dev cargo run -q -p sim-cli -- parity fixtures/parity`. For each `FAIL … metric …` line, adjust **only** the defaults in `Calibration::default()` in `calibration.rs` (for example `web_queue_per_gb`, `web_service_ms`, `max_utilization_for_latency`), with a comment naming the parity fixture that motivated the value. After every change run `./dev cargo test --workspace` too: golden fixtures and property tests must still pass. Stop when `sim-cli parity` prints `2 passed, 0 failed`.
 
 If a metric cannot reach tolerance without breaking golden fixtures, stop and report to the user with the closest values; do not widen tolerances on your own.
 
