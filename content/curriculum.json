@@ -3291,7 +3291,7 @@
               "id": "up",
               "metric": "availability",
               "op": ">=",
-              "value": 0.97
+              "value": 0.96
             },
             {
               "id": "no-spof",
