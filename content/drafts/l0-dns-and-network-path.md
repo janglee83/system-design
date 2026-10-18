@@ -8,6 +8,7 @@ prerequisites: [l0-http-basics]
 research: [content/research/dns-and-network-path.md]
 engine_readiness: not-needed
 engine_gaps: [connection-setup-cost]
+experiment_upgrade: blocked-by-gap
 status: draft
 ---
 

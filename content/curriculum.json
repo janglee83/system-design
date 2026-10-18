@@ -4,7 +4,7 @@
   "description": "System Design Lab curriculum map, level 0 (never heard of a load balancer) to 100. Generated and validated by the content researcher; edit carefully and keep ids stable.",
   "fields": {
     "format": "experiment = runnable on the sim engine and checked by sim-cli; reading+check = text with check questions (may become an experiment once its engine needs exist)",
-    "engine": "components/faults/dynamic/behaviors/calibration/nodeOverrides/metrics the lesson's experiment needs. readiness: ready-1a | needs-1b (only planned engine features) | blocked-by-gap (needs an unplanned feature, see engine_gaps) | not-needed",
+    "engine": "components/faults/dynamic/behaviors/calibration/nodeOverrides/metrics the lesson's experiment needs. readiness: ready-1a | needs-1b (only planned engine features) | blocked-by-gap (needs an unplanned feature, see engine_gaps) | not-needed (reading lesson). experimentUpgrade: for reading lessons that could become experiments, the readiness of that future experiment",
     "engine_gaps": "ids from engineGaps: engine features NOT in the sim-engine spec that the lesson's (current or intended) experiment needs",
     "goals": "metric + op + value, graded by sim-core grade(); metric keys match SimResult.metrics",
     "modes": "standard | tight-budget | misbehaving-servers | chaos | named variants; each mode has a budget, faults and optional calibration overrides"
@@ -510,7 +510,8 @@
               "availability",
               "requestsUnreachable"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-client-server.md"
@@ -543,7 +544,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-http-basics.md"
@@ -575,7 +577,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "connection-setup-cost"
@@ -615,7 +618,8 @@
             "metrics": [
               "p95"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-latency-and-distance.md"
@@ -654,7 +658,8 @@
               "requestsRejected",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-throughput-and-capacity.md"
@@ -692,7 +697,8 @@
               "p95",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-queueing-and-utilization.md"
@@ -729,7 +735,8 @@
               "p50",
               "p99"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-percentiles.md"
@@ -772,7 +779,8 @@
               "requestsRejected",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-database-basics.md"
@@ -814,7 +822,8 @@
               "peakDbConnections",
               "cacheOps"
             ],
-            "readiness": "needs-1b"
+            "readiness": "not-needed",
+            "experimentUpgrade": "needs-1b"
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-cache-basics.md"
@@ -857,7 +866,8 @@
               "availability",
               "spofCount"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-single-point-of-failure.md"
@@ -889,7 +899,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-availability-nines.md"
@@ -927,7 +938,8 @@
               "requestsRejected",
               "costPerMonth"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-cost-basics.md"
@@ -966,7 +978,8 @@
               "peakBusy",
               "costPerMonth"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": [],
           "draft": "content/drafts/l0-estimation-basics.md"
@@ -1302,7 +1315,8 @@
               "costPerMonth",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1341,7 +1355,8 @@
               "availability",
               "requestsRejected"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1377,7 +1392,8 @@
               "p95",
               "costPerMonth"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1415,7 +1431,8 @@
               "requestsRejected",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1454,7 +1471,8 @@
               "p95",
               "p99"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "lb-algorithm-effect"
@@ -1494,7 +1512,8 @@
             "metrics": [
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "health-check-detection-delay",
@@ -1537,7 +1556,8 @@
               "requestsRejected",
               "costPerMonth"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1576,7 +1596,8 @@
               "availability",
               "spofCount"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1613,7 +1634,8 @@
             "metrics": [
               "exposedBackends"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -1650,7 +1672,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "session-state-model"
@@ -1692,7 +1715,8 @@
             "metrics": [
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "session-state-model"
@@ -1737,7 +1761,8 @@
               "costPerMonth",
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "autoscaling-warmup-delay"
@@ -1783,7 +1808,8 @@
               "peakBusy",
               "costPerMonth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "static-request-share-and-cdn-hit-model"
@@ -1826,7 +1852,8 @@
               "availability",
               "p95"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "static-request-share-and-cdn-hit-model"
@@ -1863,7 +1890,8 @@
             "metrics": [
               "exposedBackends"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "gateway-path-routing"
@@ -1899,7 +1927,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "zones-and-zone-down-fault"
@@ -1932,7 +1961,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "regions-and-geo-routing"
@@ -1965,7 +1995,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "connection-draining",
@@ -2470,7 +2501,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2498,7 +2530,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2536,7 +2569,8 @@
               "p95",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2573,7 +2607,8 @@
               "peakDbConnections",
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "postgres-max-connections"
@@ -2613,7 +2648,8 @@
               "peakBusy",
               "costPerMonth"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2650,7 +2686,8 @@
             "metrics": [
               "staleReads"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "replication-lag-model"
@@ -2697,7 +2734,8 @@
               "availability",
               "spofCount"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2738,7 +2776,8 @@
               "peakDbConnections",
               "cacheOps"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2777,7 +2816,8 @@
               "peakDbConnections",
               "costPerMonth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -2816,7 +2856,8 @@
               "staleReads",
               "peakDbConnections"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "cache-ttl-staleness-model"
@@ -2859,7 +2900,8 @@
               "availability",
               "peakDbConnections"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "cache-stampede-and-hot-keys"
@@ -2897,7 +2939,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "write-policy"
@@ -2935,7 +2978,8 @@
               "p95",
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "sql-sharding"
@@ -2973,7 +3017,8 @@
               "peakBusy",
               "p99"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "sql-sharding"
@@ -3002,7 +3047,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3041,7 +3087,8 @@
               "lostUpdates",
               "writeConflicts"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "transaction-isolation-model"
@@ -3080,7 +3127,8 @@
               "p95",
               "availability"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3120,7 +3168,8 @@
               "p95",
               "costPerMonth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3148,7 +3197,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "search-index-component"
@@ -3193,7 +3243,8 @@
               "availability",
               "costPerMonth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         }
@@ -3617,7 +3668,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3655,7 +3707,8 @@
               "p95",
               "peakQueueDepth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3694,7 +3747,8 @@
               "peakQueueDepth",
               "costPerMonth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3733,7 +3787,8 @@
               "inboxWritesPerSec",
               "peakQueueDepth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3772,7 +3827,8 @@
               "lostMessages",
               "duplicateWrites"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "delivery-semantics"
@@ -3815,7 +3871,8 @@
             "metrics": [
               "duplicateWrites"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "idempotency-keys"
@@ -3855,7 +3912,8 @@
               "availability",
               "p99"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "per-hop-timeouts",
@@ -3897,7 +3955,8 @@
               "availability",
               "peakBusy"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -3937,7 +3996,8 @@
               "availability",
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "retry-jitter"
@@ -3978,7 +4038,8 @@
               "p95",
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "third-party-node"
@@ -4017,7 +4078,8 @@
               "availability",
               "p95"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4045,7 +4107,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "rate-limit-algorithms"
@@ -4085,7 +4148,8 @@
               "p95",
               "throughputRps"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "load-shedding"
@@ -4124,7 +4188,8 @@
             "metrics": [
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "bulkheads",
@@ -4167,7 +4232,8 @@
             "metrics": [
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "fallbacks"
@@ -4197,7 +4263,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "dead-letter-queue"
@@ -4236,7 +4303,8 @@
               "peakQueueDepth",
               "costPerMonth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4279,7 +4347,8 @@
               "p95",
               "peakBusy"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4311,7 +4380,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         }
@@ -4737,7 +4807,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4774,7 +4845,8 @@
               "availability",
               "staleReads"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "network-partition-fault"
@@ -4803,7 +4875,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4832,7 +4905,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4860,7 +4934,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -4900,7 +4975,8 @@
               "availability",
               "p95"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "kv-quorum-config"
@@ -4940,7 +5016,8 @@
             "metrics": [
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "partitioning-scheme"
@@ -4976,7 +5053,8 @@
             "metrics": [
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "partitioning-scheme"
@@ -5017,7 +5095,8 @@
               "duplicateIds",
               "outOfOrderIds"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5055,7 +5134,8 @@
               "outOfOrderIds",
               "lostUpdates"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "clock-skew"
@@ -5085,7 +5165,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5122,7 +5203,8 @@
               "statusFlaps",
               "staleOnline"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5149,7 +5231,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "gossip-membership"
@@ -5188,7 +5271,8 @@
             "metrics": [
               "writeConflicts"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "leader-election-leases",
@@ -5227,7 +5311,8 @@
             "metrics": [
               "lostUpdates"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "conflict-resolution"
@@ -5257,7 +5342,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         }
@@ -5597,7 +5683,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5628,7 +5715,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5667,7 +5755,8 @@
               "availability",
               "p95"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "rate-limit-algorithms"
@@ -5708,7 +5797,8 @@
               "outOfOrderIds",
               "p95"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5753,7 +5843,8 @@
               "availability",
               "duplicateIds"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5794,7 +5885,8 @@
               "staleReads",
               "p99"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "kv-quorum-config",
@@ -5836,7 +5928,8 @@
               "throughputRps",
               "peakQueueDepth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "crawler-behaviors"
@@ -5885,7 +5978,8 @@
               "duplicateWrites",
               "peakQueueDepth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "third-party-node",
@@ -5931,7 +6025,8 @@
               "p95",
               "peakQueueDepth"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -5974,7 +6069,8 @@
               "outOfOrderIds",
               "p95"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "long-lived-connections"
@@ -6014,7 +6110,8 @@
               "statusFlaps",
               "staleOnline"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -6052,7 +6149,8 @@
               "p99",
               "cacheOps"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "autocomplete-topk"
@@ -6101,7 +6199,8 @@
               "lostUpdates",
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "inventory-concurrency-control"
@@ -6145,7 +6244,8 @@
               "availability",
               "costPerMonth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "chunked-upload-dedupe"
@@ -6187,7 +6287,8 @@
               "p95",
               "costPerMonth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "static-request-share-and-cdn-hit-model"
@@ -6234,7 +6335,8 @@
               "duplicateWrites",
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "idempotency-keys",
@@ -6274,7 +6376,8 @@
               "p95",
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "sorted-set-ops"
@@ -6314,7 +6417,8 @@
               "p95",
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "geo-index"
@@ -6357,7 +6461,8 @@
               "lostMessages",
               "peakQueueDepth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "event-log-stream"
@@ -6398,7 +6503,8 @@
               "duplicateWrites",
               "peakQueueDepth"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "leader-election-leases"
@@ -7212,7 +7318,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "regions-and-geo-routing"
@@ -7253,7 +7360,8 @@
               "p95",
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "regions-and-geo-routing"
@@ -7294,7 +7402,8 @@
               "availability",
               "lostUpdates"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "regions-and-geo-routing",
@@ -7334,7 +7443,8 @@
               "writeConflicts",
               "p95"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "multi-region-writes",
@@ -7373,7 +7483,8 @@
               "availability",
               "p99"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "consensus-replication"
@@ -7403,7 +7514,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -7440,7 +7552,8 @@
               "availability",
               "lostUpdates"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "distributed-transactions"
@@ -7483,7 +7596,8 @@
               "duplicateWrites",
               "lostUpdates"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "distributed-transactions",
@@ -7525,7 +7639,8 @@
             "metrics": [
               "lostMessages"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "outbox-cdc"
@@ -7566,7 +7681,8 @@
               "staleReads",
               "lostMessages"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "outbox-cdc",
@@ -7597,7 +7713,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "blocked-by-gap"
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
           },
           "engine_gaps": [
             "event-log-stream"
@@ -7639,7 +7756,8 @@
               "p99",
               "availability"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "backpressure-producer-feedback"
@@ -7677,7 +7795,8 @@
               "p99",
               "throughputRps"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "load-shedding"
@@ -7719,7 +7838,8 @@
               "p99",
               "peakBusy"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "hedged-requests"
@@ -7767,7 +7887,8 @@
               "peakBusy",
               "costPerMonth"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -7810,7 +7931,8 @@
               "p95",
               "availability"
             ],
-            "readiness": "ready-1a"
+            "readiness": "ready-1a",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -7838,7 +7960,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -7880,7 +8003,8 @@
               "p95",
               "availability"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -7923,7 +8047,8 @@
               "availability",
               "p95"
             ],
-            "readiness": "needs-1b"
+            "readiness": "needs-1b",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         },
@@ -7959,7 +8084,8 @@
               "availability",
               "p95"
             ],
-            "readiness": "blocked-by-gap"
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
           },
           "engine_gaps": [
             "deployment-model"
@@ -7990,7 +8116,8 @@
             "calibration": [],
             "nodeOverrides": [],
             "metrics": [],
-            "readiness": "not-needed"
+            "readiness": "not-needed",
+            "experimentUpgrade": null
           },
           "engine_gaps": []
         }
@@ -8411,9 +8538,9 @@
     },
     "lessonReadiness": {
       "ready-1a": 22,
-      "needs-1b": 20,
-      "blocked-by-gap": 67,
-      "not-needed": 18
+      "needs-1b": 19,
+      "blocked-by-gap": 54,
+      "not-needed": 32
     },
     "challengeReadiness": {
       "ready-1a": 5,

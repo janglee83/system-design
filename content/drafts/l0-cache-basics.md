@@ -6,7 +6,8 @@ minutes: 12
 difficulty: 1
 prerequisites: [l0-database-basics, l0-latency-and-distance]
 research: [content/research/caching-basics.md]
-engine_readiness: needs-1b
+engine_readiness: not-needed
+experiment_upgrade: needs-1b
 engine_gaps: []
 status: draft
 upgrade: Becomes an experiment when the `redis` component ships (planned, spec §6.2). Planned experiment in the appendix.
