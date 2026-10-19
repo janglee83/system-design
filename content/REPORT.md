@@ -139,3 +139,18 @@ target), `regions-and-geo-routing`, `kv-quorum-config`, `partitioning-scheme`, `
 1. **Most of the curriculum above L1 cannot run yet**: only 22 lessons and 5 challenges run on 1a; 54 lessons and 21 challenges need features the spec does not plan. The engine roadmap should be prioritised against `engineGaps`.
 2. **Expected numbers are from my re-implementation, not the real engine**, and one golden fixture already disagrees with the formula. Every draft must pass `sim-cli check` before publishing; thresholds were chosen with margin, but the failover drill and exit checks are close to their limits.
 3. **Research depth stops at L1.** Notes exist for L0 and L1 only; L2–L6 lessons in the map rely on my background knowledge and need their own cited notes (papers listed in the agent file) before drafting. Vietnamese text also needs a native-speaker review for tone and terminology consistency.
+
+Highest impact: `third-party-node`, `static-request-share-and-cdn-hit-model`,
+`regions-and-geo-routing`, `idempotency-keys`, `kv-quorum-config`, `partitioning-scheme`,
+`distributed-transactions` and `event-log-stream`.
+
+## Top concerns
+
+1. **Most of L3–L6 cannot run yet.** Only 22 lessons and 6 challenges run on 1a, and 59 lessons and
+   27 challenges need features the spec does not plan. The engine roadmap should be ordered by the
+   gap table above.
+2. **New challenge numbers are unchecked.** The 7 new challenges, and all expected values in future
+   drafts, must pass `sim-cli check` before they ship.
+3. **Note depth is uneven, and drafts stop at L0.** Research now covers every lesson, but only the
+   L0 lessons have drafts. The older L2–L5 notes need the same depth as the L6 notes before drafting,
+   and the Vietnamese text needs a native-speaker review.
