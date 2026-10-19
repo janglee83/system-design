@@ -7,9 +7,63 @@ pub use issue::{codes, ContentIssue};
 pub mod types;
 pub use types::*;
 
-pub mod prose;
 pub mod tree;
 pub use tree::{load_dir, ContentTree, LoadError, RawItem};
 
+pub(crate) mod checks;
+pub mod ids;
+pub mod prose;
+pub mod report;
+pub(crate) mod structure;
+
+pub use report::{ItemKind, ItemReport, Readiness, Report, RunSummary};
+
+use structure::{Item, LEVELS_ID, LEVELS_PATH};
+
 #[cfg(test)]
 pub(crate) mod test_util;
+
+fn item_report<T>(kind: ItemKind, item: &Item<T>, o: checks::Outcome) -> ItemReport {
+    let mut issues = item.issues.clone();
+    issues.extend(o.issues);
+    ItemReport {
+        id: item.id.clone(),
+        kind,
+        path: item.dir.clone(),
+        readiness: o.readiness,
+        passed: true,
+        issues,
+        runs: o.runs,
+    }
+}
+
+/// Validate an in-memory tree. Deterministic: same tree, same report.
+pub fn validate_tree(tree: &ContentTree) -> Report {
+    let mut parsed = structure::parse_tree(tree);
+    structure::check_cross(&mut parsed);
+    let ctx = checks::Ctx::new(parsed.levels.as_ref());
+    let mut items = vec![ItemReport {
+        id: LEVELS_ID.into(),
+        kind: ItemKind::Levels,
+        path: LEVELS_PATH.into(),
+        readiness: None,
+        passed: true,
+        issues: parsed.global.clone(),
+        runs: vec![],
+    }];
+    for l in &parsed.lessons {
+        items.push(item_report(
+            ItemKind::Lesson,
+            l,
+            checks::check_lesson(l, &ctx),
+        ));
+    }
+    for c in &parsed.challenges {
+        items.push(item_report(
+            ItemKind::Challenge,
+            c,
+            checks::check_challenge(c, &ctx),
+        ));
+    }
+    Report::new(items)
+}

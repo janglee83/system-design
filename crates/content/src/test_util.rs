@@ -83,3 +83,22 @@ pub fn edit_prose(
     let slot = if lang == "vi" { &mut it.vi } else { &mut it.en };
     *slot = Ok(f(slot.as_ref().unwrap()));
 }
+use crate::issue::ContentIssue;
+use crate::report::Report;
+
+pub fn issues_of(report: &Report, id: &str) -> Vec<ContentIssue> {
+    report
+        .items
+        .iter()
+        .filter(|i| i.id == id)
+        .flat_map(|i| i.issues.clone())
+        .collect()
+}
+
+pub fn codes_of(report: &Report, id: &str) -> Vec<String> {
+    issues_of(report, id).into_iter().map(|i| i.code).collect()
+}
+
+pub fn has(report: &Report, id: &str, code: &str) -> bool {
+    codes_of(report, id).iter().any(|c| c == code)
+}
