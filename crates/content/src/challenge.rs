@@ -183,7 +183,12 @@ pub(crate) fn check_engine(
 ) {
     let start = normalized(&c.start);
     let mut scan = Scan::default();
-    scan.input(&start, ctx);
+    // Every mode replaces `faults`, so start's own faults never run: scan start without them.
+    let mut start_alone = start.clone();
+    if let Some(o) = start_alone.as_object_mut() {
+        o.remove("faults");
+    }
+    scan.input(&start_alone, ctx);
     let mut designs: Vec<(&Mode, &str, Value)> = vec![];
     for m in &c.modes {
         if !(m.faults.is_array() && m.workload_override.is_object()) {
@@ -571,5 +576,14 @@ mod tests {
             (Some("standard/naive"), Some("up"), false)
         );
         assert!(it.passed);
+    }
+
+    #[test]
+    fn start_faults_are_not_scanned_because_modes_replace_them() {
+        let it = shop_item(|c| {
+            c["start"]["faults"] = json!([{"kind": "instance-slow", "atMs": 1, "extra": 1}])
+        });
+        assert!(it.issues.is_empty(), "{:#?}", it.issues);
+        assert_eq!(it.readiness, Some(crate::Readiness::Ready));
     }
 }
