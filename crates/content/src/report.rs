@@ -60,15 +60,14 @@ pub struct Report {
 }
 
 impl Report {
-    /// Sorts items (`levels` first, then by id) and counts. Issue order inside an item is the
+    /// Sorts items (`levels` first, then challenges, then lessons, each by id) and counts. Issue order inside an item is the
     /// fixed check order and is kept, never sorted.
     pub fn new(mut items: Vec<ItemReport>) -> Report {
         for it in &mut items {
             it.passed = !it.issues.iter().any(|i| i.blocking);
         }
-        items.sort_by(|a, b| {
-            (a.kind != ItemKind::Levels, &a.id).cmp(&(b.kind != ItemKind::Levels, &b.id))
-        });
+        // `ItemKind` orders levels, then challenges, then lessons.
+        items.sort_by(|a, b| (a.kind, &a.id).cmp(&(b.kind, &b.id)));
         let count = |f: &dyn Fn(&ItemReport) -> bool| items.iter().filter(|i| f(i)).count() as u32;
         Report {
             passed: count(&|i| i.passed),
@@ -97,5 +96,34 @@ impl RunSummary {
             metrics: r.metrics.clone(),
             events: events.into_iter().collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn item(id: &str, kind: ItemKind) -> ItemReport {
+        ItemReport {
+            id: id.into(),
+            kind,
+            path: String::new(),
+            readiness: None,
+            passed: true,
+            issues: vec![],
+            runs: vec![],
+        }
+    }
+
+    #[test]
+    fn items_sort_by_levels_then_kind_then_id() {
+        let r = Report::new(vec![
+            item("aaa", ItemKind::Lesson),
+            item("l0-b", ItemKind::Lesson),
+            item("c-l0-z", ItemKind::Challenge),
+            item("levels", ItemKind::Levels),
+        ]);
+        let ids: Vec<&str> = r.items.iter().map(|i| i.id.as_str()).collect();
+        assert_eq!(ids, vec!["levels", "c-l0-z", "aaa", "l0-b"]);
     }
 }
