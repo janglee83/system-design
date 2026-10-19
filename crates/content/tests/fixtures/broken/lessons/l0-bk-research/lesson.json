@@ -1,0 +1,137 @@
+{
+  "formatVersion": 1,
+  "id": "l0-bk-research",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 12,
+  "difficulty": 1,
+  "prerequisites": [],
+  "concepts": [
+    "capacity"
+  ],
+  "research": [
+    "no-such-note"
+  ],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "web",
+            "kind": "web-server",
+            "config": {
+              "cpu": 1,
+              "memoryGb": 2
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "web",
+            "kind": "http"
+          }
+        ]
+      },
+      "workload": {
+        "baseRps": 12000
+      }
+    },
+    "controls": [
+      {
+        "id": "cpu",
+        "type": "stepper",
+        "path": "graph.nodes[web].config.cpu",
+        "options": [
+          1,
+          2,
+          4
+        ],
+        "default": 1
+      },
+      {
+        "id": "timeout",
+        "type": "select",
+        "path": "workload.clientTimeoutMs",
+        "options": [
+          1000,
+          5000
+        ],
+        "default": 1000
+      }
+    ],
+    "goals": [
+      {
+        "id": "fast",
+        "metric": "p95",
+        "op": "<=",
+        "value": 50
+      },
+      {
+        "id": "no-drops",
+        "metric": "requestsRejected",
+        "op": "<=",
+        "value": 0
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "cpu": 2
+        },
+        "expect": {
+          "p95": {
+            "<=": 10
+          },
+          "requestsRejected": {
+            "==": 0
+          }
+        }
+      },
+      {
+        "id": "B",
+        "misconception": "M1",
+        "set": {
+          "cpu": 1,
+          "timeout": 5000
+        },
+        "failsGoals": [
+          "fast",
+          "no-drops"
+        ],
+        "expect": {
+          "requestsRejected": {
+            ">=": 1
+          }
+        },
+        "expectEvents": [
+          "node.overloaded"
+        ]
+      },
+      {
+        "id": "C",
+        "misconception": "M2",
+        "set": {
+          "cpu": 1
+        },
+        "failsGoals": [
+          "fast",
+          "no-drops"
+        ],
+        "expect": {
+          "p95": {
+            ">=": 500
+          }
+        }
+      }
+    ]
+  }
+}
