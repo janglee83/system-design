@@ -34,7 +34,6 @@ pub(crate) struct Parsed {
     pub levels: Option<Levels>,
     /// Issues about levels.json and roadmap entries (report item `levels`).
     pub global: Vec<ContentIssue>,
-    #[allow(dead_code)] // read by later checks (plan Tasks 7); remove then
     pub research: BTreeSet<String>,
     pub lessons: Vec<Item<Lesson>>,
     pub challenges: Vec<Item<Challenge>>,
@@ -258,7 +257,6 @@ pub(crate) fn parse_tree(tree: &ContentTree) -> Parsed {
 /// What levels.json lists: id -> (level, is_lesson), plus the global lesson order.
 pub(crate) struct Listing {
     pub listed: BTreeMap<String, (LevelId, bool)>,
-    #[allow(dead_code)] // read by later checks (plan Tasks 7); remove then
     pub lesson_order: Vec<String>,
 }
 
@@ -411,8 +409,187 @@ pub(crate) fn check_cross(p: &mut Parsed) {
     check_references(p, &levels, &listing);
 }
 
-/// Prerequisites, research and references from levels.json. Replaced in Task 7.
-fn check_references(_p: &mut Parsed, _levels: &Levels, _listing: &Listing) {}
+/// True when `start` can reach itself through prerequisite edges.
+fn on_cycle(start: &str, edges: &BTreeMap<String, Vec<String>>) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<&str> = edges
+        .get(start)
+        .map(|v| v.iter().map(String::as_str).collect())
+        .unwrap_or_default();
+    while let Some(id) = stack.pop() {
+        if id == start {
+            return true;
+        }
+        if seen.insert(id) {
+            stack.extend(edges.get(id).into_iter().flatten().map(String::as_str));
+        }
+    }
+    false
+}
+
+fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
+    let mut lesson_ids: BTreeSet<String> = levels
+        .roadmap
+        .lessons
+        .iter()
+        .map(|s| s.id.clone())
+        .collect();
+    lesson_ids.extend(
+        p.lessons
+            .iter()
+            .filter_map(|i| i.doc.as_ref().map(|d| d.id.clone())),
+    );
+    // Challenge id -> its mode ids (authored or roadmap).
+    let mut modes: BTreeMap<String, Vec<String>> = levels
+        .roadmap
+        .challenges
+        .iter()
+        .map(|s| (s.id.clone(), s.modes.iter().map(|m| m.id.clone()).collect()))
+        .collect();
+    for c in p.challenges.iter().filter_map(|i| i.doc.as_ref()) {
+        modes.insert(c.id.clone(), c.modes.iter().map(|m| m.id.clone()).collect());
+    }
+    let pos: BTreeMap<&str, usize> = listing
+        .lesson_order
+        .iter()
+        .enumerate()
+        .map(|(i, id)| (id.as_str(), i))
+        .collect();
+    let mut edges: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for s in &levels.roadmap.lessons {
+        edges.insert(s.id.clone(), s.prerequisites.clone());
+    }
+    for l in p.lessons.iter().filter_map(|i| i.doc.as_ref()) {
+        edges.insert(l.id.clone(), l.prerequisites.clone());
+    }
+
+    let prereq_issues =
+        |id: &str, prereqs: &[String], path: &str, field: &str| -> Vec<ContentIssue> {
+            let mut out = vec![];
+            for pr in prereqs {
+                if !lesson_ids.contains(pr) {
+                    out.push(
+                        ContentIssue::new(codes::PREREQUISITE_MISSING, path)
+                            .id(pr.clone())
+                            .field(field),
+                    );
+                } else if let (Some(a), Some(b)) = (pos.get(pr.as_str()), pos.get(id)) {
+                    if a >= b {
+                        out.push(
+                            ContentIssue::new(codes::PREREQUISITE_CYCLE, path)
+                                .id(pr.clone())
+                                .field(field)
+                                .detail("listed after"),
+                        );
+                    }
+                }
+            }
+            if on_cycle(id, &edges) {
+                out.push(
+                    ContentIssue::new(codes::PREREQUISITE_CYCLE, path)
+                        .id(id)
+                        .field(field)
+                        .detail("cycle"),
+                );
+            }
+            out
+        };
+    let research_issues = |notes: &[String], path: &str, field: &str| -> Vec<ContentIssue> {
+        notes
+            .iter()
+            .filter(|n| !p.research.contains(*n))
+            .map(|n| {
+                ContentIssue::new(codes::RESEARCH_MISSING, path)
+                    .id(n.clone())
+                    .field(field)
+            })
+            .collect()
+    };
+
+    let mut lesson_issues = vec![];
+    for (k, item) in p.lessons.iter().enumerate() {
+        let Some(l) = &item.doc else { continue };
+        let path = item.file("lesson.json");
+        let mut out = prereq_issues(&l.id, &l.prerequisites, &path, "prerequisites");
+        out.extend(research_issues(&l.research, &path, "research"));
+        lesson_issues.push((k, out));
+    }
+    let mut challenge_issues = vec![];
+    for (k, item) in p.challenges.iter().enumerate() {
+        let Some(c) = &item.doc else { continue };
+        let path = item.file("challenge.json");
+        let out: Vec<ContentIssue> = c
+            .prerequisites
+            .iter()
+            .filter(|pr| !lesson_ids.contains(*pr))
+            .map(|pr| {
+                ContentIssue::new(codes::PREREQUISITE_MISSING, &path)
+                    .id(pr.clone())
+                    .field("prerequisites")
+            })
+            .collect();
+        challenge_issues.push((k, out));
+    }
+
+    let mut global = vec![];
+    for s in &levels.roadmap.lessons {
+        let field = format!("roadmap.lessons[{}]", s.id);
+        global.extend(prereq_issues(&s.id, &s.prerequisites, LEVELS_PATH, &field));
+        global.extend(research_issues(&s.research, LEVELS_PATH, &field));
+    }
+    for s in &levels.roadmap.challenges {
+        for pr in s
+            .prerequisites
+            .iter()
+            .filter(|pr| !lesson_ids.contains(*pr))
+        {
+            global.push(
+                ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH)
+                    .id(pr.clone())
+                    .field(format!("roadmap.challenges[{}]", s.id)),
+            );
+        }
+    }
+    for lv in &levels.levels {
+        let ec = &lv.exit_check;
+        let field = format!("levels[{:?}].exitCheck", lv.id);
+        match modes.get(&ec.challenge) {
+            Some(ms) if lv.challenges.contains(&ec.challenge) => {
+                if !ms.contains(&ec.mode) {
+                    global.push(
+                        ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH)
+                            .id(ec.mode.clone())
+                            .field(format!("{field}.mode")),
+                    );
+                }
+            }
+            _ => global.push(
+                ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH)
+                    .id(ec.challenge.clone())
+                    .field(format!("{field}.challenge")),
+            ),
+        }
+    }
+    for (gap, g) in &levels.engine_gaps {
+        for n in &g.needed_by {
+            if !lesson_ids.contains(n) && !modes.contains_key(n) {
+                global.push(
+                    ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH)
+                        .id(n.clone())
+                        .field(format!("engineGaps.{gap}.neededBy")),
+                );
+            }
+        }
+    }
+
+    for (k, out) in lesson_issues {
+        p.lessons[k].issues.extend(out);
+    }
+    for (k, out) in challenge_issues {
+        p.challenges[k].issues.extend(out);
+    }
+    p.global.extend(global);
+}
 
 #[cfg(test)]
 mod tests {
@@ -523,5 +700,63 @@ mod tests {
             .filter(|i| i.code == codes::DUPLICATE_ID)
             .collect();
         assert_eq!(dup.len(), 2, "{dup:#?}"); // listed twice, and a roadmap entry that has a folder
+    }
+
+    #[test]
+    fn missing_prerequisites_and_references() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| {
+            v["prerequisites"] = json!(["l0-nope"])
+        });
+        edit_json(&mut t, "c-l0-fx-shop", |v| {
+            v["prerequisites"] = json!(["c-l0-fx-shop"])
+        });
+        edit_levels(&mut t, |v| {
+            v["levels"][0]["exitCheck"]["mode"] = "nightmare".into();
+            v["engineGaps"]["fx-gap"]["neededBy"] = json!(["l0-ghost"]);
+            v["roadmap"]["lessons"][0]["prerequisites"] = json!(["l0-gone"]);
+        });
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::PREREQUISITE_MISSING));
+        assert!(has(&r, "c-l0-fx-shop", codes::PREREQUISITE_MISSING)); // a challenge is not a lesson
+        let g: Vec<_> = issues_of(&r, "levels")
+            .into_iter()
+            .filter(|i| i.code == codes::PREREQUISITE_MISSING)
+            .filter_map(|i| i.id)
+            .collect();
+        // Fixed check order: roadmap entries, then exit checks, then gaps.
+        assert_eq!(g, vec!["l0-gone", "nightmare", "l0-ghost"]);
+    }
+
+    #[test]
+    fn prerequisite_listed_later_is_a_cycle_in_the_path() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| {
+            v["prerequisites"] = json!(["l0-fx-reading"])
+        });
+        let r = validate_tree(&t);
+        let i: Vec<_> = issues_of(&r, "l0-fx-capacity")
+            .into_iter()
+            .filter(|i| i.code == codes::PREREQUISITE_CYCLE)
+            .collect();
+        assert!(i
+            .iter()
+            .any(|i| i.detail.as_deref() == Some("listed after")));
+        assert!(i.iter().any(|i| i.detail.as_deref() == Some("cycle")));
+        assert!(has(&r, "l0-fx-reading", codes::PREREQUISITE_CYCLE)); // reading <-> capacity
+    }
+
+    #[test]
+    fn missing_research_notes() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-reading", |v| {
+            v["research"] = json!(["no-such-note"])
+        });
+        edit_levels(&mut t, |v| {
+            v["roadmap"]["lessons"][0]["research"] = json!(["also-missing"])
+        });
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-reading", codes::RESEARCH_MISSING));
+        assert!(has(&r, "levels", codes::RESEARCH_MISSING));
     }
 }
