@@ -45,9 +45,17 @@ fn check_node_overrides(n: &Node, issues: &mut Vec<ValidationIssue>) {
     let mut keys = NODE_OVERRIDE_KEYS;
     keys.sort_unstable();
     for key in keys {
-        let Some(value) = n.config.get(key) else { continue };
+        let Some(value) = n.config.get(key) else {
+            continue;
+        };
         let ok = match value.as_f64() {
-            Some(v) if v.is_finite() => if key == "rpsPerInstance" { v > 0.0 } else { v >= 0.0 },
+            Some(v) if v.is_finite() => {
+                if key == "rpsPerInstance" {
+                    v > 0.0
+                } else {
+                    v >= 0.0
+                }
+            }
             _ => false,
         };
         if !ok {
@@ -90,8 +98,12 @@ pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<Valida
         }
     }
 
-    let clients: Vec<&str> =
-        graph.nodes.iter().filter(|n| n.kind == "client").map(|n| n.id.as_str()).collect();
+    let clients: Vec<&str> = graph
+        .nodes
+        .iter()
+        .filter(|n| n.kind == "client")
+        .map(|n| n.id.as_str())
+        .collect();
     if clients.is_empty() {
         issues.push(issue(codes::NO_CLIENT, None, None, true));
     }
@@ -128,9 +140,16 @@ pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<Valida
 }
 
 /// Iterative DFS with colors; returns a node on a cycle, if any.
-fn find_cycle<'a>(by_id: &BTreeMap<&'a str, &Node>, adj: &BTreeMap<&'a str, Vec<&'a str>>) -> Option<&'a str> {
+fn find_cycle<'a>(
+    by_id: &BTreeMap<&'a str, &Node>,
+    adj: &BTreeMap<&'a str, Vec<&'a str>>,
+) -> Option<&'a str> {
     #[derive(Clone, Copy, PartialEq)]
-    enum Color { White, Grey, Black }
+    enum Color {
+        White,
+        Grey,
+        Black,
+    }
     let mut color: BTreeMap<&str, Color> = by_id.keys().map(|k| (*k, Color::White)).collect();
     for &start in by_id.keys() {
         if color[start] != Color::White {
@@ -203,7 +222,11 @@ mod tests {
     #[test]
     fn duplicate_ids_and_unknown_kinds_are_blocking() {
         let g = graph(
-            vec![node("a", "client", 1, &[]), node("a", "client", 1, &[]), node("x", "mainframe", 1, &[])],
+            vec![
+                node("a", "client", 1, &[]),
+                node("a", "client", 1, &[]),
+                node("x", "mainframe", 1, &[]),
+            ],
             vec![edge("a", "x", EdgeKind::Http)],
         );
         let issues = validate_graph(&g, None);
@@ -214,7 +237,10 @@ mod tests {
 
     #[test]
     fn edge_to_missing_node_is_reported() {
-        let g = graph(vec![node("users", "client", 1, &[])], vec![edge("users", "ghost", EdgeKind::Http)]);
+        let g = graph(
+            vec![node("users", "client", 1, &[])],
+            vec![edge("users", "ghost", EdgeKind::Http)],
+        );
         let issues = validate_graph(&g, None);
         assert_eq!(issues[0].code, codes::EDGE_UNKNOWN_NODE);
         assert_eq!(issues[0].edge_id.as_deref(), Some("users->ghost"));
@@ -236,7 +262,10 @@ mod tests {
         assert!(codes_of(&validate_graph(&g, None)).contains(&codes::NO_CLIENT));
 
         let g = graph(vec![node("users", "client", 1, &[])], vec![]);
-        assert_eq!(codes_of(&validate_graph(&g, None)), vec![codes::CLIENT_NO_PATH]);
+        assert_eq!(
+            codes_of(&validate_graph(&g, None)),
+            vec![codes::CLIENT_NO_PATH]
+        );
     }
 
     #[test]
@@ -262,12 +291,22 @@ mod tests {
     #[test]
     fn invalid_per_node_overrides_are_blocking_and_name_the_field() {
         let mut g = web_tier(1, 1);
-        g.nodes[2].config.insert("rpsPerInstance".into(), crate::types::ConfigValue::Num(0.0));
-        g.nodes[2].config.insert("costPerMonth".into(), crate::types::ConfigValue::Str("cheap".into()));
-        g.nodes[2].config.insert("serviceMs".into(), crate::types::ConfigValue::Num(4.0)); // valid
+        g.nodes[2]
+            .config
+            .insert("rpsPerInstance".into(), crate::types::ConfigValue::Num(0.0));
+        g.nodes[2].config.insert(
+            "costPerMonth".into(),
+            crate::types::ConfigValue::Str("cheap".into()),
+        );
+        g.nodes[2]
+            .config
+            .insert("serviceMs".into(), crate::types::ConfigValue::Num(4.0)); // valid
         let issues = validate_graph(&g, None);
-        let fields: Vec<&str> = issues.iter().filter(|i| i.code == codes::CONFIG_INVALID)
-            .map(|i| i.field.as_deref().unwrap()).collect();
+        let fields: Vec<&str> = issues
+            .iter()
+            .filter(|i| i.code == codes::CONFIG_INVALID)
+            .map(|i| i.field.as_deref().unwrap())
+            .collect();
         assert_eq!(fields, vec!["costPerMonth", "rpsPerInstance"]);
         assert!(issues.iter().all(|i| i.node_id.as_deref() == Some("web")));
         assert!(has_blocking(&issues));
@@ -281,12 +320,19 @@ mod tests {
             max_instances: Some(6),
             allowed_kinds: Some(vec!["client".into(), "web-server".into()]),
         };
-        let codes = validate_graph(&g, Some(&limits)).into_iter().map(|i| i.code).collect::<Vec<_>>();
+        let codes = validate_graph(&g, Some(&limits))
+            .into_iter()
+            .map(|i| i.code)
+            .collect::<Vec<_>>();
         assert!(codes.contains(&codes::TOO_MANY_NODES.to_string()));
         assert!(codes.contains(&codes::TOO_MANY_INSTANCES.to_string()));
         assert!(codes.contains(&codes::KIND_NOT_ALLOWED.to_string()));
 
-        let ok = GraphLimits { max_nodes: Some(3), max_instances: Some(7), allowed_kinds: None };
+        let ok = GraphLimits {
+            max_nodes: Some(3),
+            max_instances: Some(7),
+            allowed_kinds: None,
+        };
         assert!(validate_graph(&g, Some(&ok)).is_empty());
     }
 }

@@ -19,7 +19,11 @@ fn input_error(message: String) -> JsValue {
 /// A JSON document is a Fixture (has "input") or a bare SimInput. Same rule as sim-cli.
 fn parse_input_json(json: &str) -> Result<SimInput, String> {
     let value: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
-    let input = if value.get("input").is_some() { value["input"].clone() } else { value };
+    let input = if value.get("input").is_some() {
+        value["input"].clone()
+    } else {
+        value
+    };
     serde_json::from_value(input).map_err(|e| e.to_string())
 }
 
@@ -61,7 +65,12 @@ impl SimRun {
         let t = &self.result.timeline;
         let cell = t.node_ids.len() * t.fields.len();
         let frames = if cell == 0 { 0 } else { t.data.len() / cell };
-        to_js(&TimelineHeader { frame_ms: t.frame_ms, frames, node_ids: &t.node_ids, fields: &t.fields })
+        to_js(&TimelineHeader {
+            frame_ms: t.frame_ms,
+            frames,
+            node_ids: &t.node_ids,
+            fields: &t.fields,
+        })
     }
 
     /// Copied into a JS-owned Float32Array, so it stays valid after free().
@@ -88,7 +97,12 @@ impl SimRun {
             .result
             .traces
             .iter()
-            .map(|t| TraceSummary { id: t.id, class: &t.class, outcome: &t.outcome, latency_ms: t.latency_ms })
+            .map(|t| TraceSummary {
+                id: t.id,
+                class: &t.class,
+                outcome: &t.outcome,
+                latency_ms: t.latency_ms,
+            })
             .collect();
         to_js(&rows)
     }
@@ -101,10 +115,13 @@ impl SimRun {
 
 #[wasm_bindgen]
 pub fn simulate(input: JsValue) -> Result<SimRun, JsValue> {
-    let input: SimInput = serde_wasm_bindgen::from_value(input).map_err(|e| input_error(e.to_string()))?;
+    let input: SimInput =
+        serde_wasm_bindgen::from_value(input).map_err(|e| input_error(e.to_string()))?;
     match sim_core::simulate(&input) {
         Ok(result) => Ok(SimRun { result }),
-        Err(issues) => Err(to_js(&serde_json::json!({"kind": "validation", "issues": issues}))?),
+        Err(issues) => Err(to_js(
+            &serde_json::json!({"kind": "validation", "issues": issues}),
+        )?),
     }
 }
 
@@ -119,7 +136,8 @@ pub fn simulate_json(json: &str) -> Result<String, JsValue> {
 
 #[wasm_bindgen(js_name = validateGraph)]
 pub fn validate_graph(graph: JsValue, limits: JsValue) -> Result<JsValue, JsValue> {
-    let graph: Graph = serde_wasm_bindgen::from_value(graph).map_err(|e| input_error(e.to_string()))?;
+    let graph: Graph =
+        serde_wasm_bindgen::from_value(graph).map_err(|e| input_error(e.to_string()))?;
     let limits: Option<GraphLimits> = if limits.is_undefined() || limits.is_null() {
         None
     } else {
@@ -130,7 +148,8 @@ pub fn validate_graph(graph: JsValue, limits: JsValue) -> Result<JsValue, JsValu
 
 #[wasm_bindgen]
 pub fn grade(run: &SimRun, goals: JsValue) -> Result<JsValue, JsValue> {
-    let goals: Vec<Goal> = serde_wasm_bindgen::from_value(goals).map_err(|e| input_error(e.to_string()))?;
+    let goals: Vec<Goal> =
+        serde_wasm_bindgen::from_value(goals).map_err(|e| input_error(e.to_string()))?;
     to_js(&sim_core::grade(&run.result, &goals))
 }
 

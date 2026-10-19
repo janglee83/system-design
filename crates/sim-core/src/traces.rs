@@ -7,14 +7,20 @@ use crate::types::{RequestClass, Trace, TraceAction, TraceOutcome, TraceStep};
 
 impl Engine<'_> {
     pub(crate) fn sample_trace(&mut self) {
-        let Some(&client) = self.clients_slice().first() else { return };
+        let Some(&client) = self.clients_slice().first() else {
+            return;
+        };
         let generated = self.nodes[client].in_read + self.nodes[client].in_write;
         if generated <= 0.0 {
             return;
         }
         let start = self.now_ms;
         let write_ratio = self.input.workload.write_ratio.clamp(0.0, 1.0);
-        let class = if self.trace_rng.next_f64() < write_ratio { RequestClass::Write } else { RequestClass::Read };
+        let class = if self.trace_rng.next_f64() < write_ratio {
+            RequestClass::Write
+        } else {
+            RequestClass::Read
+        };
 
         let mut t = start;
         let mut steps = vec![TraceStep {
@@ -44,15 +50,33 @@ impl Engine<'_> {
             let roll_down = self.trace_rng.next_f64();
             let roll_reject = self.trace_rng.next_f64();
             if roll_down < down {
-                steps.push(TraceStep { t_ms: t, node_id: n.id.clone(), action: TraceAction::Down, wait_ms: 0.0, service_ms: 0.0 });
+                steps.push(TraceStep {
+                    t_ms: t,
+                    node_id: n.id.clone(),
+                    action: TraceAction::Down,
+                    wait_ms: 0.0,
+                    service_ms: 0.0,
+                });
                 break TraceOutcome::Unreachable;
             }
             if roll_reject < reject {
-                steps.push(TraceStep { t_ms: t, node_id: n.id.clone(), action: TraceAction::Reject, wait_ms: 0.0, service_ms: 0.0 });
+                steps.push(TraceStep {
+                    t_ms: t,
+                    node_id: n.id.clone(),
+                    action: TraceAction::Reject,
+                    wait_ms: 0.0,
+                    service_ms: 0.0,
+                });
                 break TraceOutcome::Rejected;
             }
             let service = (n.lat_ms - n.wait_ms).max(0.0);
-            steps.push(TraceStep { t_ms: t, node_id: n.id.clone(), action: TraceAction::Serve, wait_ms: n.wait_ms, service_ms: service });
+            steps.push(TraceStep {
+                t_ms: t,
+                node_id: n.id.clone(),
+                action: TraceAction::Serve,
+                wait_ms: n.wait_ms,
+                service_ms: service,
+            });
             t += n.lat_ms;
             current = next;
         };
@@ -64,7 +88,14 @@ impl Engine<'_> {
             outcome
         };
         let id = self.traces.len() as u32;
-        self.traces.push(Trace { id, class, start_ms: start, latency_ms: latency, outcome, steps });
+        self.traces.push(Trace {
+            id,
+            class,
+            start_ms: start,
+            latency_ms: latency,
+            outcome,
+            steps,
+        });
     }
 }
 #[cfg(test)]
@@ -83,7 +114,10 @@ mod tests {
             assert_eq!(t.steps[0].action, TraceAction::Send);
             assert!(t.latency_ms >= 0.0);
         }
-        assert!(r.traces.iter().all(|t| t.outcome == TraceOutcome::Delivered));
+        assert!(r
+            .traces
+            .iter()
+            .all(|t| t.outcome == TraceOutcome::Delivered));
         let last = r.traces[0].steps.last().unwrap();
         assert_eq!(last.node_id, "web");
         assert_eq!(last.action, TraceAction::Serve);
@@ -92,16 +126,34 @@ mod tests {
     #[test]
     fn overloaded_server_produces_rejected_traces_with_waiting_time() {
         let g = graph(
-            vec![node("users", "client", 1, &[]), node("web", "web-server", 1, &[])],
+            vec![
+                node("users", "client", 1, &[]),
+                node("web", "web-server", 1, &[]),
+            ],
             vec![edge("users", "web", EdgeKind::Http)],
         );
         let mut i = input(g, 8_000.0);
-        i.workload.surge = Some(Surge { factor: 3.0, at_ms: 2_000, duration_ms: 6_000 });
+        i.workload.surge = Some(Surge {
+            factor: 3.0,
+            at_ms: 2_000,
+            duration_ms: 6_000,
+        });
         let r = simulate(&i).unwrap();
         assert!(r.traces.iter().any(|t| t.outcome == TraceOutcome::Rejected));
-        let slow = r.traces.iter().filter(|t| t.outcome == TraceOutcome::Delivered).map(|t| t.latency_ms);
-        assert!(slow.fold(0.0_f64, f64::max) > 100.0, "some delivered request waited in the queue");
-        let waited = r.traces.iter().flat_map(|t| &t.steps).any(|s| s.wait_ms > 50.0);
+        let slow = r
+            .traces
+            .iter()
+            .filter(|t| t.outcome == TraceOutcome::Delivered)
+            .map(|t| t.latency_ms);
+        assert!(
+            slow.fold(0.0_f64, f64::max) > 100.0,
+            "some delivered request waited in the queue"
+        );
+        let waited = r
+            .traces
+            .iter()
+            .flat_map(|t| &t.steps)
+            .any(|s| s.wait_ms > 50.0);
         assert!(waited);
     }
 
@@ -113,12 +165,18 @@ mod tests {
         );
         let r = simulate(&input(g, 1_000.0)).unwrap();
         assert!(!r.traces.is_empty());
-        assert!(r.traces.iter().all(|t| t.outcome == TraceOutcome::Unreachable));
+        assert!(r
+            .traces
+            .iter()
+            .all(|t| t.outcome == TraceOutcome::Unreachable));
     }
 
     #[test]
     fn no_traffic_means_no_traces() {
-        assert!(simulate(&input(web_tier(1, 1), 0.0)).unwrap().traces.is_empty());
+        assert!(simulate(&input(web_tier(1, 1), 0.0))
+            .unwrap()
+            .traces
+            .is_empty());
     }
 
     #[test]

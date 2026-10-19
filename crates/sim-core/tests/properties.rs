@@ -20,7 +20,13 @@ fn load() -> impl Strategy<Value = Load> {
         prop_oneof![Just(None), Just(Some("poisson")), Just(Some("uniform"))],
         proptest::option::of(0u32..4_000),
     )
-        .prop_map(|(rps, seed, surge, arrivals, traffic_end_ms)| Load { rps, seed, surge, arrivals, traffic_end_ms })
+        .prop_map(|(rps, seed, surge, arrivals, traffic_end_ms)| Load {
+            rps,
+            seed,
+            surge,
+            arrivals,
+            traffic_end_ms,
+        })
 }
 
 fn build(lb: u32, web: u32, cpu: u32, pg: Option<u32>, load: &Load) -> SimInput {
@@ -59,9 +65,18 @@ fn build(lb: u32, web: u32, cpu: u32, pg: Option<u32>, load: &Load) -> SimInput 
 }
 
 fn finite(m: &Metrics) -> bool {
-    [m.p50, m.p95, m.p99, m.availability, m.throughput_rps, m.cost_per_month, m.peak_busy, m.requests_total]
-        .iter()
-        .all(|v| v.is_finite())
+    [
+        m.p50,
+        m.p95,
+        m.p99,
+        m.availability,
+        m.throughput_rps,
+        m.cost_per_month,
+        m.peak_busy,
+        m.requests_total,
+    ]
+    .iter()
+    .all(|v| v.is_finite())
 }
 
 proptest! {

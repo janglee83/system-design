@@ -177,8 +177,11 @@ impl<'a> Engine<'a> {
     pub fn new(input: &'a SimInput) -> Self {
         let mut sorted: Vec<&Node> = input.graph.nodes.iter().collect();
         sorted.sort_by(|a, b| a.id.cmp(&b.id));
-        let index: BTreeMap<&str, usize> =
-            sorted.iter().enumerate().map(|(i, n)| (n.id.as_str(), i)).collect();
+        let index: BTreeMap<&str, usize> = sorted
+            .iter()
+            .enumerate()
+            .map(|(i, n)| (n.id.as_str(), i))
+            .collect();
         let cal = Calibration::resolve(input.calibration.as_ref());
         let mut nodes: Vec<NodeRt> = sorted.iter().map(|n| NodeRt::new(n, &cal)).collect();
 
@@ -190,7 +193,9 @@ impl<'a> Engine<'a> {
         }
 
         let order = topo_order(&nodes);
-        let clients = (0..nodes.len()).filter(|&i| nodes[i].role == Role::Client).collect();
+        let clients = (0..nodes.len())
+            .filter(|&i| nodes[i].role == Role::Client)
+            .collect();
         let ticks = (libm::ceil(f64::from(input.duration_ms) / TICK_MS) as u32).max(1);
 
         Engine {
@@ -223,12 +228,20 @@ impl<'a> Engine<'a> {
 
     pub fn timeout_ms(&self) -> f64 {
         let t = self.input.workload.client_timeout_ms;
-        if t.is_finite() && t > 0.0 { t } else { 1000.0 }
+        if t.is_finite() && t > 0.0 {
+            t
+        } else {
+            1000.0
+        }
     }
 
     fn write_ratio(&self) -> f64 {
         let w = self.input.workload.write_ratio;
-        if w.is_finite() { w.clamp(0.0, 1.0) } else { 0.2 }
+        if w.is_finite() {
+            w.clamp(0.0, 1.0)
+        } else {
+            0.2
+        }
     }
 
     fn rate_at(&self, t_ms: f64) -> f64 {
@@ -264,7 +277,13 @@ impl<'a> Engine<'a> {
         let lambda = self.rate_at(self.now_ms) * TICK_MS / 1000.0;
         let generated = match self.input.workload.arrivals.unwrap_or_default() {
             Arrivals::Poisson => self.traffic_rng.poisson(lambda),
-            Arrivals::Uniform => if lambda.is_finite() { lambda.max(0.0) } else { 0.0 },
+            Arrivals::Uniform => {
+                if lambda.is_finite() {
+                    lambda.max(0.0)
+                } else {
+                    0.0
+                }
+            }
         };
         let write_ratio = self.write_ratio();
 
@@ -354,16 +373,28 @@ impl<'a> Engine<'a> {
         let rejected = (remaining - queue_limit).max(0.0);
         n.queue = remaining - rejected;
         n.rejected = rejected;
-        n.busy = if per_tick > 0.0 { served / per_tick } else { 0.0 };
+        n.busy = if per_tick > 0.0 {
+            served / per_tick
+        } else {
+            0.0
+        };
 
-        n.wait_ms = if cap_rps > 0.0 { n.queue / cap_rps * 1000.0 } else { 0.0 };
+        n.wait_ms = if cap_rps > 0.0 {
+            n.queue / cap_rps * 1000.0
+        } else {
+            0.0
+        };
         n.lat_ms = match n.cap.latency_knee {
             // Web tier: fixed service time plus FIFO queue wait (parity: fixtures/parity).
             None => n.cap.service_ms + n.wait_ms,
             // Balancers and databases: service time inflated by utilization, capped so it
             // stays finite, plus queue wait.
             Some(cap) => {
-                let rho = if per_tick > 0.0 { (arriving / per_tick).min(cap) } else { cap };
+                let rho = if per_tick > 0.0 {
+                    (arriving / per_tick).min(cap)
+                } else {
+                    cap
+                };
                 n.cap.service_ms / (1.0 - rho) + n.wait_ms
             }
         };
@@ -371,11 +402,19 @@ impl<'a> Engine<'a> {
         // Overflow rejects newly arriving requests (queued ones were already admitted), so the
         // fraction is taken over arrivals, not queue + arrivals. Capped at 1 in case the queue
         // limit shrank (instances lost) and also dropped previously queued work.
-        let reject_frac = if arriving > 0.0 { (rejected / arriving).min(1.0) } else { 0.0 };
+        let reject_frac = if arriving > 0.0 {
+            (rejected / arriving).min(1.0)
+        } else {
+            0.0
+        };
         n.fail_reject_r = reject_frac;
         n.fail_reject_w = if writes_down { 0.0 } else { reject_frac };
 
-        let read_share = if arriving > 0.0 { n.in_read / arriving } else { 1.0 };
+        let read_share = if arriving > 0.0 {
+            n.in_read / arriving
+        } else {
+            1.0
+        };
         n.served_read = served * read_share;
         n.served_write = served - n.served_read;
 
@@ -485,8 +524,13 @@ impl<'a> Engine<'a> {
         for n in &self.nodes {
             let in_flight = (n.served_read + n.served_write) * n.lat_ms / TICK_MS + n.queue;
             let up = if n.instances_up > 0 { 1.0 } else { 0.0 };
-            self.timeline
-                .extend_from_slice(&[in_flight as f32, n.queue as f32, n.busy as f32, n.rejected as f32, up]);
+            self.timeline.extend_from_slice(&[
+                in_flight as f32,
+                n.queue as f32,
+                n.busy as f32,
+                n.rejected as f32,
+                up,
+            ]);
         }
     }
 
@@ -561,7 +605,11 @@ mod timeout_tests {
     #[test]
     fn a_steady_latency_is_all_or_nothing() {
         assert_eq!(timed_out_fraction(900.0, 900.0, 1000.0), 0.0);
-        assert_eq!(timed_out_fraction(1000.0, 1000.0, 1000.0), 0.0, "exactly at the timeout is ok");
+        assert_eq!(
+            timed_out_fraction(1000.0, 1000.0, 1000.0),
+            0.0,
+            "exactly at the timeout is ok"
+        );
         assert_eq!(timed_out_fraction(1000.5, 1000.5, 1000.0), 1.0);
     }
 

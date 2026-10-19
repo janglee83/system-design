@@ -101,13 +101,27 @@ impl Calibration {
         let mut c = Calibration::default();
         if let Some(o) = overrides {
             apply_overrides!(
-                c, o,
-                web_rps_per_vcpu, web_service_ms, web_queue_per_gb, web_cost_per_vcpu,
+                c,
+                o,
+                web_rps_per_vcpu,
+                web_service_ms,
+                web_queue_per_gb,
+                web_cost_per_vcpu,
                 web_cost_per_extra_vcpu,
-                lb_rps_per_replica, lb_service_ms, lb_queue_seconds, lb_cost_per_replica,
+                lb_rps_per_replica,
+                lb_service_ms,
+                lb_queue_seconds,
+                lb_cost_per_replica,
                 lb_max_utilization_for_latency,
-                pg_qps_per_instance, pg_service_ms, pg_queue_seconds, pg_cost_per_instance,
-                pg_failover_ms, pg_max_utilization_for_latency, edge_delay_http_ms, edge_delay_db_ms, edge_delay_cache_ms,
+                pg_qps_per_instance,
+                pg_service_ms,
+                pg_queue_seconds,
+                pg_cost_per_instance,
+                pg_failover_ms,
+                pg_max_utilization_for_latency,
+                edge_delay_http_ms,
+                edge_delay_db_ms,
+                edge_delay_cache_ms,
                 edge_delay_msg_ms,
             );
         }
@@ -151,8 +165,14 @@ pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
         ("edgeDelayMsgMs", o.edge_delay_msg_ms),
     ];
     let unit_open = [
-        ("lbMaxUtilizationForLatency", o.lb_max_utilization_for_latency),
-        ("pgMaxUtilizationForLatency", o.pg_max_utilization_for_latency),
+        (
+            "lbMaxUtilizationForLatency",
+            o.lb_max_utilization_for_latency,
+        ),
+        (
+            "pgMaxUtilizationForLatency",
+            o.pg_max_utilization_for_latency,
+        ),
     ];
     let mut bad = Vec::new();
     for (name, value) in positive {
@@ -194,7 +214,11 @@ mod tests {
 
     #[test]
     fn resolve_applies_only_the_given_fields() {
-        let o = CalibrationOverrides { web_rps_per_vcpu: Some(3_000.0), edge_delay_http_ms: Some(40.0), ..Default::default() };
+        let o = CalibrationOverrides {
+            web_rps_per_vcpu: Some(3_000.0),
+            edge_delay_http_ms: Some(40.0),
+            ..Default::default()
+        };
         let c = Calibration::resolve(Some(&o));
         assert_eq!(c.web_rps_per_vcpu, 3_000.0);
         assert_eq!(c.edge_delay_ms(EdgeKind::Http), 40.0);
@@ -226,8 +250,15 @@ mod tests {
             ]
         );
         for bad in [f64::NAN, f64::INFINITY, -0.5, 1.5] {
-            let o = CalibrationOverrides { pg_max_utilization_for_latency: Some(bad), ..Default::default() };
-            assert_eq!(invalid_overrides(&o), vec!["pgMaxUtilizationForLatency"], "{bad}");
+            let o = CalibrationOverrides {
+                pg_max_utilization_for_latency: Some(bad),
+                ..Default::default()
+            };
+            assert_eq!(
+                invalid_overrides(&o),
+                vec!["pgMaxUtilizationForLatency"],
+                "{bad}"
+            );
         }
         let ok = CalibrationOverrides {
             lb_max_utilization_for_latency: Some(0.5),

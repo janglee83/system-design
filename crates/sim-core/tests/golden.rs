@@ -21,12 +21,21 @@ fn fixtures() -> Vec<Fixture> {
 #[test]
 fn all_golden_fixtures_pass() {
     let all = fixtures();
-    assert!(all.len() >= 10, "expected at least 10 golden fixtures, found {}", all.len());
+    assert!(
+        all.len() >= 10,
+        "expected at least 10 golden fixtures, found {}",
+        all.len()
+    );
     let failures: Vec<String> = all
         .iter()
         .map(check_fixture)
         .filter(|r| !r.passed)
-        .map(|r| format!("{}: failures={:?} validation={:?} metrics={:?}", r.id, r.failures, r.validation, r.metrics))
+        .map(|r| {
+            format!(
+                "{}: failures={:?} validation={:?} metrics={:?}",
+                r.id, r.failures, r.validation, r.metrics
+            )
+        })
         .collect();
     assert!(failures.is_empty(), "{failures:#?}");
 }

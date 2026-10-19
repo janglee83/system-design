@@ -32,12 +32,14 @@ impl ComponentModel for WebServer {
         let workers = rps * cal.web_service_ms / 1000.0;
         Capacity {
             rps,
-            service_ms: cal.web_service_ms, max_queue: (cal.web_queue_per_gb * mem - workers).max(0.0),
+            service_ms: cal.web_service_ms,
+            max_queue: (cal.web_queue_per_gb * mem - workers).max(0.0),
             latency_knee: None,
         }
     }
     fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {
         let extra = (num(node, "cpu", DEFAULT_CPU) - 1.0).max(0.0);
-        (cal.web_cost_per_vcpu + cal.web_cost_per_extra_vcpu * extra) * f64::from(self.instances(node))
+        (cal.web_cost_per_vcpu + cal.web_cost_per_extra_vcpu * extra)
+            * f64::from(self.instances(node))
     }
 }

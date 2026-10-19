@@ -1,7 +1,7 @@
 //! Goals -> verdict. Grading is separate from simulation so one run can be scored against
 //! several challenge modes, and Lab runs are not scored at all.
 
-use crate::types::{GoalOp, GoalResult, Goal, Metrics, SimResult, Verdict};
+use crate::types::{Goal, GoalOp, GoalResult, Metrics, SimResult, Verdict};
 
 pub fn metric_value(m: &Metrics, key: &str) -> Option<f64> {
     Some(match key {
@@ -59,7 +59,12 @@ pub fn grade(result: &SimResult, goals: &[Goal]) -> Verdict {
     let total = results.len() as u32;
     let passed = results.iter().filter(|r| r.passed).count() as u32;
     if total == 0 {
-        return Verdict { passed: true, score: 100, stars: 5, goals: results };
+        return Verdict {
+            passed: true,
+            score: 100,
+            stars: 5,
+            goals: results,
+        };
     }
     let all = passed == total;
     Verdict {
@@ -86,18 +91,32 @@ mod tests {
     }
 
     fn goal(id: &str, metric: &str, op: GoalOp, value: f64) -> Goal {
-        Goal { id: id.into(), metric: metric.into(), op, value }
+        Goal {
+            id: id.into(),
+            metric: metric.into(),
+            op,
+            value,
+        }
     }
 
     fn sample() -> Metrics {
-        Metrics { p95: 37.0, availability: 0.8031, cost_per_month: 163.0, spof_count: 1, ..Metrics::default() }
+        Metrics {
+            p95: 37.0,
+            availability: 0.8031,
+            cost_per_month: 163.0,
+            spof_count: 1,
+            ..Metrics::default()
+        }
     }
 
     #[test]
     fn all_goals_passing_gives_five_stars() {
         let v = grade(
             &result(sample()),
-            &[goal("lat", "p95", GoalOp::Le, 100.0), goal("cost", "costPerMonth", GoalOp::Le, 200.0)],
+            &[
+                goal("lat", "p95", GoalOp::Le, 100.0),
+                goal("cost", "costPerMonth", GoalOp::Le, 200.0),
+            ],
         );
         assert!(v.passed);
         assert_eq!((v.score, v.stars), (100, 5));
@@ -123,7 +142,10 @@ mod tests {
     fn unknown_and_null_metrics_fail_with_no_measurement() {
         let v = grade(
             &result(sample()),
-            &[goal("x", "noSuchMetric", GoalOp::Le, 1.0), goal("ids", "duplicateIds", GoalOp::Eq, 0.0)],
+            &[
+                goal("x", "noSuchMetric", GoalOp::Le, 1.0),
+                goal("ids", "duplicateIds", GoalOp::Eq, 0.0),
+            ],
         );
         assert!(v.goals.iter().all(|g| !g.passed && g.measured.is_none()));
     }
@@ -148,7 +170,23 @@ mod tests {
         // Keep metric_value in sync with Metrics: serialize Metrics and look up each key.
         let json = serde_json::to_value(Metrics::default()).unwrap();
         for key in json.as_object().unwrap().keys() {
-            let known = metric_value(&Metrics { duplicate_ids: Some(0.0), out_of_order_ids: Some(0.0), lost_updates: Some(0.0), write_conflicts: Some(0.0), duplicate_writes: Some(0.0), stale_reads: Some(0.0), peak_queue_depth: Some(0.0), lost_messages: Some(0.0), status_flaps: Some(0.0), stale_online: Some(0.0), inbox_writes_per_sec: Some(0.0), ..Metrics::default() }, key);
+            let known = metric_value(
+                &Metrics {
+                    duplicate_ids: Some(0.0),
+                    out_of_order_ids: Some(0.0),
+                    lost_updates: Some(0.0),
+                    write_conflicts: Some(0.0),
+                    duplicate_writes: Some(0.0),
+                    stale_reads: Some(0.0),
+                    peak_queue_depth: Some(0.0),
+                    lost_messages: Some(0.0),
+                    status_flaps: Some(0.0),
+                    stale_online: Some(0.0),
+                    inbox_writes_per_sec: Some(0.0),
+                    ..Metrics::default()
+                },
+                key,
+            );
             assert!(known.is_some(), "metric_value does not know {key}");
         }
     }

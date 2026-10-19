@@ -18,7 +18,10 @@ impl Default for Histogram {
 
 impl Histogram {
     pub fn new() -> Self {
-        Histogram { counts: vec![0.0; BUCKETS], total: 0.0 }
+        Histogram {
+            counts: vec![0.0; BUCKETS],
+            total: 0.0,
+        }
     }
 
     fn bucket(value_ms: f64) -> usize {

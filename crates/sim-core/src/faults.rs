@@ -37,7 +37,10 @@ fn event(at_ms: f64, node: Option<&str>, code: &str, params: &[(&str, f64)]) -> 
         at_ms: at_ms as u32,
         node: node.map(String::from),
         code: code.into(),
-        params: params.iter().map(|(k, v)| (k.to_string(), *v)).collect::<BTreeMap<_, _>>(),
+        params: params
+            .iter()
+            .map(|(k, v)| (k.to_string(), *v))
+            .collect::<BTreeMap<_, _>>(),
     }
 }
 
@@ -68,8 +71,9 @@ impl Engine<'_> {
         match &f.target {
             Some(id) => self.nodes.iter().position(|n| &n.id == id && eligible(n)),
             None => {
-                let candidates: Vec<usize> =
-                    (0..self.nodes.len()).filter(|&i| eligible(&self.nodes[i])).collect();
+                let candidates: Vec<usize> = (0..self.nodes.len())
+                    .filter(|&i| eligible(&self.nodes[i]))
+                    .collect();
                 if candidates.is_empty() {
                     None
                 } else {
@@ -85,20 +89,23 @@ impl Engine<'_> {
         let role = match f.kind {
             FaultKind::TrafficSurge3x => {
                 self.rate_multiplier *= 3.0;
-                self.events.push(event(now, None, "fault.traffic-surge", &[("factor", 3.0)]));
+                self.events
+                    .push(event(now, None, "fault.traffic-surge", &[("factor", 3.0)]));
                 return;
             }
             FaultKind::InstanceDown => Role::Service,
             FaultKind::LbNodeDown => Role::Balancer,
             FaultKind::DbPrimaryDown => Role::Database,
             _ => {
-                self.events.push(event(now, f.target.as_deref(), "fault.unsupported", &[]));
+                self.events
+                    .push(event(now, f.target.as_deref(), "fault.unsupported", &[]));
                 return;
             }
         };
 
         let Some(i) = self.pick_target(f, role) else {
-            self.events.push(event(now, f.target.as_deref(), "fault.no-target", &[]));
+            self.events
+                .push(event(now, f.target.as_deref(), "fault.no-target", &[]));
             return;
         };
 
@@ -107,18 +114,34 @@ impl Engine<'_> {
         let remaining = f64::from(n.instances_up);
         match f.kind {
             FaultKind::InstanceDown => {
-                self.events.push(event(now, Some(&n.id), "instance.down", &[("remaining", remaining)]));
+                self.events.push(event(
+                    now,
+                    Some(&n.id),
+                    "instance.down",
+                    &[("remaining", remaining)],
+                ));
             }
             FaultKind::LbNodeDown => {
-                self.events.push(event(now, Some(&n.id), "lb.node-down", &[("remaining", remaining)]));
+                self.events.push(event(
+                    now,
+                    Some(&n.id),
+                    "lb.node-down",
+                    &[("remaining", remaining)],
+                ));
             }
             FaultKind::DbPrimaryDown => {
                 n.primary_up = false;
-                self.events.push(event(now, Some(&n.id), "db.primary-down", &[("replicas", remaining)]));
+                self.events.push(event(
+                    now,
+                    Some(&n.id),
+                    "db.primary-down",
+                    &[("replicas", remaining)],
+                ));
                 if n.instances_up > 0 {
                     n.promote_at_ms = Some(now + failover_ms);
                 } else {
-                    self.events.push(event(now, Some(&n.id), "db.no-replica", &[]));
+                    self.events
+                        .push(event(now, Some(&n.id), "db.no-replica", &[]));
                 }
             }
             _ => unreachable!("filtered above"),
@@ -134,13 +157,22 @@ mod tests {
 
     fn with_pg(read_replicas: f64) -> Graph {
         let mut g = web_tier(2, 3);
-        g.nodes.push(node("pg", "postgres", 1, &[("readReplicas", read_replicas)]));
+        g.nodes.push(node(
+            "pg",
+            "postgres",
+            1,
+            &[("readReplicas", read_replicas)],
+        ));
         g.edges.push(edge("web", "pg", EdgeKind::Db));
         g
     }
 
     fn fault(kind: FaultKind, target: Option<&str>, at_ms: u32) -> Fault {
-        Fault { kind, target: target.map(String::from), at_ms }
+        Fault {
+            kind,
+            target: target.map(String::from),
+            at_ms,
+        }
     }
 
     fn codes(r: &SimResult) -> Vec<&str> {
@@ -163,7 +195,11 @@ mod tests {
         i.faults = vec![fault(FaultKind::DbPrimaryDown, Some("pg"), 3_000)];
         let r = simulate(&i).unwrap();
         assert!(r.metrics.availability > 0.95, "{:?}", r.metrics);
-        let promoted = r.events.iter().find(|e| e.code == "db.promoted").expect("promotion event");
+        let promoted = r
+            .events
+            .iter()
+            .find(|e| e.code == "db.promoted")
+            .expect("promotion event");
         assert_eq!(promoted.at_ms, 3_600);
     }
 
@@ -191,7 +227,11 @@ mod tests {
         i.faults = vec![fault(FaultKind::TrafficSurge3x, None, 3_000)];
         let m = simulate(&i).unwrap().metrics;
         // 3 s at 1,000 rps + 7 s at 3,000 rps = 24,000 requests.
-        assert!((m.requests_total - 24_000.0).abs() < 800.0, "{}", m.requests_total);
+        assert!(
+            (m.requests_total - 24_000.0).abs() < 800.0,
+            "{}",
+            m.requests_total
+        );
     }
 
     #[test]
@@ -212,7 +252,13 @@ mod tests {
             fault(FaultKind::DbPrimaryDown, Some("web"), 1_000),
         ];
         let r = simulate(&i).unwrap();
-        assert_eq!(codes(&r).iter().filter(|c| **c == "fault.no-target").count(), 2);
+        assert_eq!(
+            codes(&r)
+                .iter()
+                .filter(|c| **c == "fault.no-target")
+                .count(),
+            2
+        );
         assert!(r.metrics.availability > 0.999);
     }
 

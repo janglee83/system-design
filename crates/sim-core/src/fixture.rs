@@ -72,7 +72,12 @@ pub fn check_fixture(f: &Fixture) -> FixtureReport {
                 _ => false,
             };
             if !ok {
-                failures.push(FixtureFailure { metric: metric.clone(), op: op.clone(), expected: *expected, measured });
+                failures.push(FixtureFailure {
+                    metric: metric.clone(),
+                    op: op.clone(),
+                    expected: *expected,
+                    measured,
+                });
             }
         }
     }
@@ -103,8 +108,14 @@ mod tests {
     #[test]
     fn reports_each_failed_condition_and_missing_event() {
         let mut expect = BTreeMap::new();
-        expect.insert("p95".to_string(), BTreeMap::from([("<=".to_string(), 0.001), (">=".to_string(), 0.0)]));
-        expect.insert("nope".to_string(), BTreeMap::from([("==".to_string(), 1.0)]));
+        expect.insert(
+            "p95".to_string(),
+            BTreeMap::from([("<=".to_string(), 0.001), (">=".to_string(), 0.0)]),
+        );
+        expect.insert(
+            "nope".to_string(),
+            BTreeMap::from([("==".to_string(), 1.0)]),
+        );
         let f = Fixture {
             id: "t".into(),
             description: String::new(),

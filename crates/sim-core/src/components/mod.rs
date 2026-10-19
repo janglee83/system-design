@@ -103,8 +103,12 @@ pub trait ComponentModel: Sync {
 }
 
 /// Sorted by kind so listings are stable.
-static REGISTRY: [&dyn ComponentModel; 4] =
-    [&client::Client, &lb::LoadBalancer, &postgres::Postgres, &web_server::WebServer];
+static REGISTRY: [&dyn ComponentModel; 4] = [
+    &client::Client,
+    &lb::LoadBalancer,
+    &postgres::Postgres,
+    &web_server::WebServer,
+];
 
 pub fn get(kind: &str) -> Option<&'static dyn ComponentModel> {
     REGISTRY.iter().copied().find(|c| c.kind() == kind)
@@ -137,7 +141,11 @@ pub const NODE_OVERRIDE_KEYS: [&str; 3] = ["rpsPerInstance", "serviceMs", "costP
 /// Invalid values are rejected by validation before a run, so they are ignored here.
 pub fn effective_capacity(model: &dyn ComponentModel, node: &Node, cal: &Calibration) -> Capacity {
     let mut cap = model.capacity_per_instance(node, cal);
-    if let Some(v) = node.config.get("rpsPerInstance").and_then(ConfigValue::as_f64) {
+    if let Some(v) = node
+        .config
+        .get("rpsPerInstance")
+        .and_then(ConfigValue::as_f64)
+    {
         if v.is_finite() && v > 0.0 {
             cap.rps = v;
         }
@@ -152,7 +160,11 @@ pub fn effective_capacity(model: &dyn ComponentModel, node: &Node, cal: &Calibra
 
 /// Monthly cost after the per-node override `costPerMonth` (price of ONE instance).
 pub fn effective_cost(model: &dyn ComponentModel, node: &Node, cal: &Calibration) -> f64 {
-    match node.config.get("costPerMonth").and_then(ConfigValue::as_f64) {
+    match node
+        .config
+        .get("costPerMonth")
+        .and_then(ConfigValue::as_f64)
+    {
         Some(v) if v.is_finite() && v >= 0.0 => v * f64::from(model.instances(node)),
         _ => model.cost_per_month(node, cal),
     }
@@ -189,7 +201,10 @@ mod tests {
             kind: kind.into(),
             label: String::new(),
             replicas,
-            config: config.iter().map(|(k, v)| (k.to_string(), ConfigValue::Num(*v))).collect(),
+            config: config
+                .iter()
+                .map(|(k, v)| (k.to_string(), ConfigValue::Num(*v)))
+                .collect(),
         }
     }
 
@@ -209,10 +224,17 @@ mod tests {
         let web = get("web-server").unwrap();
         let n = node("web-server", 3, &[("cpu", 2.0), ("memoryGb", 4.0)]);
         assert_eq!(web.instances(&n), 3);
-        assert_eq!(web.cost_per_month(&n, &cal()), 150.0, "3 x (22.5 + 27.5 for the second vCPU)");
+        assert_eq!(
+            web.cost_per_month(&n, &cal()),
+            150.0,
+            "3 x (22.5 + 27.5 for the second vCPU)"
+        );
         let cap = web.capacity_per_instance(&n, &cal());
         assert_eq!(cap.rps, 18_000.0);
-        assert_eq!(cap.max_queue, 16_312.0, "4 GB x 4,096 minus 72 workers (18,000 rps x 4 ms)");
+        assert_eq!(
+            cap.max_queue, 16_312.0,
+            "4 GB x 4,096 minus 72 workers (18,000 rps x 4 ms)"
+        );
         assert_eq!(web.meta().accepts, vec![EdgeKind::Http]);
     }
 
@@ -228,7 +250,11 @@ mod tests {
     fn run_level_calibration_changes_capacity_and_cost() {
         let web = get("web-server").unwrap();
         let n = node("web-server", 2, &[]);
-        let slow = Calibration { web_rps_per_vcpu: 3_000.0, web_cost_per_vcpu: 40.0, ..Calibration::default() };
+        let slow = Calibration {
+            web_rps_per_vcpu: 3_000.0,
+            web_cost_per_vcpu: 40.0,
+            ..Calibration::default()
+        };
         assert_eq!(web.capacity_per_instance(&n, &slow).rps, 3_000.0);
         assert_eq!(web.cost_per_month(&n, &slow), 80.0);
     }
@@ -236,10 +262,22 @@ mod tests {
     #[test]
     fn node_level_overrides_win_over_calibration() {
         let web = get("web-server").unwrap();
-        let n = node("web-server", 3, &[("rpsPerInstance", 1_234.0), ("serviceMs", 7.0), ("costPerMonth", 10.0)]);
+        let n = node(
+            "web-server",
+            3,
+            &[
+                ("rpsPerInstance", 1_234.0),
+                ("serviceMs", 7.0),
+                ("costPerMonth", 10.0),
+            ],
+        );
         let cap = effective_capacity(web, &n, &cal());
         assert_eq!((cap.rps, cap.service_ms), (1_234.0, 7.0));
-        assert_eq!(effective_cost(web, &n, &cal()), 30.0, "price of one instance x 3");
+        assert_eq!(
+            effective_cost(web, &n, &cal()),
+            30.0,
+            "price of one instance x 3"
+        );
         let plain = node("web-server", 3, &[]);
         assert_eq!(effective_cost(web, &plain, &cal()), 67.5);
     }
@@ -269,9 +307,14 @@ mod tests {
     fn num_falls_back_to_default_for_missing_or_non_numeric() {
         let mut n = node("web-server", 1, &[]);
         assert_eq!(num(&n, "cpu", 1.0), 1.0);
-        n.config.insert("cpu".into(), ConfigValue::Str("two".into()));
+        n.config
+            .insert("cpu".into(), ConfigValue::Str("two".into()));
         assert_eq!(num(&n, "cpu", 1.0), 1.0);
         n.config.insert("cpu".into(), ConfigValue::Num(-3.0));
-        assert_eq!(num(&n, "cpu", 1.0), 1.0, "non-positive values fall back too");
+        assert_eq!(
+            num(&n, "cpu", 1.0),
+            1.0,
+            "non-positive values fall back too"
+        );
     }
 }

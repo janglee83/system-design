@@ -12,7 +12,12 @@ impl ComponentModel for Client {
         meta("client", "general", Role::Client, &[], false, vec![])
     }
     fn capacity_per_instance(&self, _node: &Node, _cal: &Calibration) -> Capacity {
-        Capacity { rps: f64::INFINITY, service_ms: 0.0, max_queue: 0.0, latency_knee: None }
+        Capacity {
+            rps: f64::INFINITY,
+            service_ms: 0.0,
+            max_queue: 0.0,
+            latency_knee: None,
+        }
     }
     fn cost_per_month(&self, _node: &Node, _cal: &Calibration) -> f64 {
         0.0

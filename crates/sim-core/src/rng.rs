@@ -11,9 +11,14 @@ const STREAM: u64 = 0xda3e_39cb_94b9_5bdb;
 
 impl Pcg32 {
     pub fn new(seed: u32) -> Self {
-        let mut rng = Pcg32 { state: 0, inc: (STREAM << 1) | 1 };
+        let mut rng = Pcg32 {
+            state: 0,
+            inc: (STREAM << 1) | 1,
+        };
         rng.next_u32();
-        rng.state = rng.state.wrapping_add(u64::from(seed) ^ 0x853c_49e6_748f_ea9b);
+        rng.state = rng
+            .state
+            .wrapping_add(u64::from(seed) ^ 0x853c_49e6_748f_ea9b);
         rng.next_u32();
         rng
     }

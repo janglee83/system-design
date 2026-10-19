@@ -90,14 +90,23 @@ pub struct ParityReport {
 
 /// Allowed absolute difference for `metric` given the reference value. An override with
 /// neither `rel` nor `abs` set falls back to the default rule.
-pub fn allowed_difference(metric: &str, reference: f64, overrides: &BTreeMap<String, Tolerance>) -> f64 {
-    if let Some(t) = overrides.get(metric).filter(|t| t.rel.is_some() || t.abs.is_some()) {
+pub fn allowed_difference(
+    metric: &str,
+    reference: f64,
+    overrides: &BTreeMap<String, Tolerance>,
+) -> f64 {
+    if let Some(t) = overrides
+        .get(metric)
+        .filter(|t| t.rel.is_some() || t.abs.is_some())
+    {
         let rel = t.rel.map_or(0.0, |r| r * reference.abs());
         return rel.max(t.abs.unwrap_or(0.0));
     }
     match metric {
         "spofCount" | "exposedBackends" | "costPerMonth" => 1e-9,
-        "p50" | "p95" | "p99" => (0.15 * reference.abs()).max(if reference < 13.0 { 2.0 } else { 0.0 }),
+        "p50" | "p95" | "p99" => {
+            (0.15 * reference.abs()).max(if reference < 13.0 { 2.0 } else { 0.0 })
+        }
         "availability" => 0.005,
         "requestsTotal" | "throughputRps" => 0.02 * reference.abs(),
         _ => 0.10 * reference.abs(),
@@ -105,7 +114,13 @@ pub fn allowed_difference(metric: &str, reference: f64, overrides: &BTreeMap<Str
 }
 
 fn issue(code: &str, field: &str) -> ValidationIssue {
-    ValidationIssue { code: code.into(), node_id: None, edge_id: None, field: Some(field.into()), blocking: true }
+    ValidationIssue {
+        code: code.into(),
+        node_id: None,
+        edge_id: None,
+        field: Some(field.into()),
+        blocking: true,
+    }
 }
 
 /// Problems in the fixture itself: goal ops we do not know and unusable tolerances.
@@ -172,7 +187,12 @@ pub fn check_parity(f: &ParityFixture) -> ParityReport {
             let measured = metric_value(m, metric);
             let allowed = allowed_difference(metric, reference, &f.tolerance);
             let ok = measured.is_some_and(|v| (v - reference).abs() <= allowed);
-            (!ok).then(|| MetricMismatch { metric: metric.clone(), reference, measured, allowed })
+            (!ok).then(|| MetricMismatch {
+                metric: metric.clone(),
+                reference,
+                measured,
+                allowed,
+            })
         })
         .collect();
 
@@ -196,7 +216,10 @@ mod tests {
             source: ParitySource::default(),
             input: input(web_tier(2, 2), 2_000.0),
             reference: ParityReference {
-                metrics: reference_metrics.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+                metrics: reference_metrics
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), *v))
+                    .collect(),
                 goals,
             },
             tolerance: BTreeMap::new(),
@@ -204,14 +227,27 @@ mod tests {
     }
 
     fn goal(id: &str, metric: &str, op: &str, value: f64, passed: bool) -> ParityGoal {
-        ParityGoal { id: id.into(), metric: metric.into(), op: op.into(), value, passed }
+        ParityGoal {
+            id: id.into(),
+            metric: metric.into(),
+            op: op.into(),
+            value,
+            passed,
+        }
     }
 
     #[test]
     fn matching_goals_and_close_metrics_pass() {
         let r = check_parity(&fixture(
-            &[("availability", 1.0), ("costPerMonth", 95.0), ("spofCount", 0.0)],
-            vec![goal("lat", "p95", "<=", 100.0, true), goal("spof", "spofCount", "==", 0.0, true)],
+            &[
+                ("availability", 1.0),
+                ("costPerMonth", 95.0),
+                ("spofCount", 0.0),
+            ],
+            vec![
+                goal("lat", "p95", "<=", 100.0, true),
+                goal("spof", "spofCount", "==", 0.0, true),
+            ],
         ));
         assert!(r.passed, "{r:?}");
     }
@@ -226,8 +262,15 @@ mod tests {
 
     #[test]
     fn numbers_outside_tolerance_fail_and_structural_numbers_must_be_exact() {
-        let r = check_parity(&fixture(&[("availability", 0.9), ("costPerMonth", 95.5)], vec![]));
-        let metrics: Vec<&str> = r.metric_mismatches.iter().map(|m| m.metric.as_str()).collect();
+        let r = check_parity(&fixture(
+            &[("availability", 0.9), ("costPerMonth", 95.5)],
+            vec![],
+        ));
+        let metrics: Vec<&str> = r
+            .metric_mismatches
+            .iter()
+            .map(|m| m.metric.as_str())
+            .collect();
         assert_eq!(metrics, vec!["availability", "costPerMonth"]);
     }
 
@@ -235,7 +278,10 @@ mod tests {
     fn an_unknown_op_or_metric_is_a_mismatch_even_when_the_reference_failed() {
         let r = check_parity(&fixture(
             &[],
-            vec![goal("op", "p95", "<", 100.0, false), goal("metric", "p42", "<=", 100.0, false)],
+            vec![
+                goal("op", "p95", "<", 100.0, false),
+                goal("metric", "p42", "<=", 100.0, false),
+            ],
         ));
         assert!(!r.passed);
         let ids: Vec<&str> = r.goal_mismatches.iter().map(|g| g.id.as_str()).collect();
@@ -248,14 +294,33 @@ mod tests {
     #[test]
     fn negative_or_non_finite_tolerances_are_reported() {
         let mut f = fixture(&[("availability", 1.0)], vec![]);
-        f.tolerance.insert("availability".into(), Tolerance { rel: Some(-0.1), abs: None });
-        f.tolerance.insert("p95".into(), Tolerance { rel: None, abs: Some(f64::NAN) });
+        f.tolerance.insert(
+            "availability".into(),
+            Tolerance {
+                rel: Some(-0.1),
+                abs: None,
+            },
+        );
+        f.tolerance.insert(
+            "p95".into(),
+            Tolerance {
+                rel: None,
+                abs: Some(f64::NAN),
+            },
+        );
         let r = check_parity(&f);
         assert!(!r.passed);
-        let fields: Vec<_> = r.validation.iter().map(|v| (v.code.as_str(), v.field.as_deref())).collect();
+        let fields: Vec<_> = r
+            .validation
+            .iter()
+            .map(|v| (v.code.as_str(), v.field.as_deref()))
+            .collect();
         assert_eq!(
             fields,
-            vec![("parity.invalid-tolerance", Some("availability")), ("parity.invalid-tolerance", Some("p95"))]
+            vec![
+                ("parity.invalid-tolerance", Some("availability")),
+                ("parity.invalid-tolerance", Some("p95"))
+            ]
         );
     }
 
@@ -264,14 +329,23 @@ mod tests {
         let mut o = BTreeMap::new();
         o.insert("availability".to_string(), Tolerance::default());
         assert_eq!(allowed_difference("availability", 0.9, &o), 0.005);
-        o.insert("availability".to_string(), Tolerance { rel: None, abs: Some(0.01) });
+        o.insert(
+            "availability".to_string(),
+            Tolerance {
+                rel: None,
+                abs: Some(0.01),
+            },
+        );
         assert_eq!(allowed_difference("availability", 0.9, &o), 0.01);
     }
 
     #[test]
     fn small_latencies_use_an_absolute_window() {
         // Our p95 for this light load is a few ms; a 2 ms reference is within 2 ms abs.
-        let ours = crate::simulate(&input(web_tier(2, 2), 2_000.0)).unwrap().metrics.p95;
+        let ours = crate::simulate(&input(web_tier(2, 2), 2_000.0))
+            .unwrap()
+            .metrics
+            .p95;
         let r = check_parity(&fixture(&[("p95", (ours - 1.5).max(0.0))], vec![]));
         assert!(r.metric_mismatches.is_empty(), "{r:?}");
     }

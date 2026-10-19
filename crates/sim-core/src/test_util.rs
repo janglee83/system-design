@@ -6,12 +6,20 @@ pub fn node(id: &str, kind: &str, replicas: u32, config: &[(&str, f64)]) -> Node
         kind: kind.into(),
         label: String::new(),
         replicas,
-        config: config.iter().map(|(k, v)| (k.to_string(), ConfigValue::Num(*v))).collect(),
+        config: config
+            .iter()
+            .map(|(k, v)| (k.to_string(), ConfigValue::Num(*v)))
+            .collect(),
     }
 }
 
 pub fn edge(from: &str, to: &str, kind: EdgeKind) -> Edge {
-    Edge { id: format!("{from}->{to}"), from: from.into(), to: to.into(), kind }
+    Edge {
+        id: format!("{from}->{to}"),
+        from: from.into(),
+        to: to.into(),
+        kind,
+    }
 }
 
 pub fn graph(nodes: Vec<Node>, edges: Vec<Edge>) -> Graph {
@@ -26,7 +34,10 @@ pub fn web_tier(lb_replicas: u32, web_replicas: u32) -> Graph {
             node("lb", "lb", lb_replicas, &[]),
             node("web", "web-server", web_replicas, &[]),
         ],
-        vec![edge("users", "lb", EdgeKind::Http), edge("lb", "web", EdgeKind::Http)],
+        vec![
+            edge("users", "lb", EdgeKind::Http),
+            edge("lb", "web", EdgeKind::Http),
+        ],
     )
 }
 

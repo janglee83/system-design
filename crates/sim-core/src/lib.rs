@@ -21,8 +21,8 @@ pub use components::list_components;
 pub mod types;
 pub use types::*;
 
-pub mod rng;
 pub mod histogram;
+pub mod rng;
 
 #[cfg(test)]
 mod type_tests {
@@ -48,7 +48,10 @@ mod type_tests {
         assert_eq!(input.workload.write_ratio, 0.2);
         assert_eq!(input.workload.client_timeout_ms, 1000.0);
         assert_eq!(input.graph.nodes[0].replicas, 1);
-        assert_eq!(input.graph.nodes[1].config.get("cpu"), Some(&ConfigValue::Num(2.0)));
+        assert_eq!(
+            input.graph.nodes[1].config.get("cpu"),
+            Some(&ConfigValue::Num(2.0))
+        );
         assert_eq!(input.graph.edges[0].kind, EdgeKind::Http);
         assert_eq!(input.calibration, None);
     }
@@ -73,7 +76,8 @@ mod type_tests {
             serde_json::to_string(&FaultKind::DbPrimaryDown).unwrap(),
             r#""db-primary-down""#
         );
-        let g: Goal = serde_json::from_str(r#"{"id":"p95","metric":"p95","op":"<=","value":100}"#).unwrap();
+        let g: Goal =
+            serde_json::from_str(r#"{"id":"p95","metric":"p95","op":"<=","value":100}"#).unwrap();
         assert_eq!(g.op, GoalOp::Le);
     }
 

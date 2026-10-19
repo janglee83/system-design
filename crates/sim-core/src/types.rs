@@ -27,19 +27,30 @@ pub enum ConfigValue { Bool(bool), Num(f64), Str(String) }
 
 impl ConfigValue {
     pub fn as_f64(&self) -> Option<f64> {
-        match self { ConfigValue::Num(v) => Some(*v), _ => None }
+        match self {
+            ConfigValue::Num(v) => Some(*v),
+            _ => None,
+        }
     }
     pub fn as_str(&self) -> Option<&str> {
-        match self { ConfigValue::Str(v) => Some(v), _ => None }
+        match self {
+            ConfigValue::Str(v) => Some(v),
+            _ => None,
+        }
     }
     pub fn as_bool(&self) -> Option<bool> {
-        match self { ConfigValue::Bool(v) => Some(*v), _ => None }
+        match self {
+            ConfigValue::Bool(v) => Some(*v),
+            _ => None,
+        }
     }
 }
 
 pub type Config = BTreeMap<String, ConfigValue>;
 
-fn default_replicas() -> u32 { 1 }
+fn default_replicas() -> u32 {
+    1
+}
 
 exported! {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -94,10 +105,18 @@ pub enum Arrivals {
 }
 }
 
-fn default_profile() -> Profile { Profile::Mixed }
-fn default_write_ratio() -> f64 { 0.2 }
-fn default_clients() -> u32 { 1000 }
-fn default_timeout() -> f64 { 1000.0 }
+fn default_profile() -> Profile {
+    Profile::Mixed
+}
+fn default_write_ratio() -> f64 {
+    0.2
+}
+fn default_clients() -> u32 {
+    1000
+}
+fn default_timeout() -> f64 {
+    1000.0
+}
 
 exported! {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -190,7 +209,9 @@ pub struct CalibrationOverrides {
 }
 }
 
-fn default_duration() -> u32 { 10_000 }
+fn default_duration() -> u32 {
+    10_000
+}
 
 exported! {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

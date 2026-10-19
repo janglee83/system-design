@@ -22,7 +22,11 @@ fn fixtures() -> Vec<ParityFixture> {
         .collect();
     // Six reference captures are committed (see fixtures/parity/README.md); fewer means a
     // fixture went missing and the robustness check would silently cover less.
-    assert!(all.len() >= 6, "expected at least 6 reference fixtures, found {}", all.len());
+    assert!(
+        all.len() >= 6,
+        "expected at least 6 reference fixtures, found {}",
+        all.len()
+    );
     all
 }
 
@@ -36,10 +40,18 @@ type Setter = fn(&mut CalibrationOverrides, f64);
 fn fitted() -> Vec<(&'static str, f64, Setter)> {
     let d = Calibration::default();
     vec![
-        ("webRpsPerVcpu", d.web_rps_per_vcpu, |o, v| o.web_rps_per_vcpu = Some(v)),
-        ("webServiceMs", d.web_service_ms, |o, v| o.web_service_ms = Some(v)),
-        ("webQueuePerGb", d.web_queue_per_gb, |o, v| o.web_queue_per_gb = Some(v)),
-        ("lbServiceMs", d.lb_service_ms, |o, v| o.lb_service_ms = Some(v)),
+        ("webRpsPerVcpu", d.web_rps_per_vcpu, |o, v| {
+            o.web_rps_per_vcpu = Some(v)
+        }),
+        ("webServiceMs", d.web_service_ms, |o, v| {
+            o.web_service_ms = Some(v)
+        }),
+        ("webQueuePerGb", d.web_queue_per_gb, |o, v| {
+            o.web_queue_per_gb = Some(v)
+        }),
+        ("lbServiceMs", d.lb_service_ms, |o, v| {
+            o.lb_service_ms = Some(v)
+        }),
     ]
 }
 
@@ -47,18 +59,31 @@ fn fitted() -> Vec<(&'static str, f64, Setter)> {
 /// scale-web-tier-surge-direct-2cpu-2gb rejects exactly the surge excess over 18,000 rps, so
 /// availability moves ~0.0032 per 1% of webRpsPerVcpu: ±2% (±0.0065) exceeds the ±0.005
 /// tolerance while ±1% (±0.0033) does not. The capture fixes capacity to about ±1.5%.
-const PINNED: [(&str, &str, f64); 1] = [("scale-web-tier-surge-direct-2cpu-2gb", "webRpsPerVcpu", 0.01)];
+const PINNED: [(&str, &str, f64); 1] = [(
+    "scale-web-tier-surge-direct-2cpu-2gb",
+    "webRpsPerVcpu",
+    0.01,
+)];
 
 fn step(fixture: &str, field: &str) -> f64 {
-    PINNED.iter().find(|(f, n, _)| *f == fixture && *n == field).map_or(0.02, |p| p.2)
+    PINNED
+        .iter()
+        .find(|(f, n, _)| *f == fixture && *n == field)
+        .map_or(0.02, |p| p.2)
 }
 
 #[test]
 fn parity_holds_with_each_fitted_default_moved_two_percent() {
     let all = fixtures();
     for (fixture, field, _) in PINNED {
-        assert!(all.iter().any(|f| f.id == fixture), "pinned fixture {fixture} is missing");
-        assert!(fitted().iter().any(|(n, _, _)| *n == field), "pinned field {field} is not fitted");
+        assert!(
+            all.iter().any(|f| f.id == fixture),
+            "pinned fixture {fixture} is missing"
+        );
+        assert!(
+            fitted().iter().any(|(n, _, _)| *n == field),
+            "pinned field {field} is not fitted"
+        );
     }
     let mut failures = Vec::new();
     for f in all {

@@ -27,12 +27,17 @@ mod tests {
     use crate::types::*;
 
     fn surge(mut i: SimInput) -> SimInput {
-        i.workload.surge = Some(Surge { factor: 3.0, at_ms: 2_000, duration_ms: 6_000 });
+        i.workload.surge = Some(Surge {
+            factor: 3.0,
+            at_ms: 2_000,
+            duration_ms: 6_000,
+        });
         i
     }
 
     fn conserved(m: &Metrics) -> bool {
-        let sum = m.requests_ok + m.requests_rejected + m.requests_timed_out + m.requests_unreachable;
+        let sum =
+            m.requests_ok + m.requests_rejected + m.requests_timed_out + m.requests_unreachable;
         (sum - m.requests_total).abs() <= 1e-6 * m.requests_total.max(1.0)
     }
 
@@ -42,12 +47,24 @@ mod tests {
         i.duration_ms = 11_000;
         i.workload.traffic_end_ms = Some(10_000);
         i.workload.arrivals = Some(Arrivals::Uniform);
-        i.workload.surge = Some(Surge { factor: 3.0, at_ms: 4_000, duration_ms: 2_000 });
+        i.workload.surge = Some(Surge {
+            factor: 3.0,
+            at_ms: 4_000,
+            duration_ms: 2_000,
+        });
         let m = simulate(&i).unwrap().metrics;
         // 8,000 rps for 10 s plus 16,000 extra for 2 s; nothing after 10 s.
-        assert!((m.requests_total - 112_000.0).abs() < 1e-6, "{}", m.requests_total);
+        assert!(
+            (m.requests_total - 112_000.0).abs() < 1e-6,
+            "{}",
+            m.requests_total
+        );
         assert!(conserved(&m));
-        assert_eq!(simulate(&i).unwrap(), simulate(&i).unwrap(), "deterministic");
+        assert_eq!(
+            simulate(&i).unwrap(),
+            simulate(&i).unwrap(),
+            "deterministic"
+        );
     }
 
     #[test]
@@ -55,7 +72,11 @@ mod tests {
         let mut i = input(web_tier(2, 2), 2_000.0);
         i.workload.traffic_end_ms = Some(5_000);
         let m = simulate(&i).unwrap().metrics;
-        assert!((m.requests_total - 10_000.0).abs() < 400.0, "{}", m.requests_total);
+        assert!(
+            (m.requests_total - 10_000.0).abs() < 400.0,
+            "{}",
+            m.requests_total
+        );
     }
 
     #[test]
@@ -64,8 +85,13 @@ mod tests {
         let poisson = simulate(&i).unwrap();
         i.workload.arrivals = Some(Arrivals::Poisson);
         assert_eq!(simulate(&i).unwrap(), poisson);
-        let w: Workload = serde_json::from_str(r#"{"baseRps": 1, "arrivals": "uniform", "trafficEndMs": 10}"#).unwrap();
-        assert_eq!((w.arrivals, w.traffic_end_ms), (Some(Arrivals::Uniform), Some(10)));
+        let w: Workload =
+            serde_json::from_str(r#"{"baseRps": 1, "arrivals": "uniform", "trafficEndMs": 10}"#)
+                .unwrap();
+        assert_eq!(
+            (w.arrivals, w.traffic_end_ms),
+            (Some(Arrivals::Uniform), Some(10))
+        );
     }
 
     #[test]
@@ -77,14 +103,21 @@ mod tests {
         assert_eq!(m.spof_count, 0);
         assert_eq!(m.exposed_backends, 0);
         assert_eq!(m.cost_per_month, 2.0 * 25.0 + 2.0 * 22.5);
-        assert!((m.requests_total - 20_000.0).abs() < 600.0, "{}", m.requests_total);
+        assert!(
+            (m.requests_total - 20_000.0).abs() < 600.0,
+            "{}",
+            m.requests_total
+        );
         assert!(conserved(m));
     }
 
     #[test]
     fn single_web_server_falls_over_under_3x_surge() {
         let g = graph(
-            vec![node("users", "client", 1, &[]), node("web", "web-server", 1, &[])],
+            vec![
+                node("users", "client", 1, &[]),
+                node("web", "web-server", 1, &[]),
+            ],
             vec![edge("users", "web", EdgeKind::Http)],
         );
         let r = simulate(&surge(input(g, 8_000.0))).unwrap();
@@ -94,7 +127,10 @@ mod tests {
         assert_eq!(m.spof_count, 1);
         assert_eq!(m.exposed_backends, 1);
         assert!(m.requests_rejected > 0.0);
-        assert!(r.events.iter().any(|e| e.code == "node.overloaded" && e.node.as_deref() == Some("web")));
+        assert!(r
+            .events
+            .iter()
+            .any(|e| e.code == "node.overloaded" && e.node.as_deref() == Some("web")));
         assert!(conserved(m));
     }
 
@@ -111,7 +147,8 @@ mod tests {
     #[test]
     fn postgres_behind_web_tier_reports_db_connections() {
         let mut g = web_tier(2, 2);
-        g.nodes.push(node("pg", "postgres", 1, &[("readReplicas", 1.0)]));
+        g.nodes
+            .push(node("pg", "postgres", 1, &[("readReplicas", 1.0)]));
         g.edges.push(edge("web", "pg", EdgeKind::Db));
         let r = simulate(&input(g, 2_000.0)).unwrap();
         assert!(r.metrics.availability > 0.999, "{:?}", r.metrics);
@@ -122,8 +159,15 @@ mod tests {
     /// users -> web x5 -> pg (one instance, 5,000 qps) at a steady uniform rate.
     fn web_to_pg(rps: f64) -> SimInput {
         let g = graph(
-            vec![node("users", "client", 1, &[]), node("web", "web-server", 5, &[]), node("pg", "postgres", 1, &[])],
-            vec![edge("users", "web", EdgeKind::Http), edge("web", "pg", EdgeKind::Db)],
+            vec![
+                node("users", "client", 1, &[]),
+                node("web", "web-server", 5, &[]),
+                node("pg", "postgres", 1, &[]),
+            ],
+            vec![
+                edge("users", "web", EdgeKind::Http),
+                edge("web", "pg", EdgeKind::Db),
+            ],
         );
         let mut i = input(g, rps);
         i.workload.arrivals = Some(Arrivals::Uniform);
@@ -134,7 +178,10 @@ mod tests {
     fn postgres_latency_rises_near_saturation_before_overload() {
         let p95 = |rps: f64| {
             let m = simulate(&web_to_pg(rps)).unwrap().metrics;
-            assert_eq!(m.requests_rejected, 0.0, "{rps} rps must not overload: {m:?}");
+            assert_eq!(
+                m.requests_rejected, 0.0,
+                "{rps} rps must not overload: {m:?}"
+            );
             assert_eq!(m.availability, 1.0, "{m:?}");
             m.p95
         };
@@ -144,8 +191,10 @@ mod tests {
         assert!(near > busy + 15.0, "busy {busy}, near {near}");
         // A lower knee cap flattens the curve: 3 ms / (1 - 0.5) = 6 ms at any utilization.
         let mut capped = web_to_pg(4_900.0);
-        capped.calibration =
-            Some(CalibrationOverrides { pg_max_utilization_for_latency: Some(0.5), ..Default::default() });
+        capped.calibration = Some(CalibrationOverrides {
+            pg_max_utilization_for_latency: Some(0.5),
+            ..Default::default()
+        });
         let flat = simulate(&capped).unwrap().metrics.p95;
         assert!(flat < light + 5.0, "light {light}, capped {flat}");
     }
@@ -155,7 +204,10 @@ mod tests {
         let p95 = |rps: f64| {
             let mut i = input(web_tier(1, 5), rps);
             i.workload.arrivals = Some(Arrivals::Uniform);
-            i.calibration = Some(CalibrationOverrides { lb_rps_per_replica: Some(10_000.0), ..Default::default() });
+            i.calibration = Some(CalibrationOverrides {
+                lb_rps_per_replica: Some(10_000.0),
+                ..Default::default()
+            });
             let m = simulate(&i).unwrap().metrics;
             assert_eq!(m.requests_rejected, 0.0, "{m:?}");
             m.p95
@@ -174,7 +226,10 @@ mod tests {
         i.workload.client_timeout_ms = 200.0;
         let m = simulate(&i).unwrap().metrics;
         assert!(m.requests_timed_out > 0.0, "{m:?}");
-        assert!(m.requests_rejected > 0.0, "a full queue still rejects: {m:?}");
+        assert!(
+            m.requests_rejected > 0.0,
+            "a full queue still rejects: {m:?}"
+        );
         assert!(m.p95 > 400.0, "waits up to 500 ms are recorded: {m:?}");
         assert!(conserved(&m));
     }
@@ -185,7 +240,10 @@ mod tests {
         let t = &r.timeline;
         assert_eq!(t.frame_ms, 100);
         assert_eq!(t.node_ids, vec!["lb", "users", "web"]);
-        assert_eq!(t.fields, vec!["inFlight", "queued", "busy", "rejected", "up"]);
+        assert_eq!(
+            t.fields,
+            vec!["inFlight", "queued", "busy", "rejected", "up"]
+        );
         assert_eq!(t.data.len(), 100 * 3 * 5);
     }
 
@@ -195,7 +253,10 @@ mod tests {
         assert_eq!(simulate(&i).unwrap(), simulate(&i).unwrap());
         let mut other = i.clone();
         other.seed = 99;
-        assert_ne!(simulate(&i).unwrap().metrics, simulate(&other).unwrap().metrics);
+        assert_ne!(
+            simulate(&i).unwrap().metrics,
+            simulate(&other).unwrap().metrics
+        );
     }
 
     #[test]
@@ -236,7 +297,10 @@ mod tests {
     #[test]
     fn slower_hardware_override_makes_the_scaled_design_fail() {
         let mut i = surge(input(web_tier(2, 5), 8_000.0));
-        i.calibration = Some(CalibrationOverrides { web_rps_per_vcpu: Some(3_000.0), ..Default::default() });
+        i.calibration = Some(CalibrationOverrides {
+            web_rps_per_vcpu: Some(3_000.0),
+            ..Default::default()
+        });
         let m = simulate(&i).unwrap().metrics;
         assert!(m.availability < 0.95, "{m:?}");
     }
@@ -246,17 +310,27 @@ mod tests {
         let base = input(web_tier(2, 3), 5_000.0);
         let mut with_empty = base.clone();
         with_empty.calibration = Some(CalibrationOverrides::default());
-        assert_eq!(simulate(&base).unwrap().metrics, simulate(&with_empty).unwrap().metrics);
+        assert_eq!(
+            simulate(&base).unwrap().metrics,
+            simulate(&with_empty).unwrap().metrics
+        );
     }
 
     #[test]
     fn per_node_overrides_change_only_that_node() {
         let mut g = web_tier(2, 2);
-        g.nodes[2].config.insert("costPerMonth".into(), ConfigValue::Num(100.0));
-        g.nodes[2].config.insert("rpsPerInstance".into(), ConfigValue::Num(500.0));
+        g.nodes[2]
+            .config
+            .insert("costPerMonth".into(), ConfigValue::Num(100.0));
+        g.nodes[2]
+            .config
+            .insert("rpsPerInstance".into(), ConfigValue::Num(500.0));
         let m = simulate(&input(g, 2_000.0)).unwrap().metrics;
         assert_eq!(m.cost_per_month, 50.0 + 200.0);
-        assert!(m.availability < 0.9, "2 x 500 rps cannot serve 2,000 rps: {m:?}");
+        assert!(
+            m.availability < 0.9,
+            "2 x 500 rps cannot serve 2,000 rps: {m:?}"
+        );
     }
 
     #[test]
@@ -270,7 +344,9 @@ mod tests {
         let err = simulate(&i).unwrap_err();
         let fields: Vec<&str> = err.iter().map(|e| e.field.as_deref().unwrap()).collect();
         assert_eq!(fields, vec!["webRpsPerVcpu", "webCostPerExtraVcpu"]);
-        assert!(err.iter().all(|e| e.code == "calibration.invalid" && e.blocking));
+        assert!(err
+            .iter()
+            .all(|e| e.code == "calibration.invalid" && e.blocking));
     }
 
     // Review focus 3: very large numbers.
@@ -278,7 +354,15 @@ mod tests {
     fn huge_numbers_finish_with_finite_metrics() {
         let r = simulate(&input(web_tier(1000, 1000), 1e7)).unwrap();
         let m = &r.metrics;
-        for v in [m.p50, m.p95, m.p99, m.availability, m.throughput_rps, m.cost_per_month, m.peak_busy] {
+        for v in [
+            m.p50,
+            m.p95,
+            m.p99,
+            m.availability,
+            m.throughput_rps,
+            m.cost_per_month,
+            m.peak_busy,
+        ] {
             assert!(v.is_finite(), "{m:?}");
         }
     }

@@ -15,7 +15,11 @@ impl ComponentModel for LoadBalancer {
             Role::Balancer,
             &[EdgeKind::Http],
             true,
-            vec![ConfigField::choice("algorithm", "round-robin", &["round-robin", "least-conn"])],
+            vec![ConfigField::choice(
+                "algorithm",
+                "round-robin",
+                &["round-robin", "least-conn"],
+            )],
         )
     }
     fn capacity_per_instance(&self, _node: &Node, cal: &Calibration) -> Capacity {
