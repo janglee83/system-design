@@ -100,6 +100,6 @@ pub(crate) fn check_challenge(item: &Item<Challenge>, ctx: &Ctx) -> Outcome {
     let structure = crate::challenge::check_structure(&path, c);
     let structural_ok = c.start.is_object() && !structure.iter().any(|i| i.blocking);
     out.issues.extend(structure);
-    let _ = (ctx, structural_ok); // used from Task 16
+    crate::challenge::check_engine(&path, c, ctx, structural_ok, &mut out);
     out
 }

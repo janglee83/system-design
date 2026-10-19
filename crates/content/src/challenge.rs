@@ -1,11 +1,15 @@
 //! Challenges (spec §4, rulings R15 and R16): structure here; designs and runs in Tasks 16–17.
 
+use crate::checks::{Ctx, Outcome};
 use crate::choices::check_goals;
+use crate::engine_input::{engine_check, mode_input, normalized, EngineCheck};
 use crate::ids;
 use crate::issue::{codes, ContentIssue};
+use crate::readiness::Scan;
+use crate::report::Readiness;
 use crate::types::*;
 use serde_json::Value;
-use sim_core::{Goal, GoalOp};
+use sim_core::{validate_graph, Goal, GoalOp, Graph, SimInput, ValidationIssue};
 use std::collections::BTreeSet;
 
 pub(crate) const BUDGET_GOAL: &str = "budget";
@@ -164,6 +168,115 @@ pub(crate) fn check_structure(path: &str, c: &Challenge) -> Vec<ContentIssue> {
     out
 }
 
+fn limit_issues(graph: &Graph, limits: &sim_core::GraphLimits) -> Vec<ValidationIssue> {
+    validate_graph(graph, Some(limits))
+        .into_iter()
+        .filter(|i| i.code.starts_with("limits."))
+        .collect()
+}
+
+pub(crate) fn check_engine(
+    path: &str,
+    c: &Challenge,
+    ctx: &Ctx,
+    structural_ok: bool,
+    out: &mut Outcome,
+) {
+    let start = normalized(&c.start);
+    let mut scan = Scan::default();
+    scan.input(&start, ctx);
+    let mut designs: Vec<(&Mode, &str, Value)> = vec![];
+    for m in &c.modes {
+        if !(m.faults.is_array() && m.workload_override.is_object()) {
+            continue; // reported structurally
+        }
+        for (name, graph) in [("reference", &m.reference.graph), ("naive", &m.naive.graph)] {
+            let v = mode_input(&start, m, graph);
+            scan.input(&v, ctx);
+            designs.push((m, name, v));
+        }
+    }
+    for g in &c.goals {
+        scan.metric(&g.metric, ctx);
+    }
+    scan.metric("costPerMonth", ctx);
+    out.issues.extend(scan.issues(path));
+    out.needs = scan.needs();
+    out.missing = scan.missing.iter().cloned().collect();
+    if !scan.missing.is_empty() {
+        out.readiness = Some(Readiness::Blocked);
+    }
+    if !structural_ok || scan.stops_engine() {
+        return;
+    }
+
+    let limits = c.limits.graph_limits();
+    let start_graph: Graph = match serde_json::from_value(start["graph"].clone()) {
+        Ok(g) => g,
+        Err(e) => {
+            out.issues.push(
+                ContentIssue::new(codes::ENGINE_INVALID, path)
+                    .id("start")
+                    .detail(e.to_string()),
+            );
+            return;
+        }
+    };
+    let lim = limit_issues(&start_graph, &limits);
+    if !lim.is_empty() {
+        out.issues.push(
+            ContentIssue::new(codes::LIMITS, path)
+                .id("start")
+                .engine(lim),
+        );
+    }
+    for (m, name, v) in designs {
+        let label = format!("{}/{name}", m.id);
+        let input = match engine_check(&v) {
+            EngineCheck::Accepted(i) => i,
+            failed => {
+                if let Some(issue) = failed.issue(codes::ENGINE_INVALID, path) {
+                    out.issues.push(issue.id(label));
+                }
+                continue;
+            }
+        };
+        let lim = limit_issues(&input.graph, &limits);
+        if !lim.is_empty() {
+            out.issues.push(
+                ContentIssue::new(codes::LIMITS, path)
+                    .id(label.clone())
+                    .engine(lim),
+            );
+        }
+        for id in &c.locked_nodes {
+            let before = start_graph.nodes.iter().find(|n| &n.id == id);
+            let after = input.graph.nodes.iter().find(|n| &n.id == id);
+            if before.is_some() && before != after {
+                out.issues.push(
+                    ContentIssue::new(codes::LIMITS, path)
+                        .id(label.clone())
+                        .field(id.clone())
+                        .detail("locked node changed"),
+                );
+            }
+        }
+        run_design(path, c, m, name, &label, &input, out); // Task 17
+    }
+}
+
+/// Task 17.
+fn run_design(
+    _path: &str,
+    _c: &Challenge,
+    _m: &Mode,
+    _name: &str,
+    _label: &str,
+    _input: &SimInput,
+    _out: &mut Outcome,
+) {
+}
+
 #[cfg(test)]
 mod tests {
     use crate::issue::codes;
@@ -276,5 +389,86 @@ mod tests {
     fn budget_may_be_listed_as_a_naive_failure() {
         let i = shop(|c| c["modes"][0]["naive"]["failsGoals"] = json!(["fast", "up", "budget"]));
         assert!(!has_code(&i, codes::CHOICE));
+    }
+
+    fn shop_item(edit: impl FnOnce(&mut Value)) -> crate::ItemReport {
+        let mut t = good_tree();
+        edit_json(&mut t, "c-l0-fx-shop", edit);
+        validate_tree(&t)
+            .items
+            .into_iter()
+            .find(|i| i.id == "c-l0-fx-shop")
+            .unwrap()
+    }
+
+    #[test]
+    fn design_over_the_instance_limit() {
+        let it =
+            shop_item(|c| c["modes"][1]["reference"]["graph"]["nodes"][2]["replicas"] = 6.into()); // lb 1 + web 6 = 7 > 6
+        let i = it.issues.iter().find(|i| i.code == codes::LIMITS).unwrap();
+        assert_eq!(i.id.as_deref(), Some("chaos/reference"));
+        assert_eq!(i.engine[0].code, "limits.too-many-instances");
+    }
+
+    #[test]
+    fn kind_not_allowed() {
+        let it = shop_item(|c| c["limits"]["allowedKinds"] = json!(["client", "web-server"]));
+        assert!(it.issues.iter().any(|i| i.code == codes::LIMITS
+            && i.id.as_deref() == Some("chaos/reference")
+            && i.engine.iter().any(|e| e.code == "limits.kind-not-allowed")));
+    }
+
+    #[test]
+    fn locked_node_changed_or_equal() {
+        let it = shop_item(|c| {
+            c["modes"][0]["reference"]["graph"]["nodes"][0]["label"] = "visitors".into()
+        });
+        assert!(it.issues.iter().any(|i| i.code == codes::LIMITS
+            && i.id.as_deref() == Some("standard/reference")
+            && i.field.as_deref() == Some("users")));
+        // Review focus 5: the same node written differently is unchanged.
+        let it = shop_item(|c| {
+            c["modes"][0]["reference"]["graph"]["nodes"][0] =
+                json!({"kind": "client", "replicas": 1, "id": "users"})
+        });
+        assert!(!it.issues.iter().any(|i| i.code == codes::LIMITS));
+    }
+
+    #[test]
+    fn start_over_the_limits() {
+        let it = shop_item(|c| c["limits"]["maxNodes"] = 1.into());
+        assert!(it
+            .issues
+            .iter()
+            .any(|i| i.code == codes::LIMITS && i.id.as_deref() == Some("start")));
+    }
+
+    #[test]
+    fn design_rejected_by_the_engine() {
+        let it = shop_item(|c| c["modes"][0]["naive"]["graph"]["edges"][0]["kind"] = "db".into());
+        let i = it
+            .issues
+            .iter()
+            .find(|i| i.code == codes::ENGINE_INVALID)
+            .unwrap();
+        assert_eq!(i.id.as_deref(), Some("standard/naive"));
+        assert_eq!(i.engine[0].code, "edge.not-accepted");
+    }
+
+    #[test]
+    fn blocked_challenge_and_unknown_override_field() {
+        let it = shop_item(|c| {
+            c["modes"][1]["faults"] = json!([{"kind": "instance-slow", "atMs": 3000}])
+        });
+        assert!(it
+            .issues
+            .iter()
+            .any(|i| i.code == codes::BLOCKED && i.missing == vec!["fault:instance-slow"]));
+        assert!(it.runs.is_empty() && it.passed);
+        assert_eq!(it.readiness, Some(crate::Readiness::Blocked));
+        let it = shop_item(|c| c["modes"][0]["workloadOverride"] = json!({"burst": 2}));
+        assert!(it.issues.iter().any(
+            |i| i.code == codes::ENGINE_INVALID && i.field.as_deref() == Some("workload.burst")
+        ));
     }
 }

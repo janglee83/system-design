@@ -65,7 +65,6 @@ impl EngineCheck {
 
 /// Ruling R15: `start` (already normalized) with `workloadOverride` shallow-merged into
 /// `workload` (`null` removes a key), `faults` replaced and `graph` replaced by the design's.
-#[allow(dead_code)] // read by design checks (plan Task 16); remove then
 pub(crate) fn mode_input(start: &Value, mode: &Mode, graph: &Value) -> Value {
     let mut v = start.clone();
     let Some(o) = v.as_object_mut() else { return v };
