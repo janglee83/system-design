@@ -1,0 +1,8 @@
+{
+  "sim:scale-web-tier/surge": {
+    "durationMs": 11000,
+    "clientTimeoutMs": 1000,
+    "writeRatio": 0,
+    "surge": {"atMs": 4000, "durationMs": 1500}
+  }
+}
