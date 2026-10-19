@@ -170,3 +170,38 @@ fn curriculum_check_read_error_exits_two_with_the_reason() {
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
     assert!(stderr.contains("curriculum.json"), "{stderr}");
 }
+
+#[test]
+fn curriculum_json_flag_formats_the_refusal_report() {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("broken"), tmp.path());
+    let out = cli()
+        .args(["content", "curriculum", "--json"])
+        .arg(tmp.path())
+        .assert()
+        .code(1);
+    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["failed"].as_u64().unwrap() > 0);
+}
+
+#[test]
+fn curriculum_write_replaces_the_file_and_leaves_no_temp_file() {
+    let tmp = good_copy();
+    std::fs::write(tmp.path().join("curriculum.json"), "old").unwrap();
+    cli()
+        .args(["content", "curriculum"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    let names: Vec<String> = std::fs::read_dir(tmp.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|n| n.contains("curriculum"))
+        .collect();
+    assert_eq!(names, vec!["curriculum.json"]);
+}

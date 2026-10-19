@@ -92,6 +92,7 @@ enum ContentCmd {
         dir: PathBuf,
         #[arg(long)]
         check: bool,
+        /// Print the validation report as JSON when blocking issues refuse the build.
         #[arg(long)]
         json: bool,
     },
@@ -160,7 +161,14 @@ fn content_cmd(cmd: ContentCmd) -> ExitCode {
                     ExitCode::from(1)
                 }
             } else {
-                match std::fs::write(&target, &text) {
+                // Write next to the target, then rename: a reader never sees a half-written file.
+                let tmp = dir.join(".curriculum.json.tmp");
+                let written =
+                    std::fs::write(&tmp, &text).and_then(|()| std::fs::rename(&tmp, &target));
+                if written.is_err() {
+                    let _ = std::fs::remove_file(&tmp);
+                }
+                match written {
                     Ok(()) => {
                         println!("wrote {}", target.display());
                         ExitCode::SUCCESS
