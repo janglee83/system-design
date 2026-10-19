@@ -7,6 +7,7 @@ pub use issue::{codes, ContentIssue};
 pub mod types;
 pub use types::*;
 
+pub mod prose;
 pub mod tree;
 pub use tree::{load_dir, ContentTree, LoadError, RawItem};
 
