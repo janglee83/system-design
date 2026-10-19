@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build:sim": "pnpm --filter @sd/sim build:wasm",
-    "test:rust": "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo clippy -p sim-wasm --target wasm32-unknown-unknown -- -D warnings",
+    "test:rust": "cargo fmt --all -- --check && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo clippy -p sim-wasm --target wasm32-unknown-unknown -- -D warnings",
     "test:perf": "cargo test -p sim-cli --release -- --ignored",
     "test:types": "sh scripts/check-types.sh",
     "test": "pnpm test:rust && pnpm test:types && pnpm -r test && pnpm test:perf && pnpm test:parity",
