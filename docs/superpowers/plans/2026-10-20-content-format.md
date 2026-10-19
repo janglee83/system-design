@@ -78,6 +78,7 @@ The spec leaves these points open. Each ruling below is what this plan implement
 | `crates/content/src/known.rs` | Field-name sets taken from sim-core types by serialization |
 | `crates/content/src/ids.rs` | Id patterns |
 | `crates/content/src/structure.rs` | Parse stage and cross-item checks (ids, duplicates, prerequisites, research, levels refs) |
+| `crates/content/src/checks.rs` | Per-item stage: `Ctx`, `Outcome`, `check_lesson`, `check_challenge` (calls the modules below) |
 | `crates/content/src/prose_check.rs` | Required sections and keys |
 | `crates/content/src/controls.rs` | Control path grammar, resolution, application, option rules |
 | `crates/content/src/choices.rs` | Goal, choice, expect-shape and reading-check rules |
