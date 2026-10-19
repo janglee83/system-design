@@ -6,16 +6,15 @@ use crate::engine_input::{engine_check, mode_input, normalized, EngineCheck};
 use crate::ids;
 use crate::issue::{codes, ContentIssue};
 use crate::readiness::Scan;
-use crate::report::Readiness;
+use crate::report::{Readiness, RunSummary};
 use crate::types::*;
 use serde_json::Value;
-use sim_core::{validate_graph, Goal, GoalOp, Graph, SimInput, ValidationIssue};
+use sim_core::{grade, simulate, validate_graph, Goal, GoalOp, Graph, SimInput, ValidationIssue};
 use std::collections::BTreeSet;
 
 pub(crate) const BUDGET_GOAL: &str = "budget";
 
 /// The challenge's goals plus the implicit budget goal of `mode`.
-#[allow(dead_code)] // read by mode runs (plan Task 17); remove then
 pub(crate) fn goals_for(c: &Challenge, m: &Mode) -> Vec<Goal> {
     let mut g = c.goals.clone();
     g.push(Goal {
@@ -265,16 +264,41 @@ pub(crate) fn check_engine(
     }
 }
 
-/// Task 17.
 fn run_design(
-    _path: &str,
-    _c: &Challenge,
-    _m: &Mode,
-    _name: &str,
-    _label: &str,
-    _input: &SimInput,
-    _out: &mut Outcome,
+    path: &str,
+    c: &Challenge,
+    m: &Mode,
+    name: &str,
+    label: &str,
+    input: &SimInput,
+    out: &mut Outcome,
 ) {
+    let result = match simulate(input) {
+        Ok(r) => r,
+        Err(e) => {
+            out.issues.push(
+                ContentIssue::new(codes::ENGINE_INVALID, path)
+                    .id(label)
+                    .engine(e),
+            );
+            return;
+        }
+    };
+    out.runs
+        .push(RunSummary::of(format!("mode:{label}"), &result));
+    for g in grade(&result, &goals_for(c, m)).goals {
+        let code = match (name, g.passed) {
+            ("reference", false) => codes::REFERENCE_FAILS,
+            ("naive", true) if m.naive.fails_goals.contains(&g.id) => codes::NAIVE_PASSES,
+            _ => continue,
+        };
+        out.issues.push(
+            ContentIssue::new(code, path)
+                .id(label)
+                .field(g.id.clone())
+                .measured(g.measured),
+        );
+    }
 }
 
 #[cfg(test)]
@@ -470,5 +494,65 @@ mod tests {
         assert!(it.issues.iter().any(
             |i| i.code == codes::ENGINE_INVALID && i.field.as_deref() == Some("workload.burst")
         ));
+    }
+
+    #[test]
+    fn good_shop_runs_every_design() {
+        let it = shop_item(|_| {});
+        let labels: Vec<&str> = it.runs.iter().map(|r| r.label.as_str()).collect();
+        assert_eq!(
+            labels,
+            vec![
+                "mode:standard/reference",
+                "mode:standard/naive",
+                "mode:chaos/reference",
+                "mode:chaos/naive"
+            ]
+        );
+        // Measured while writing the plan.
+        assert_eq!(it.runs[0].metrics.cost_per_month, 50.0);
+        assert!(it.runs[3].metrics.availability < 0.5); // one web instance, lost at 3 s
+        assert!(it.passed, "{:#?}", it.issues);
+    }
+
+    #[test]
+    fn reference_missing_goals_and_budget() {
+        let it = shop_item(|c| {
+            c["modes"][0]["reference"]["graph"]["nodes"][1]["config"]["cpu"] = 1.into()
+        });
+        let f: Vec<_> = it
+            .issues
+            .iter()
+            .filter(|i| i.code == codes::REFERENCE_FAILS)
+            .filter_map(|i| i.field.clone())
+            .collect();
+        assert_eq!(f, vec!["fast", "up"]);
+        let it = shop_item(|c| c["modes"][0]["budgetPerMonth"] = 40.into());
+        let b = it
+            .issues
+            .iter()
+            .find(|i| i.code == codes::REFERENCE_FAILS)
+            .unwrap();
+        assert_eq!(
+            (b.field.as_deref(), b.measured),
+            (Some("budget"), Some(50.0))
+        );
+    }
+
+    #[test]
+    fn naive_passing_a_goal_it_should_fail() {
+        let it = shop_item(|c| {
+            c["modes"][0]["naive"]["graph"]["nodes"][1]["config"] = json!({"cpu": 2});
+            c["modes"][0]["naive"]["failsGoals"] = json!(["fast"]);
+        });
+        let i = it
+            .issues
+            .iter()
+            .find(|i| i.code == codes::NAIVE_PASSES)
+            .unwrap();
+        assert_eq!(
+            (i.id.as_deref(), i.field.as_deref()),
+            (Some("standard/naive"), Some("fast"))
+        );
     }
 }
