@@ -141,11 +141,13 @@ pub struct Curriculum {
 }
 }
 
+/// The JSON name of a unit enum (`"not-needed"`, `"L0"`). Only called on such enums.
 fn name_of<T: Serialize>(v: &T) -> String {
-    serde_json::to_value(v)
+    let name = serde_json::to_value(v)
         .ok()
-        .and_then(|v| v.as_str().map(String::from))
-        .unwrap_or_default()
+        .and_then(|v| v.as_str().map(String::from));
+    debug_assert!(name.is_some(), "name_of on a value that is not a unit enum");
+    name.unwrap_or_default()
 }
 
 /// What a roadmap stub needs that this engine build lacks.
@@ -173,13 +175,22 @@ fn roadmap_missing(n: &EngineNeeds, caps: &Capabilities, planned: &PlannedFeatur
     m.into_iter().collect()
 }
 
+/// Titles from the prose front matter. Without blocking issues both files parsed.
 fn titles<T>(item: &Item<T>) -> (String, String) {
-    let t =
-        |p: &Option<crate::prose::Prose>| p.as_ref().map(|p| p.title.clone()).unwrap_or_default();
+    let t = |p: &Option<crate::prose::Prose>| {
+        debug_assert!(
+            p.is_some(),
+            "{}: prose did not parse but nothing blocked",
+            item.id
+        );
+        p.as_ref().map(|p| p.title.clone()).unwrap_or_default()
+    };
     (t(&item.vi), t(&item.en))
 }
 
+/// Every parsed item gets a readiness from its checks.
 fn summary(o: &Outcome) -> EngineSummary {
+    debug_assert!(o.readiness.is_some(), "a parsed item has no readiness");
     EngineSummary {
         needs: o.needs.clone(),
         missing: o.missing.clone(),
@@ -366,12 +377,27 @@ fn build(levels: &Levels, a: &Analysis) -> Curriculum {
             lessons: lv
                 .lessons
                 .iter()
-                .filter_map(|id| lesson_entry(id))
+                .filter_map(|id| {
+                    // Validation guarantees a folder or a stub for every listed id.
+                    let e = lesson_entry(id);
+                    debug_assert!(
+                        e.is_some(),
+                        "listed lesson {id} has neither folder nor stub"
+                    );
+                    e
+                })
                 .collect(),
             challenges: lv
                 .challenges
                 .iter()
-                .filter_map(|id| challenge_entry(id))
+                .filter_map(|id| {
+                    let e = challenge_entry(id);
+                    debug_assert!(
+                        e.is_some(),
+                        "listed challenge {id} has neither folder nor stub"
+                    );
+                    e
+                })
                 .collect(),
         })
         .collect();
@@ -505,5 +531,16 @@ mod tests {
         });
         let r = curriculum(&t).unwrap_err();
         assert!(r.has_blocking());
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "listed lesson l0-ghost")]
+    fn a_listed_id_without_folder_or_stub_is_never_dropped_silently() {
+        // Validation rejects this tree; build() is called directly to prove the invariant holds.
+        let a = crate::analyze(&good_tree());
+        let mut levels = a.parsed.levels.clone().unwrap();
+        levels.levels[0].lessons.push("l0-ghost".into());
+        let _ = build(&levels, &a);
     }
 }
