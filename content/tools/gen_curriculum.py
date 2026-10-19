@@ -39,7 +39,7 @@ GAPS = {
     "idempotency-keys": "Consumer/API deduplication by idempotency key, turning duplicate deliveries/retries into duplicateWrites = 0.",
     "per-hop-timeouts": "Timeout configured per edge/dependency (not only the client timeout), freeing workers when a dependency is slow.",
     "retry-jitter": "Jitter option on retry backoff (none/full/equal) so synchronized retries spread out.",
-    "load-shedding": "Server-side shedding/adaptive concurrency limit: reject early when queue wait exceeds a budget, optionally by priority.",
+    "load-shedding": "Server-side shedding and concurrency limits (none / fixed / adaptive gradient or AIMD): reject early when in-flight work or queue wait exceeds a budget, optionally by priority; goodput metric.",
     "bulkheads": "Separate worker pools per dependency inside a service so one slow dependency cannot take all workers.",
     "fallbacks": "Degraded/fallback responses (cached or default answer) when a dependency fails, counted separately from errors.",
     "dead-letter-queue": "Moving messages that fail N times to a dead-letter queue instead of retrying forever (poison messages).",
@@ -47,7 +47,7 @@ GAPS = {
     "rate-limit-algorithms": "Choice of rate-limit algorithm (token bucket, leaky bucket, fixed window, sliding window) and burst behaviour; spec only has per-client requests per minute.",
     "network-partition-fault": "Network partition between groups of nodes (both sides alive, cannot talk), needed for CAP and split-brain experiments.",
     "kv-quorum-config": "kv-store replication factor N and read/write quorum R/W, with staleReads and availability depending on them under kv-node-down.",
-    "partitioning-scheme": "Key partitioning scheme for kv-store (modulo vs consistent hashing, virtual nodes) and a 'keys moved on resize' metric.",
+    "partitioning-scheme": "Key partitioning scheme for kv-store and cache clusters (modulo vs consistent hashing, virtual nodes) and a 'keys moved on resize' metric (cache misses after a node loss).",
     "clock-skew": "Per-node clock skew/drift affecting timestamp ordering and last-write-wins.",
     "gossip-membership": "Gossip-based membership/failure dissemination with convergence time.",
     "leader-election-leases": "Leader election with leases/fencing and a splitBrain metric under partitions or pauses.",
@@ -55,17 +55,26 @@ GAPS = {
     "long-lived-connections": "Long-lived (WebSocket) connections with a per-server connection capacity, reconnect storms when a server dies.",
     "crawler-behaviors": "Crawler-specific behaviour: URL frontier, per-host politeness rate, duplicate URL/content detection.",
     "autocomplete-topk": "Precomputed top-k prefix index (trie) with an update pipeline and freshness metric.",
-    "inventory-concurrency-control": "Limited inventory decremented concurrently, with an oversold metric and strategies (row lock, atomic decrement, reservation queue).",
-    "chunked-upload-dedupe": "Chunked uploads with content-hash deduplication and sync notifications.",
+    "inventory-concurrency-control": "Limited inventory decremented concurrently, with an oversold metric and strategies (naive read-then-write, conditional update, row lock, Redis pre-decrement, admission queue/waiting room); for bookings, range overlap with a doubleBookings metric.",
+    "chunked-upload-dedupe": "Chunked uploads with content-hash deduplication (dedupe ratio, bytes transferred, storage cost) and sync notifications fanned out to a user's other devices.",
     "sorted-set-ops": "Cache component supporting sorted-set operations (rank/top-N) with their own cost.",
     "geo-index": "Geospatial index (geohash/quadtree) and query fan-out by area.",
-    "event-log-stream": "Partitioned append-only log (Kafka-like) with retention, consumer groups and consumer lag metric.",
+    "event-log-stream": "Partitioned append-only log (Kafka-like) with retention, consumer groups, consumer lag metric, key skew producing hot partitions, and replication factor / min in-sync replicas deciding loss vs unavailability under broker-down.",
     "consensus-replication": "Replicated state machine (Raft-like group of 3/5) with majority commit, leader failover time and unavailability without quorum.",
-    "distributed-transactions": "Multi-service transactions: 2PC coordinator (with coordinator-down blocking) and sagas with compensation; inconsistency metric.",
-    "outbox-cdc": "Dual-write inconsistency metric, transactional outbox relay and change-data-capture stream from postgres.",
+    "distributed-transactions": "Multi-service transactions: 2PC coordinator with a coordinator-down fault leaving in-doubt participants holding locks, and sagas with compensation (orchestrated or choreographed); inconsistency metric.",
+    "outbox-cdc": "Dual-write inconsistency metric, transactional outbox relay (poller or log tailing) and change-data-capture stream from postgres with consumer lag and WAL retention when the connector is down.",
     "multi-region-writes": "Writes accepted in several regions with cross-region replication delay and conflict counting.",
     "backpressure-producer-feedback": "Producer slowing or blocking when a downstream queue is full (backpressure signal), vs unbounded queue growth.",
-    "hedged-requests": "Hedged/backup requests sent after a delay to another replica, with the extra-load cost.",
+    "hedged-requests": "Hedged/backup requests sent after a delay to another replica, with the extra-load cost. Needs per-request latency variance (1a gives every request in a tick the same latency).",
+    # added 2026-10-19 from L5/L6 research notes
+    "consumer-prefetch-partitions": "Consumer prefetch (messages buffered per worker before ack) and partition-to-consumer assignment, so a slow or crashed worker hoards messages and the partition count caps parallelism.",
+    "erasure-coding-and-durability": "Object-store redundancy scheme (replicas vs erasure coding k+m) with storage overhead, tolerated node losses and a dataLoss metric under repeated object-storage node failures.",
+    "bandwidth-egress-model": "Bytes per response and egress price per GB per tier (edge vs origin vs cross-region), so costPerMonth reflects bandwidth for video, downloads and cross-region replication.",
+    "cells-and-shuffle-sharding": "Several identical stacks (cells) behind a thin router, or shuffle-sharded worker subsets per tenant, with a poison-tenant / noisy-neighbour fault and a share-of-clients-affected metric.",
+    "per-node-timeseries-and-traces": "Expose per-node time series and sampled request traces from a run, so learners diagnose 'where did it break?' from evidence instead of the fault list.",
+    "cardinality-cost": "Metrics-store cost driven by series count (label choices) and trace sampling rate, to teach observability cost trade-offs.",
+    "alert-evaluation": "Evaluate alert rules (static threshold vs multiwindow burn rate) over a run's per-tick error and latency series and score precision, recall and detection time.",
+    "background-batch-load": "A throttled background batch job (backfill, migration, reindex) sharing database capacity with live traffic, with batch size and rate controls.",
 }
 
 def L(id, vi, en, fmt, mins, prereq, concepts, research=None, comps=None, faults=None, dyn=None, beh=None,
@@ -267,6 +276,8 @@ L2 = dict(id="L2", title_vi="Dữ liệu", title_en="Data", score=[25, 40],
           ["shard-key", "hot-shard", "resharding"], comps=DB, metrics=["peakBusy", "p99"], gaps=["sql-sharding"], diff=3),
         L("l2-denormalization", "Phi chuẩn hóa: đổi công ghi lấy tốc độ đọc", "Denormalization: trading writes for reads", R, 12, ["l2-data-modeling"],
           ["denormalization", "read-model"], diff=2),
+        L("l2-schema-evolution", "Thay đổi lược đồ mà không làm hỏng phiên bản cũ", "Evolving schemas without breaking old code", R, 12, ["l2-data-modeling"],
+          ["schema-evolution", "backward-compatibility", "forward-compatibility"], diff=2),
         L("l2-transactions-isolation", "Giao dịch, mức cô lập và cập nhật bị mất", "Transactions, isolation and lost updates", E, 18, ["l2-data-modeling"],
           ["acid", "isolation-level", "lost-update", "optimistic-locking"], ["databases-basics"], DB, metrics=["lostUpdates", "writeConflicts"],
           gaps=["transaction-isolation-model"], diff=3),
@@ -309,6 +320,10 @@ L3 = dict(id="L3", title_vi="Bất đồng bộ và độ tin cậy", title_en="
           ["worker-pool", "queue-depth-scaling"], comps=Q, dyn=["autoscaling"], metrics=["peakQueueDepth", "costPerMonth"], diff=2),
         L("l3-pubsub-fanout", "Pub/sub và fan-out", "Pub/sub and fan-out", E, 15, ["l3-message-queues"],
           ["pub-sub", "fan-out", "topic"], comps=Q, beh=["fanout"], metrics=["inboxWritesPerSec", "peakQueueDepth"], diff=2),
+        L("l3-consumer-prefetch-and-partitions", "Prefetch và phân vùng: chia việc cho worker", "Prefetch and partitions: how work reaches workers", E, 15,
+          ["l3-scaling-workers"], ["prefetch", "partition", "consumer-group", "ordering"], ["queues-and-workers", "distributed-message-queue"],
+          Q, ["instance-slow", "instance-down"], metrics=["peakQueueDepth", "p95", "throughputRps"],
+          gaps=["consumer-prefetch-partitions"], diff=3),
         L("l3-delivery-semantics", "Giao nhiều nhất một lần, ít nhất một lần", "At-most-once, at-least-once, effectively-once", E, 18, ["l3-message-queues"],
           ["at-least-once", "at-most-once", "ack"], comps=Q, faults=["broker-down"], metrics=["lostMessages", "duplicateWrites"],
           gaps=["delivery-semantics"], diff=3),
@@ -345,6 +360,10 @@ L3 = dict(id="L3", title_vi="Bất đồng bộ và độ tin cậy", title_en="
           ["dead-letter-queue", "poison-message"], gaps=["dead-letter-queue"], diff=2),
         L("l3-background-jobs", "Công việc nền và lịch chạy", "Background jobs and schedules", E, 15, ["l3-scaling-workers"],
           ["background-job", "cron", "batch"], comps=Q, metrics=["peakQueueDepth", "costPerMonth"], diff=2),
+        L("l3-service-discovery", "Tìm nhau giữa nhiều dịch vụ: service discovery", "Finding each other: service discovery", R, 12,
+          ["l1-health-checks", "l3-sync-vs-async"], ["service-registry", "client-side-discovery", "server-side-discovery"], diff=2),
+        L("l3-auth-basics", "Xác thực, phân quyền và TLS khi có nhiều máy", "Authentication, authorization and TLS across many servers", R, 15,
+          ["l1-stateless-servers", "l1-reverse-proxy-and-gateway"], ["authentication", "authorization", "token", "tls-termination"], diff=2),
         L("l3-observability-basics", "Quan sát hệ thống: metric, log, trace", "Observability basics: metrics, logs and traces", E, 15, ["l0-percentiles"],
           ["metrics", "logs", "traces", "use-method"], ["percentiles-and-tail-latency", "queueing-and-utilization"], DB,
           ["db-primary-down", "instance-down"], metrics=["p95", "peakBusy"], diff=2),
@@ -457,12 +476,19 @@ L5 = dict(id="L5", title_vi="Các thiết kế kinh điển", title_en="Classic 
           ["l2-transactions-isolation", "l3-message-queues", "l3-rate-limiting"], ["oversell", "inventory-reservation", "queue-admission"],
           comps=Q + ["postgres", "redis", "api-gateway"], faults=["traffic-surge-3x"], dyn=["rate-limiting"],
           metrics=["writeConflicts", "lostUpdates", "availability"], gaps=["inventory-concurrency-control"], diff=3),
+        L("l5-hotel-booking", "Thiết kế đặt phòng: không bán trùng một đêm", "Designing bookings: never sell the same night twice", E, 20,
+          ["l5-flash-sale"], ["double-booking", "write-skew", "reservation-hold", "exclusion-constraint"], ["flash-sale-and-inventory", "transactions-and-isolation"],
+          DB, metrics=["writeConflicts", "lostUpdates", "p95"], gaps=["inventory-concurrency-control"], diff=3),
         L("l5-file-sync", "Thiết kế lưu trữ và đồng bộ tệp", "Designing file storage and sync", E, 25, ["l2-blob-storage", "l3-message-queues"],
           ["chunking", "dedupe", "sync-notification"], comps=Q + ["object-storage", "postgres"], faults=["object-storage-down"],
           metrics=["availability", "costPerMonth"], gaps=["chunked-upload-dedupe"], diff=3),
+        L("l5-object-storage-design", "Thiết kế kho đối tượng kiểu S3", "Designing an S3-like object store", E, 25,
+          ["l5-file-sync", "l4-replication-strategies"], ["metadata-vs-data", "erasure-coding", "multipart-upload", "durability"],
+          ["file-sync-and-object-storage"], CORE + ["object-storage", "postgres"], ["object-storage-down"],
+          metrics=["availability", "costPerMonth"], gaps=["erasure-coding-and-durability"], diff=3),
         L("l5-video-streaming", "Thiết kế dịch vụ xem video", "Designing a video streaming service", E, 25, ["l1-cdn-static-content", "l3-background-jobs"],
           ["transcoding", "adaptive-bitrate", "cdn-offload"], comps=Q + ["cdn", "object-storage"], metrics=["p95", "costPerMonth"],
-          gaps=["static-request-share-and-cdn-hit-model"], diff=3),
+          gaps=["static-request-share-and-cdn-hit-model", "bandwidth-egress-model"], diff=3),
         L("l5-payment-system", "Thiết kế hệ thống thanh toán", "Designing a payment system", E, 25, ["l3-idempotency", "l3-circuit-breakers"],
           ["ledger", "idempotent-payment", "reconciliation"], comps=Q + ["postgres"], faults=["third-party-slow", "third-party-down"],
           dyn=["retries", "circuit-breaker"], metrics=["duplicateWrites", "availability"], gaps=["idempotency-keys", "third-party-node"], diff=3),
@@ -470,6 +496,10 @@ L5 = dict(id="L5", title_vi="Các thiết kế kinh điển", title_en="Classic 
           ["sorted-set", "top-n", "write-heavy"], comps=DB + ["redis"], metrics=["p95", "peakBusy"], gaps=["sorted-set-ops"], diff=2),
         L("l5-proximity-service", "Thiết kế tìm địa điểm gần bạn", "Designing a nearby-places service", E, 20, ["l2-sharding-basics", "l2-indexes"],
           ["geohash", "quadtree", "geo-sharding"], comps=DB + ["redis"], metrics=["p95", "peakBusy"], gaps=["geo-index"], diff=3),
+        L("l5-distributed-message-queue", "Thiết kế hàng đợi thông điệp phân tán kiểu Kafka", "Designing a Kafka-style distributed log", E, 25,
+          ["l3-consumer-prefetch-and-partitions", "l3-delivery-semantics", "l4-replication-strategies"],
+          ["partitioned-log", "consumer-offset", "in-sync-replicas", "retention"], ["distributed-message-queue"], Q, ["broker-down"],
+          metrics=["lostMessages", "peakQueueDepth", "throughputRps"], gaps=["event-log-stream"], diff=3),
         L("l5-metrics-pipeline", "Thiết kế hệ thống thu thập metric và log", "Designing a metrics and logging pipeline", E, 25,
           ["l3-message-queues", "l3-observability-basics"], ["ingestion", "time-series", "downsampling"], comps=Q + ["object-storage"],
           faults=["broker-down"], metrics=["lostMessages", "peakQueueDepth"], gaps=["event-log-stream"], diff=3),
@@ -539,7 +569,10 @@ L6 = dict(id="L6", title_vi="Nâng cao", title_en="Advanced", score=[85, 100],
           ["unit-economics", "reserved-vs-on-demand", "cost-per-request"], ["cost-basics"], DB,
           cal=["webCostPerVcpu", "pgCostPerInstance", "lbCostPerReplica"], metrics=["costPerMonth", "p95", "availability"], diff=3),
         L("l6-slo-alerting", "SLO, tốc độ đốt ngân sách lỗi và cảnh báo", "SLOs, burn rates and alerting", R, 15, ["l3-slos-error-budgets"],
-          ["burn-rate", "alerting", "symptom-based-alerts"], diff=3),
+          ["burn-rate", "alerting", "symptom-based-alerts"], gaps=["alert-evaluation"], diff=3),
+        L("l6-observability-at-scale", "Quan sát ở quy mô lớn: trace, lấy mẫu, cardinality", "Observability at scale: tracing, sampling and cardinality", R, 15,
+          ["l6-slo-alerting", "l5-metrics-pipeline"], ["distributed-tracing", "tail-sampling", "cardinality", "exemplar"], ["observability-at-scale"],
+          gaps=["per-node-timeseries-and-traces", "cardinality-cost"], diff=3),
         L("l6-incident-debugging", "Gỡ lỗi sự cố từ bằng chứng", "Debugging an incident from the evidence", E, 25,
           ["l3-observability-basics", "l3-circuit-breakers"], ["incident-response", "root-cause", "timeline-reading"], comps=DB + ["redis"],
           faults=["db-stalled", "cache-down", "instance-slow"], metrics=["p95", "availability"], diff=3),
@@ -549,8 +582,11 @@ L6 = dict(id="L6", title_vi="Nâng cao", title_en="Advanced", score=[85, 100],
         L("l6-safe-deployments", "Triển khai an toàn: canary và rollback", "Safe deployments: canaries and rollback", E, 20,
           ["l1-rolling-deploys", "l6-slo-alerting"], ["canary", "rollback", "feature-flag"], comps=CORE, metrics=["availability", "p95"],
           gaps=["deployment-model"], diff=3),
+        L("l6-cells-and-blast-radius", "Kiến trúc tế bào và shuffle sharding: thu nhỏ bán kính sự cố", "Cells and shuffle sharding: shrinking the blast radius", E, 20,
+          ["l6-safe-deployments", "l3-bulkheads"], ["cell", "blast-radius", "shuffle-sharding", "noisy-neighbor"], ["cells-and-shuffle-sharding"],
+          CORE + ["postgres"], ["instance-down"], metrics=["availability", "p95", "costPerMonth"], gaps=["cells-and-shuffle-sharding"], diff=3),
         L("l6-zero-downtime-migrations", "Di chuyển dữ liệu không gián đoạn", "Zero-downtime data migrations", R, 18,
-          ["l6-change-data-capture", "l2-sharding-basics"], ["expand-contract", "backfill", "dual-read"], diff=3),
+          ["l6-change-data-capture", "l2-sharding-basics"], ["expand-contract", "backfill", "dual-read"], gaps=["background-batch-load", "outbox-cdc"], diff=3),
     ])
 LEVELS.append(L6)
 
@@ -594,6 +630,12 @@ CHALLENGES = [
       M("tight-budget", 420, [F("instance-down", 5000, "web"), F("db-primary-down", 7000, "pg")])],
      "Estimate the peak from the brief, size the web server and database, remove every single point of failure and stay in budget.",
      "Ước lượng đỉnh tải từ đề bài, chọn cấu hình máy web và cơ sở dữ liệu, loại bỏ mọi điểm lỗi đơn và giữ trong ngân sách."),
+  CH("c-l0-size-from-estimate", "L0", "Từ đề bài đến cấu hình", "From a brief to a sizing", ["l0-estimation-basics"],
+     ["client", "web-server", "postgres"], dict(profile="mixed", baseRps=6000, writeRatio=0.2),
+     [G("fast", "p95", "<=", 50), G("headroom", "peakBusy", "<=", 0.7), G("no-drops", "requestsRejected", "<=", 0)],
+     [M("peak", 500, note="Thresholds provisional until confirmed with sim-cli check.")],
+     "Turn a written estimate of daily users into peak requests per second, then size the web server and database with headroom.",
+     "Đổi ước lượng số người dùng mỗi ngày thành số request mỗi giây lúc đỉnh, rồi chọn cấu hình máy web và cơ sở dữ liệu có chừa khoảng dư."),
   # L1
   CH("c-l1-launch-day", "L1", "Ngày ra mắt: lưu lượng gấp ba", "Launch day: traffic triples", ["l1-n-plus-one", "l1-lb-redundancy"],
      ["client", "lb", "web-server"], dict(profile="read-heavy", baseRps=8000, writeRatio=0.1, surge=dict(factor=3, atMs=2000, durationMs=6000)),
@@ -668,6 +710,14 @@ CHALLENGES = [
       M("chaos", 1600, [F("cache-down", 3000), F("db-primary-down", 5000), F("db-replica-down", 7000)])],
      "Profile pages with photos, read far more than written; cache and replica failures included.",
      "Trang hồ sơ có ảnh, đọc nhiều hơn ghi rất nhiều; có cả lỗi cache và bản sao."),
+  CH("c-l2-zero-to-millions", "L2", "Từ con số không đến hàng triệu người dùng", "From zero to millions of users",
+     ["l2-read-heavy-recipe", "l2-db-failover", "l1-n-plus-one"], ["client", "lb", "web-server", "postgres", "redis", "cdn", "object-storage"],
+     dict(profile="mixed", baseRps=30000, writeRatio=0.1, surge=dict(factor=2, atMs=4000, durationMs=2000), params=dict(staticShare=0.5)),
+     [G("fast", "p95", "<=", 60), G("up", "availability", ">=", 0.99), G("no-spof", "spofCount", "==", 0), G("budget", "costPerMonth", "<=", 2000)],
+     [M("standard", 2000, note="Thresholds provisional until confirmed with sim-cli check."), M("tight-budget", 1500), M("chaos", 2300, [F("cache-down", 3000), F("db-primary-down", 5000), F("instance-down", 7000)])],
+     "Grow a one-server app into a full read-heavy stack — balancer, replicas, cache, CDN — and keep it alive when parts fail.",
+     "Phát triển ứng dụng một máy thành cả hệ thống đọc nhiều — bộ cân bằng tải, bản sao, cache, CDN — và giữ nó sống khi các phần hỏng.",
+     gaps=["static-request-share-and-cdn-hit-model"]),
   # L3
   CH("c-l3-email-backlog", "L3", "Dồn ứ email xác nhận", "The confirmation-email backlog", ["l3-scaling-workers"],
      ["client", "lb", "web-server", "queue", "worker"], dict(profile="jobs", baseRps=5000, writeRatio=0.3, surge=dict(factor=3, atMs=2000, durationMs=3000)),
@@ -703,6 +753,14 @@ CHALLENGES = [
      "Orders flow through a queue to workers that charge a provider; no order lost, none charged twice.",
      "Đơn hàng đi qua hàng đợi đến các worker gọi nhà cung cấp thanh toán; không mất đơn nào, không trừ tiền hai lần.",
      gaps=["delivery-semantics", "idempotency-keys", "third-party-node"]),
+  CH("c-l3-photo-pipeline", "L3", "Dây chuyền xử lý ảnh", "The photo-processing pipeline",
+     ["l3-consumer-prefetch-and-partitions", "l3-dead-letter-queues"], ["client", "lb", "web-server", "queue", "worker", "object-storage"],
+     dict(profile="jobs", baseRps=3000, writeRatio=0.5, surge=dict(factor=3, atMs=2000, durationMs=3000)),
+     [G("drained", "peakQueueDepth", "<=", 30000), G("no-loss", "lostMessages", "==", 0), G("budget", "costPerMonth", "<=", 500)],
+     [M("steady", 500, note="Thresholds provisional until confirmed with sim-cli check."), M("burst", 550, [F("traffic-surge-3x", 2000)]), M("crash", 550, [F("instance-down", 3000, "worker")])],
+     "Uploaded photos are resized by workers; one slow worker must not hoard the queue and broken images must not loop forever.",
+     "Ảnh tải lên được worker thu nhỏ; một worker chậm không được ôm hết hàng đợi và ảnh hỏng không được lặp mãi.",
+     gaps=["consumer-prefetch-partitions", "dead-letter-queue"]),
   # L4
   CH("c-l4-unique-ids", "L4", "ID cho hàng triệu đơn mỗi ngày", "IDs for millions of orders a day", ["l4-unique-ids"],
      ["client", "lb", "web-server", "kv-store", "postgres"], dict(profile="write-heavy", baseRps=10000, writeRatio=0.8),
@@ -729,6 +787,13 @@ CHALLENGES = [
      "A replicated key-value ring loses nodes and must stay balanced, fresh and lossless.",
      "Một vòng khóa–giá trị nhân bản mất nút mà vẫn phải cân bằng, mới và không mất dữ liệu.",
      gaps=["kv-quorum-config", "partitioning-scheme", "conflict-resolution"]),
+  CH("c-l4-cache-ring", "L4", "Vòng cache khi mất một máy", "The cache ring loses a node", ["l4-consistent-hashing", "l4-virtual-nodes"],
+     ["client", "lb", "web-server", "redis", "postgres"], dict(profile="read-heavy", baseRps=30000, writeRatio=0.02),
+     [G("db-calm", "peakDbConnections", "<=", 80), G("up", "availability", ">=", 0.99), G("balanced", "peakBusy", "<=", 0.8)],
+     [M("offline", 950, [F("cache-down", 3000)], note="Thresholds provisional until confirmed with sim-cli check."), M("even", 950)],
+     "A cluster of cache servers loses one node; choose a key-to-node scheme so most keys stay where they were.",
+     "Một cụm máy cache mất một nút; chọn cách gán khóa cho nút sao cho phần lớn khóa vẫn ở chỗ cũ.",
+     gaps=["partitioning-scheme"]),
   # L5
   CH("c-l5-url-shortener", "L5", "Dịch vụ rút gọn link", "The link shortener", ["l5-url-shortener"],
      ["client", "lb", "web-server", "kv-store", "redis", "postgres"], dict(profile="read-heavy", baseRps=50000, writeRatio=0.01),
@@ -800,6 +865,22 @@ CHALLENGES = [
      "Listings with photos, a follower feed, notifications and a weekly flash sale in one design.",
      "Tin đăng có ảnh, bảng tin người theo dõi, thông báo và flash sale hằng tuần trong cùng một thiết kế.",
      gaps=["inventory-concurrency-control", "third-party-node", "static-request-share-and-cdn-hit-model"]),
+  CH("c-l5-payments", "L5", "Thanh toán không trừ tiền hai lần", "Payments that never charge twice", ["l5-payment-system"],
+     ["client", "api-gateway", "lb", "web-server", "queue", "worker", "postgres"], dict(profile="mixed", baseRps=3000, writeRatio=0.4, clientTimeoutMs=2000),
+     [G("no-dupes", "duplicateWrites", "==", 0), G("up", "availability", ">=", 0.97), G("fast", "p95", "<=", 300)],
+     [M("standard", 900, [F("third-party-slow", 3000)], note="Thresholds provisional until confirmed with sim-cli check."), M("provider-down", 900, [F("third-party-down", 3000)]),
+      M("chaos", 1000, [F("third-party-slow", 2000), F("broker-down", 4000), F("instance-down", 6000)])],
+     "A payment provider slows down and times out; retry safely so no customer is charged twice and no paid order is lost.",
+     "Nhà cung cấp thanh toán chậm đi và quá thời gian chờ; thử lại an toàn để không ai bị trừ tiền hai lần và không mất đơn đã trả.",
+     gaps=["third-party-node", "idempotency-keys"]),
+  CH("c-l5-video-platform", "L5", "Nền tảng video buổi tối", "The evening video rush", ["l5-video-streaming"],
+     ["client", "lb", "web-server", "queue", "worker", "cdn", "object-storage"],
+     dict(profile="read-heavy", baseRps=40000, writeRatio=0.01, surge=dict(factor=2, atMs=3000, durationMs=3000), params=dict(staticShare=0.95)),
+     [G("fast", "p95", "<=", 80), G("up", "availability", ">=", 0.995), G("budget", "costPerMonth", "<=", 3000)],
+     [M("standard", 3000, note="Thresholds provisional until confirmed with sim-cli check."), M("origin-down", 3200, [F("object-storage-down", 4000)])],
+     "Evening viewers double; serve video segments from the edge and keep uploads transcoding in the background within budget.",
+     "Lượng người xem buổi tối tăng gấp đôi; phục vụ các đoạn video từ biên mạng và vẫn chuyển mã video tải lên ở nền trong ngân sách.",
+     gaps=["static-request-share-and-cdn-hit-model", "bandwidth-egress-model"]),
   # L6
   CH("c-l6-global-checkout-lite", "L6", "Thanh toán hai châu lục", "Checkout on two continents", ["l6-active-passive-dr", "l6-geo-routing"],
      ["client", "lb", "web-server", "postgres", "redis"], dict(profile="mixed", baseRps=20000, writeRatio=0.2),
@@ -839,9 +920,36 @@ CHALLENGES = [
      "Everything at once: global users, payments, queues, caches and failures. Defend every choice.",
      "Tất cả cùng lúc: người dùng toàn cầu, thanh toán, hàng đợi, cache và sự cố. Bảo vệ từng lựa chọn.",
      gaps=["regions-and-geo-routing", "multi-region-writes", "distributed-transactions", "third-party-node"]),
+  CH("c-l6-noisy-neighbor", "L6", "Khách hàng ồn ào", "The noisy neighbour", ["l6-cells-and-blast-radius"],
+     ["client", "lb", "web-server", "postgres"], dict(profile="mixed", baseRps=20000, writeRatio=0.2, params=dict(poisonTenantShare=0.01)),
+     [G("up", "availability", ">=", 0.99), G("fast", "p95", "<=", 60), G("budget", "costPerMonth", "<=", 2500)],
+     [M("standard", 2500, note="Thresholds provisional until confirmed with sim-cli check."), M("bad-deploy", 2500, note="A bad change reaches one cell first once deployment-model exists.")],
+     "One tenant's requests crash whichever servers handle them; arrange cells or shuffle shards so almost everyone else stays up.",
+     "Request của một khách hàng làm sập bất kỳ máy nào xử lý chúng; sắp xếp cell hoặc shuffle shard để gần như mọi người khác vẫn dùng được.",
+     gaps=["cells-and-shuffle-sharding"]),
 ]
 
 # ---------------- assemble & validate ----------------
+import os, re
+# Research links: every note's header lines "Feeds lessons:" (and "Background for"/"background:")
+# name the lessons it supports; those links are merged with the explicit `research` lists above.
+RESEARCH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "research")
+NOTE_LINKS = {}
+for fn in sorted(os.listdir(RESEARCH_DIR)):
+    if not fn.endswith(".md"):
+        continue
+    note = fn[:-3]
+    head = []
+    for line in open(os.path.join(RESEARCH_DIR, fn), encoding="utf-8"):
+        if line.startswith("## "):
+            break
+        head.append(line)
+    text = "".join(head)
+    m = re.search(r"- Feeds lessons:(.*?)(?=\n- [A-Z]|\n\n)", text, re.S)
+    if m:
+        for lid in re.findall(r"`(l[0-6]-[a-z0-9-]+)`", m.group(1)):
+            NOTE_LINKS.setdefault(lid, []).append(note)
+ALL_NOTES = {fn[:-3] for fn in os.listdir(RESEARCH_DIR) if fn.endswith(".md")}
 all_ids = {}
 out_levels = []
 for lv in LEVELS:
@@ -869,8 +977,11 @@ for lv in LEVELS:
         engine = dict(components=les["comps"], faults=les["faults"], dynamic=les["dyn"], behaviors=les["beh"],
                       calibration=les["cal"], nodeOverrides=les["nodeov"], metrics=les["metrics"], readiness=ready,
                       experimentUpgrade=upgrade)
+        for n in les["research"]:
+            assert n in ALL_NOTES, ("unknown research note", les["id"], n)
+        research = list(dict.fromkeys(les["research"] + NOTE_LINKS.get(les["id"], [])))
         d = dict(id=les["id"], title_vi=les["title_vi"], title_en=les["title_en"], format=les["format"], minutes=les["minutes"],
-                 difficulty=les["diff"], prerequisites=les["prerequisites"], concepts=les["concepts"], research=les["research"],
+                 difficulty=les["diff"], prerequisites=les["prerequisites"], concepts=les["concepts"], research=research,
                  engine=engine, engine_gaps=les["engine_gaps"])
         if lv["id"] == "L0":
             d["draft"] = f"content/drafts/{les['id']}.md"
@@ -879,6 +990,12 @@ for lv in LEVELS:
     o.update(entry_assumptions_vi=lv["entry_assumptions_vi"], entry_assumptions_en=lv["entry_assumptions_en"],
              outcomes_vi=lv["outcomes_vi"], outcomes_en=lv["outcomes_en"], exit_check=lv["exit_check"], lessons=lessons)
     out_levels.append(o)
+
+unknown_links = sorted(l for l in NOTE_LINKS if l not in all_ids)
+assert not unknown_links, ("research notes feed unknown lessons", unknown_links)
+no_research = [l["id"] for lv in out_levels for l in lv["lessons"] if not l["research"]]
+if no_research:
+    print("lessons without research notes:", no_research, file=sys.stderr)
 
 # prerequisites exist and come earlier
 order = [l["id"] for lv in out_levels for l in lv["lessons"]]

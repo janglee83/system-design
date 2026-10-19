@@ -115,8 +115,10 @@
         "l1-cdn-static-content",
         "l1-object-storage-for-assets",
         "c-l1-photo-news",
+        "c-l2-zero-to-millions",
         "l5-video-streaming",
-        "c-l5-exit-marketplace"
+        "c-l5-exit-marketplace",
+        "c-l5-video-platform"
       ]
     },
     "autoscaling-warmup-delay": {
@@ -218,7 +220,8 @@
         "c-l3-exit-order-pipeline",
         "l5-notification-system",
         "l5-payment-system",
-        "c-l5-notifications"
+        "c-l5-notifications",
+        "c-l5-payments"
       ]
     },
     "per-hop-timeouts": {
@@ -236,7 +239,7 @@
       ]
     },
     "load-shedding": {
-      "description": "Server-side shedding/adaptive concurrency limit: reject early when queue wait exceeds a budget, optionally by priority.",
+      "description": "Server-side shedding and concurrency limits (none / fixed / adaptive gradient or AIMD): reject early when in-flight work or queue wait exceeds a budget, optionally by priority; goodput metric.",
       "neededBy": [
         "l3-load-shedding",
         "c-l3-public-api",
@@ -258,7 +261,8 @@
     "dead-letter-queue": {
       "description": "Moving messages that fail N times to a dead-letter queue instead of retrying forever (poison messages).",
       "neededBy": [
-        "l3-dead-letter-queues"
+        "l3-dead-letter-queues",
+        "c-l3-photo-pipeline"
       ]
     },
     "third-party-node": {
@@ -273,6 +277,7 @@
         "l5-payment-system",
         "c-l5-notifications",
         "c-l5-exit-marketplace",
+        "c-l5-payments",
         "l6-sagas",
         "c-l6-payment-saga",
         "c-l6-capstone"
@@ -304,11 +309,12 @@
       ]
     },
     "partitioning-scheme": {
-      "description": "Key partitioning scheme for kv-store (modulo vs consistent hashing, virtual nodes) and a 'keys moved on resize' metric.",
+      "description": "Key partitioning scheme for kv-store and cache clusters (modulo vs consistent hashing, virtual nodes) and a 'keys moved on resize' metric (cache misses after a node loss).",
       "neededBy": [
         "l4-consistent-hashing",
         "l4-virtual-nodes",
         "c-l4-exit-ring",
+        "c-l4-cache-ring",
         "l5-kv-store-design",
         "c-l5-kv-store"
       ]
@@ -362,15 +368,16 @@
       ]
     },
     "inventory-concurrency-control": {
-      "description": "Limited inventory decremented concurrently, with an oversold metric and strategies (row lock, atomic decrement, reservation queue).",
+      "description": "Limited inventory decremented concurrently, with an oversold metric and strategies (naive read-then-write, conditional update, row lock, Redis pre-decrement, admission queue/waiting room); for bookings, range overlap with a doubleBookings metric.",
       "neededBy": [
         "l5-flash-sale",
+        "l5-hotel-booking",
         "c-l5-flash-sale",
         "c-l5-exit-marketplace"
       ]
     },
     "chunked-upload-dedupe": {
-      "description": "Chunked uploads with content-hash deduplication and sync notifications.",
+      "description": "Chunked uploads with content-hash deduplication (dedupe ratio, bytes transferred, storage cost) and sync notifications fanned out to a user's other devices.",
       "neededBy": [
         "l5-file-sync"
       ]
@@ -388,8 +395,9 @@
       ]
     },
     "event-log-stream": {
-      "description": "Partitioned append-only log (Kafka-like) with retention, consumer groups and consumer lag metric.",
+      "description": "Partitioned append-only log (Kafka-like) with retention, consumer groups, consumer lag metric, key skew producing hot partitions, and replication factor / min in-sync replicas deciding loss vs unavailability under broker-down.",
       "neededBy": [
+        "l5-distributed-message-queue",
         "l5-metrics-pipeline",
         "l6-event-sourcing-cqrs"
       ]
@@ -401,7 +409,7 @@
       ]
     },
     "distributed-transactions": {
-      "description": "Multi-service transactions: 2PC coordinator (with coordinator-down blocking) and sagas with compensation; inconsistency metric.",
+      "description": "Multi-service transactions: 2PC coordinator with a coordinator-down fault leaving in-doubt participants holding locks, and sagas with compensation (orchestrated or choreographed); inconsistency metric.",
       "neededBy": [
         "l6-two-phase-commit",
         "l6-sagas",
@@ -410,10 +418,11 @@
       ]
     },
     "outbox-cdc": {
-      "description": "Dual-write inconsistency metric, transactional outbox relay and change-data-capture stream from postgres.",
+      "description": "Dual-write inconsistency metric, transactional outbox relay (poller or log tailing) and change-data-capture stream from postgres with consumer lag and WAL retention when the connector is down.",
       "neededBy": [
         "l6-outbox-pattern",
         "l6-change-data-capture",
+        "l6-zero-downtime-migrations",
         "c-l6-payment-saga"
       ]
     },
@@ -431,9 +440,60 @@
       ]
     },
     "hedged-requests": {
-      "description": "Hedged/backup requests sent after a delay to another replica, with the extra-load cost.",
+      "description": "Hedged/backup requests sent after a delay to another replica, with the extra-load cost. Needs per-request latency variance (1a gives every request in a tick the same latency).",
       "neededBy": [
         "l6-tail-latency-hedging"
+      ]
+    },
+    "consumer-prefetch-partitions": {
+      "description": "Consumer prefetch (messages buffered per worker before ack) and partition-to-consumer assignment, so a slow or crashed worker hoards messages and the partition count caps parallelism.",
+      "neededBy": [
+        "l3-consumer-prefetch-and-partitions",
+        "c-l3-photo-pipeline"
+      ]
+    },
+    "erasure-coding-and-durability": {
+      "description": "Object-store redundancy scheme (replicas vs erasure coding k+m) with storage overhead, tolerated node losses and a dataLoss metric under repeated object-storage node failures.",
+      "neededBy": [
+        "l5-object-storage-design"
+      ]
+    },
+    "bandwidth-egress-model": {
+      "description": "Bytes per response and egress price per GB per tier (edge vs origin vs cross-region), so costPerMonth reflects bandwidth for video, downloads and cross-region replication.",
+      "neededBy": [
+        "l5-video-streaming",
+        "c-l5-video-platform"
+      ]
+    },
+    "cells-and-shuffle-sharding": {
+      "description": "Several identical stacks (cells) behind a thin router, or shuffle-sharded worker subsets per tenant, with a poison-tenant / noisy-neighbour fault and a share-of-clients-affected metric.",
+      "neededBy": [
+        "l6-cells-and-blast-radius",
+        "c-l6-noisy-neighbor"
+      ]
+    },
+    "per-node-timeseries-and-traces": {
+      "description": "Expose per-node time series and sampled request traces from a run, so learners diagnose 'where did it break?' from evidence instead of the fault list.",
+      "neededBy": [
+        "l6-observability-at-scale"
+      ]
+    },
+    "cardinality-cost": {
+      "description": "Metrics-store cost driven by series count (label choices) and trace sampling rate, to teach observability cost trade-offs.",
+      "neededBy": [
+        "l6-observability-at-scale"
+      ]
+    },
+    "alert-evaluation": {
+      "description": "Evaluate alert rules (static threshold vs multiwindow burn rate) over a run's per-tick error and latency series and score precision, recall and detection time.",
+      "neededBy": [
+        "l6-slo-alerting"
+      ]
+    },
+    "background-batch-load": {
+      "description": "A throttled background batch job (backfill, migration, reindex) sharing database capacity with live traffic, with batch size and rate controls.",
+      "neededBy": [
+        "l6-zero-downtime-migrations"
       ]
     }
   },
@@ -601,7 +661,8 @@
             "propagation-delay"
           ],
           "research": [
-            "latency-and-distance"
+            "latency-and-distance",
+            "dns-and-network-path"
           ],
           "engine": {
             "components": [
@@ -921,7 +982,8 @@
             "over-provisioning"
           ],
           "research": [
-            "cost-basics"
+            "cost-basics",
+            "throughput-and-capacity"
           ],
           "engine": {
             "components": [
@@ -1238,6 +1300,57 @@
           "brief_vi": "Ước lượng đỉnh tải từ đề bài, chọn cấu hình máy web và cơ sở dữ liệu, loại bỏ mọi điểm lỗi đơn và giữ trong ngân sách.",
           "engine_gaps": [],
           "readiness": "ready-1a"
+        },
+        {
+          "id": "c-l0-size-from-estimate",
+          "level": "L0",
+          "title_vi": "Từ đề bài đến cấu hình",
+          "title_en": "From a brief to a sizing",
+          "prerequisites": [
+            "l0-estimation-basics"
+          ],
+          "allowedKinds": [
+            "client",
+            "web-server",
+            "postgres"
+          ],
+          "workload": {
+            "profile": "mixed",
+            "baseRps": 6000,
+            "writeRatio": 0.2
+          },
+          "goals": [
+            {
+              "id": "fast",
+              "metric": "p95",
+              "op": "<=",
+              "value": 50
+            },
+            {
+              "id": "headroom",
+              "metric": "peakBusy",
+              "op": "<=",
+              "value": 0.7
+            },
+            {
+              "id": "no-drops",
+              "metric": "requestsRejected",
+              "op": "<=",
+              "value": 0
+            }
+          ],
+          "modes": [
+            {
+              "id": "peak",
+              "budgetPerMonth": 500,
+              "faults": [],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            }
+          ],
+          "brief_en": "Turn a written estimate of daily users into peak requests per second, then size the web server and database with headroom.",
+          "brief_vi": "Đổi ước lượng số người dùng mỗi ngày thành số request mỗi giây lúc đỉnh, rồi chọn cấu hình máy web và cơ sở dữ liệu có chừa khoảng dư.",
+          "engine_gaps": [],
+          "readiness": "ready-1a"
         }
       ]
     },
@@ -1298,7 +1411,8 @@
             "price-per-capacity"
           ],
           "research": [
-            "vertical-vs-horizontal-scaling"
+            "vertical-vs-horizontal-scaling",
+            "throughput-and-capacity"
           ],
           "engine": {
             "components": [
@@ -1536,7 +1650,8 @@
             "capacity-after-failure"
           ],
           "research": [
-            "health-checks-and-failover"
+            "health-checks-and-failover",
+            "availability-and-spof"
           ],
           "engine": {
             "components": [
@@ -1577,7 +1692,8 @@
             "single-point-of-failure"
           ],
           "research": [
-            "load-balancing-basics"
+            "load-balancing-basics",
+            "availability-and-spof"
           ],
           "engine": {
             "components": [
@@ -1739,7 +1855,8 @@
             "cooldown"
           ],
           "research": [
-            "autoscaling"
+            "autoscaling",
+            "queueing-and-utilization"
           ],
           "engine": {
             "components": [
@@ -1787,7 +1904,9 @@
             "static-content"
           ],
           "research": [
-            "cdn-and-static-content"
+            "cdn-and-static-content",
+            "caching-basics",
+            "latency-and-distance"
           ],
           "engine": {
             "components": [
@@ -1831,7 +1950,8 @@
             "origin"
           ],
           "research": [
-            "cdn-and-static-content"
+            "cdn-and-static-content",
+            "file-sync-and-object-storage"
           ],
           "engine": {
             "components": [
@@ -1951,7 +2071,8 @@
             "vip"
           ],
           "research": [
-            "global-entry-dns-anycast"
+            "global-entry-dns-anycast",
+            "dns-and-network-path"
           ],
           "engine": {
             "components": [],
@@ -2492,7 +2613,9 @@
             "wide-column",
             "access-pattern"
           ],
-          "research": [],
+          "research": [
+            "data-models-and-schema"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -2521,7 +2644,9 @@
             "relationships",
             "access-pattern"
           ],
-          "research": [],
+          "research": [
+            "data-models-and-schema"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -2550,7 +2675,9 @@
             "full-scan",
             "write-amplification"
           ],
-          "research": [],
+          "research": [
+            "indexes-and-storage-engines"
+          ],
           "engine": {
             "components": [
               "client",
@@ -2590,7 +2717,9 @@
             "connection-pool",
             "max-connections"
           ],
-          "research": [],
+          "research": [
+            "connection-pooling"
+          ],
           "engine": {
             "components": [
               "client",
@@ -2630,7 +2759,9 @@
             "read-replica",
             "read-write-split"
           ],
-          "research": [],
+          "research": [
+            "replication-and-failover"
+          ],
           "engine": {
             "components": [
               "client",
@@ -2668,7 +2799,9 @@
             "read-your-writes",
             "stale-read"
           ],
-          "research": [],
+          "research": [
+            "replication-and-failover"
+          ],
           "engine": {
             "components": [
               "client",
@@ -2710,7 +2843,8 @@
             "rto"
           ],
           "research": [
-            "availability-and-spof"
+            "availability-and-spof",
+            "replication-and-failover"
           ],
           "engine": {
             "components": [
@@ -2756,7 +2890,8 @@
             "cache-miss"
           ],
           "research": [
-            "caching-basics"
+            "caching-basics",
+            "caching-patterns"
           ],
           "engine": {
             "components": [
@@ -2797,7 +2932,8 @@
             "eviction"
           ],
           "research": [
-            "caching-basics"
+            "caching-basics",
+            "caching-patterns"
           ],
           "engine": {
             "components": [
@@ -2837,7 +2973,8 @@
             "stale-read"
           ],
           "research": [
-            "caching-basics"
+            "caching-basics",
+            "caching-patterns"
           ],
           "engine": {
             "components": [
@@ -2879,7 +3016,8 @@
             "request-coalescing"
           ],
           "research": [
-            "caching-basics"
+            "caching-basics",
+            "cache-failures-and-hot-keys"
           ],
           "engine": {
             "components": [
@@ -2922,7 +3060,9 @@
             "write-back",
             "write-around"
           ],
-          "research": [],
+          "research": [
+            "caching-patterns"
+          ],
           "engine": {
             "components": [
               "client",
@@ -2961,7 +3101,9 @@
             "partition",
             "shard-key"
           ],
-          "research": [],
+          "research": [
+            "sharding"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3000,7 +3142,9 @@
             "hot-shard",
             "resharding"
           ],
-          "research": [],
+          "research": [
+            "sharding"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3038,7 +3182,40 @@
             "denormalization",
             "read-model"
           ],
-          "research": [],
+          "research": [
+            "data-models-and-schema"
+          ],
+          "engine": {
+            "components": [],
+            "faults": [],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [],
+            "readiness": "not-needed",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": []
+        },
+        {
+          "id": "l2-schema-evolution",
+          "title_vi": "Thay đổi lược đồ mà không làm hỏng phiên bản cũ",
+          "title_en": "Evolving schemas without breaking old code",
+          "format": "reading+check",
+          "minutes": 12,
+          "difficulty": 2,
+          "prerequisites": [
+            "l2-data-modeling"
+          ],
+          "concepts": [
+            "schema-evolution",
+            "backward-compatibility",
+            "forward-compatibility"
+          ],
+          "research": [
+            "data-models-and-schema"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -3069,7 +3246,8 @@
             "optimistic-locking"
           ],
           "research": [
-            "databases-basics"
+            "databases-basics",
+            "transactions-and-isolation"
           ],
           "engine": {
             "components": [
@@ -3108,7 +3286,9 @@
             "key-value",
             "partition-key"
           ],
-          "research": [],
+          "research": [
+            "key-value-and-blob-storage"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3149,7 +3329,9 @@
             "metadata"
           ],
           "research": [
-            "cdn-and-static-content"
+            "cdn-and-static-content",
+            "file-sync-and-object-storage",
+            "key-value-and-blob-storage"
           ],
           "engine": {
             "components": [
@@ -3188,7 +3370,9 @@
             "full-text-search",
             "indexing-lag"
           ],
-          "research": [],
+          "research": [
+            "search-indexing"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -3220,7 +3404,9 @@
             "read-heavy",
             "layered-caching"
           ],
-          "research": [],
+          "research": [
+            "caching-patterns"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3605,6 +3791,102 @@
           "brief_vi": "Trang hồ sơ có ảnh, đọc nhiều hơn ghi rất nhiều; có cả lỗi cache và bản sao.",
           "engine_gaps": [],
           "readiness": "needs-1b"
+        },
+        {
+          "id": "c-l2-zero-to-millions",
+          "level": "L2",
+          "title_vi": "Từ con số không đến hàng triệu người dùng",
+          "title_en": "From zero to millions of users",
+          "prerequisites": [
+            "l2-read-heavy-recipe",
+            "l2-db-failover",
+            "l1-n-plus-one"
+          ],
+          "allowedKinds": [
+            "client",
+            "lb",
+            "web-server",
+            "postgres",
+            "redis",
+            "cdn",
+            "object-storage"
+          ],
+          "workload": {
+            "profile": "mixed",
+            "baseRps": 30000,
+            "writeRatio": 0.1,
+            "surge": {
+              "factor": 2,
+              "atMs": 4000,
+              "durationMs": 2000
+            },
+            "params": {
+              "staticShare": 0.5
+            }
+          },
+          "goals": [
+            {
+              "id": "fast",
+              "metric": "p95",
+              "op": "<=",
+              "value": 60
+            },
+            {
+              "id": "up",
+              "metric": "availability",
+              "op": ">=",
+              "value": 0.99
+            },
+            {
+              "id": "no-spof",
+              "metric": "spofCount",
+              "op": "==",
+              "value": 0
+            },
+            {
+              "id": "budget",
+              "metric": "costPerMonth",
+              "op": "<=",
+              "value": 2000
+            }
+          ],
+          "modes": [
+            {
+              "id": "standard",
+              "budgetPerMonth": 2000,
+              "faults": [],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            },
+            {
+              "id": "tight-budget",
+              "budgetPerMonth": 1500,
+              "faults": []
+            },
+            {
+              "id": "chaos",
+              "budgetPerMonth": 2300,
+              "faults": [
+                {
+                  "kind": "cache-down",
+                  "atMs": 3000
+                },
+                {
+                  "kind": "db-primary-down",
+                  "atMs": 5000
+                },
+                {
+                  "kind": "instance-down",
+                  "atMs": 7000
+                }
+              ]
+            }
+          ],
+          "brief_en": "Grow a one-server app into a full read-heavy stack — balancer, replicas, cache, CDN — and keep it alive when parts fail.",
+          "brief_vi": "Phát triển ứng dụng một máy thành cả hệ thống đọc nhiều — bộ cân bằng tải, bản sao, cache, CDN — và giữ nó sống khi các phần hỏng.",
+          "engine_gaps": [
+            "static-request-share-and-cdn-hit-model"
+          ],
+          "readiness": "blocked-by-gap"
         }
       ]
     },
@@ -3659,7 +3941,9 @@
             "asynchronous",
             "decoupling"
           ],
-          "research": [],
+          "research": [
+            "queues-and-workers"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -3689,7 +3973,9 @@
             "consumer",
             "queue-depth"
           ],
-          "research": [],
+          "research": [
+            "queues-and-workers"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3727,7 +4013,9 @@
             "worker-pool",
             "queue-depth-scaling"
           ],
-          "research": [],
+          "research": [
+            "queues-and-workers"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3767,7 +4055,9 @@
             "fan-out",
             "topic"
           ],
-          "research": [],
+          "research": [
+            "queues-and-workers"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3793,6 +4083,54 @@
           "engine_gaps": []
         },
         {
+          "id": "l3-consumer-prefetch-and-partitions",
+          "title_vi": "Prefetch và phân vùng: chia việc cho worker",
+          "title_en": "Prefetch and partitions: how work reaches workers",
+          "format": "experiment",
+          "minutes": 15,
+          "difficulty": 3,
+          "prerequisites": [
+            "l3-scaling-workers"
+          ],
+          "concepts": [
+            "prefetch",
+            "partition",
+            "consumer-group",
+            "ordering"
+          ],
+          "research": [
+            "queues-and-workers",
+            "distributed-message-queue"
+          ],
+          "engine": {
+            "components": [
+              "client",
+              "lb",
+              "web-server",
+              "queue",
+              "worker"
+            ],
+            "faults": [
+              "instance-slow",
+              "instance-down"
+            ],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [
+              "peakQueueDepth",
+              "p95",
+              "throughputRps"
+            ],
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": [
+            "consumer-prefetch-partitions"
+          ]
+        },
+        {
           "id": "l3-delivery-semantics",
           "title_vi": "Giao nhiều nhất một lần, ít nhất một lần",
           "title_en": "At-most-once, at-least-once, effectively-once",
@@ -3807,7 +4145,9 @@
             "at-most-once",
             "ack"
           ],
-          "research": [],
+          "research": [
+            "delivery-semantics-and-idempotency"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3850,7 +4190,9 @@
             "idempotency-key",
             "deduplication"
           ],
-          "research": [],
+          "research": [
+            "delivery-semantics-and-idempotency"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3893,7 +4235,8 @@
             "resource-exhaustion"
           ],
           "research": [
-            "percentiles-and-tail-latency"
+            "percentiles-and-tail-latency",
+            "timeouts-retries-backoff"
           ],
           "engine": {
             "components": [
@@ -3935,7 +4278,9 @@
             "exponential-backoff",
             "retry-budget"
           ],
-          "research": [],
+          "research": [
+            "timeouts-retries-backoff"
+          ],
           "engine": {
             "components": [
               "client",
@@ -3975,7 +4320,9 @@
             "jitter",
             "retry-amplification"
           ],
-          "research": [],
+          "research": [
+            "timeouts-retries-backoff"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4018,7 +4365,9 @@
             "half-open",
             "fail-fast"
           ],
-          "research": [],
+          "research": [
+            "circuit-breakers-bulkheads-fallbacks"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4060,7 +4409,9 @@
             "quota",
             "429"
           ],
-          "research": [],
+          "research": [
+            "rate-limiting"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4098,7 +4449,9 @@
             "leaky-bucket",
             "sliding-window"
           ],
-          "research": [],
+          "research": [
+            "rate-limiting"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -4130,7 +4483,9 @@
             "priority",
             "goodput"
           ],
-          "research": [],
+          "research": [
+            "load-shedding-and-backpressure"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4170,7 +4525,9 @@
             "isolation",
             "thread-pool"
           ],
-          "research": [],
+          "research": [
+            "circuit-breakers-bulkheads-fallbacks"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4210,7 +4567,9 @@
             "fallback",
             "degraded-mode"
           ],
-          "research": [],
+          "research": [
+            "circuit-breakers-bulkheads-fallbacks"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4254,7 +4613,9 @@
             "dead-letter-queue",
             "poison-message"
           ],
-          "research": [],
+          "research": [
+            "queues-and-workers"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -4285,7 +4646,9 @@
             "cron",
             "batch"
           ],
-          "research": [],
+          "research": [
+            "queues-and-workers"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4309,6 +4672,71 @@
           "engine_gaps": []
         },
         {
+          "id": "l3-service-discovery",
+          "title_vi": "Tìm nhau giữa nhiều dịch vụ: service discovery",
+          "title_en": "Finding each other: service discovery",
+          "format": "reading+check",
+          "minutes": 12,
+          "difficulty": 2,
+          "prerequisites": [
+            "l1-health-checks",
+            "l3-sync-vs-async"
+          ],
+          "concepts": [
+            "service-registry",
+            "client-side-discovery",
+            "server-side-discovery"
+          ],
+          "research": [
+            "service-discovery"
+          ],
+          "engine": {
+            "components": [],
+            "faults": [],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [],
+            "readiness": "not-needed",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": []
+        },
+        {
+          "id": "l3-auth-basics",
+          "title_vi": "Xác thực, phân quyền và TLS khi có nhiều máy",
+          "title_en": "Authentication, authorization and TLS across many servers",
+          "format": "reading+check",
+          "minutes": 15,
+          "difficulty": 2,
+          "prerequisites": [
+            "l1-stateless-servers",
+            "l1-reverse-proxy-and-gateway"
+          ],
+          "concepts": [
+            "authentication",
+            "authorization",
+            "token",
+            "tls-termination"
+          ],
+          "research": [
+            "auth-and-tls"
+          ],
+          "engine": {
+            "components": [],
+            "faults": [],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [],
+            "readiness": "not-needed",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": []
+        },
+        {
           "id": "l3-observability-basics",
           "title_vi": "Quan sát hệ thống: metric, log, trace",
           "title_en": "Observability basics: metrics, logs and traces",
@@ -4326,7 +4754,8 @@
           ],
           "research": [
             "percentiles-and-tail-latency",
-            "queueing-and-utilization"
+            "queueing-and-utilization",
+            "observability-and-slos"
           ],
           "engine": {
             "components": [
@@ -4370,7 +4799,8 @@
           ],
           "research": [
             "availability-and-spof",
-            "percentiles-and-tail-latency"
+            "percentiles-and-tail-latency",
+            "observability-and-slos"
           ],
           "engine": {
             "components": [],
@@ -4745,6 +5175,90 @@
             "third-party-node"
           ],
           "readiness": "blocked-by-gap"
+        },
+        {
+          "id": "c-l3-photo-pipeline",
+          "level": "L3",
+          "title_vi": "Dây chuyền xử lý ảnh",
+          "title_en": "The photo-processing pipeline",
+          "prerequisites": [
+            "l3-consumer-prefetch-and-partitions",
+            "l3-dead-letter-queues"
+          ],
+          "allowedKinds": [
+            "client",
+            "lb",
+            "web-server",
+            "queue",
+            "worker",
+            "object-storage"
+          ],
+          "workload": {
+            "profile": "jobs",
+            "baseRps": 3000,
+            "writeRatio": 0.5,
+            "surge": {
+              "factor": 3,
+              "atMs": 2000,
+              "durationMs": 3000
+            }
+          },
+          "goals": [
+            {
+              "id": "drained",
+              "metric": "peakQueueDepth",
+              "op": "<=",
+              "value": 30000
+            },
+            {
+              "id": "no-loss",
+              "metric": "lostMessages",
+              "op": "==",
+              "value": 0
+            },
+            {
+              "id": "budget",
+              "metric": "costPerMonth",
+              "op": "<=",
+              "value": 500
+            }
+          ],
+          "modes": [
+            {
+              "id": "steady",
+              "budgetPerMonth": 500,
+              "faults": [],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            },
+            {
+              "id": "burst",
+              "budgetPerMonth": 550,
+              "faults": [
+                {
+                  "kind": "traffic-surge-3x",
+                  "atMs": 2000
+                }
+              ]
+            },
+            {
+              "id": "crash",
+              "budgetPerMonth": 550,
+              "faults": [
+                {
+                  "kind": "instance-down",
+                  "atMs": 3000,
+                  "target": "worker"
+                }
+              ]
+            }
+          ],
+          "brief_en": "Uploaded photos are resized by workers; one slow worker must not hoard the queue and broken images must not loop forever.",
+          "brief_vi": "Ảnh tải lên được worker thu nhỏ; một worker chậm không được ôm hết hàng đợi và ảnh hỏng không được lặp mãi.",
+          "engine_gaps": [
+            "consumer-prefetch-partitions",
+            "dead-letter-queue"
+          ],
+          "readiness": "blocked-by-gap"
         }
       ]
     },
@@ -4798,7 +5312,9 @@
             "partial-failure",
             "network-fallacies"
           ],
-          "research": [],
+          "research": [
+            "partial-failure-and-fallacies"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -4828,7 +5344,9 @@
             "partition-tolerance",
             "consistency-vs-availability"
           ],
-          "research": [],
+          "research": [
+            "cap-pacelc-consistency"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4866,7 +5384,9 @@
             "pacelc",
             "latency-vs-consistency"
           ],
-          "research": [],
+          "research": [
+            "cap-pacelc-consistency"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -4896,7 +5416,9 @@
             "causal-consistency",
             "read-your-writes"
           ],
-          "research": [],
+          "research": [
+            "cap-pacelc-consistency"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -4925,7 +5447,9 @@
             "multi-leader",
             "leaderless"
           ],
-          "research": [],
+          "research": [
+            "replication-strategies-and-quorums"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -4955,7 +5479,9 @@
             "replication-factor",
             "sloppy-quorum"
           ],
-          "research": [],
+          "research": [
+            "replication-strategies-and-quorums"
+          ],
           "engine": {
             "components": [
               "client",
@@ -4998,7 +5524,11 @@
             "hash-ring",
             "rebalancing"
           ],
-          "research": [],
+          "research": [
+            "consistent-hashing",
+            "load-balancing-algorithms",
+            "sharding"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5037,7 +5567,9 @@
             "virtual-node",
             "load-skew"
           ],
-          "research": [],
+          "research": [
+            "consistent-hashing"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5075,7 +5607,9 @@
             "snowflake-id",
             "db-sequence"
           ],
-          "research": [],
+          "research": [
+            "unique-ids"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5115,7 +5649,9 @@
             "ntp",
             "last-write-wins"
           ],
-          "research": [],
+          "research": [
+            "clocks-and-ordering"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5156,7 +5692,9 @@
             "vector-clock",
             "happens-before"
           ],
-          "research": [],
+          "research": [
+            "clocks-and-ordering"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -5185,7 +5723,9 @@
             "timeout-tuning",
             "false-positive"
           ],
-          "research": [],
+          "research": [
+            "failure-detection-and-leader-election"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5222,7 +5762,9 @@
             "gossip",
             "membership"
           ],
-          "research": [],
+          "research": [
+            "failure-detection-and-leader-election"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -5255,7 +5797,9 @@
             "fencing-token",
             "split-brain"
           ],
-          "research": [],
+          "research": [
+            "failure-detection-and-leader-election"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5295,7 +5839,9 @@
             "version-vector",
             "crdt"
           ],
-          "research": [],
+          "research": [
+            "conflict-resolution-and-crdts"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5333,7 +5879,9 @@
             "read-repair",
             "merkle-tree"
           ],
-          "research": [],
+          "research": [
+            "replication-strategies-and-quorums"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -5623,6 +6171,72 @@
             "conflict-resolution"
           ],
           "readiness": "blocked-by-gap"
+        },
+        {
+          "id": "c-l4-cache-ring",
+          "level": "L4",
+          "title_vi": "Vòng cache khi mất một máy",
+          "title_en": "The cache ring loses a node",
+          "prerequisites": [
+            "l4-consistent-hashing",
+            "l4-virtual-nodes"
+          ],
+          "allowedKinds": [
+            "client",
+            "lb",
+            "web-server",
+            "redis",
+            "postgres"
+          ],
+          "workload": {
+            "profile": "read-heavy",
+            "baseRps": 30000,
+            "writeRatio": 0.02
+          },
+          "goals": [
+            {
+              "id": "db-calm",
+              "metric": "peakDbConnections",
+              "op": "<=",
+              "value": 80
+            },
+            {
+              "id": "up",
+              "metric": "availability",
+              "op": ">=",
+              "value": 0.99
+            },
+            {
+              "id": "balanced",
+              "metric": "peakBusy",
+              "op": "<=",
+              "value": 0.8
+            }
+          ],
+          "modes": [
+            {
+              "id": "offline",
+              "budgetPerMonth": 950,
+              "faults": [
+                {
+                  "kind": "cache-down",
+                  "atMs": 3000
+                }
+              ],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            },
+            {
+              "id": "even",
+              "budgetPerMonth": 950,
+              "faults": []
+            }
+          ],
+          "brief_en": "A cluster of cache servers loses one node; choose a key-to-node scheme so most keys stay where they were.",
+          "brief_vi": "Một cụm máy cache mất một nút; chọn cách gán khóa cho nút sao cho phần lớn khóa vẫn ở chỗ cũ.",
+          "engine_gaps": [
+            "partitioning-scheme"
+          ],
+          "readiness": "blocked-by-gap"
         }
       ]
     },
@@ -5674,7 +6288,9 @@
             "high-level-design",
             "deep-dive"
           ],
-          "research": [],
+          "research": [
+            "design-framework-and-estimation"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -5705,7 +6321,8 @@
             "bandwidth-estimate"
           ],
           "research": [
-            "estimation-basics"
+            "estimation-basics",
+            "design-framework-and-estimation"
           ],
           "engine": {
             "components": [],
@@ -5734,7 +6351,9 @@
             "distributed-rate-limit",
             "shared-counter"
           ],
-          "research": [],
+          "research": [
+            "rate-limiting"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5776,7 +6395,9 @@
             "snowflake-id",
             "id-service"
           ],
-          "research": [],
+          "research": [
+            "unique-ids"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5819,7 +6440,9 @@
             "redirect",
             "read-heavy"
           ],
-          "research": [],
+          "research": [
+            "url-shortener"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5865,7 +6488,11 @@
             "sstable",
             "compaction"
           ],
-          "research": [],
+          "research": [
+            "indexes-and-storage-engines",
+            "kv-store-design",
+            "replication-strategies-and-quorums"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5909,7 +6536,9 @@
             "politeness",
             "dedupe"
           ],
-          "research": [],
+          "research": [
+            "web-crawler"
+          ],
           "engine": {
             "components": [
               "client",
@@ -5952,7 +6581,10 @@
             "email-sms-providers",
             "templating"
           ],
-          "research": [],
+          "research": [
+            "delivery-semantics-and-idempotency",
+            "notification-system"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6002,7 +6634,9 @@
             "fan-out-on-read",
             "celebrity-problem"
           ],
-          "research": [],
+          "research": [
+            "news-feed"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6046,7 +6680,9 @@
             "inbox",
             "message-ordering"
           ],
-          "research": [],
+          "research": [
+            "chat-and-presence"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6091,7 +6727,10 @@
             "presence",
             "heartbeat-interval"
           ],
-          "research": [],
+          "research": [
+            "chat-and-presence",
+            "failure-detection-and-leader-election"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6131,7 +6770,10 @@
             "top-k",
             "prefix-cache"
           ],
-          "research": [],
+          "research": [
+            "search-autocomplete",
+            "search-indexing"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6173,7 +6815,10 @@
             "inventory-reservation",
             "queue-admission"
           ],
-          "research": [],
+          "research": [
+            "flash-sale-and-inventory",
+            "transactions-and-isolation"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6207,6 +6852,50 @@
           ]
         },
         {
+          "id": "l5-hotel-booking",
+          "title_vi": "Thiết kế đặt phòng: không bán trùng một đêm",
+          "title_en": "Designing bookings: never sell the same night twice",
+          "format": "experiment",
+          "minutes": 20,
+          "difficulty": 3,
+          "prerequisites": [
+            "l5-flash-sale"
+          ],
+          "concepts": [
+            "double-booking",
+            "write-skew",
+            "reservation-hold",
+            "exclusion-constraint"
+          ],
+          "research": [
+            "flash-sale-and-inventory",
+            "transactions-and-isolation"
+          ],
+          "engine": {
+            "components": [
+              "client",
+              "lb",
+              "web-server",
+              "postgres"
+            ],
+            "faults": [],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [
+              "writeConflicts",
+              "lostUpdates",
+              "p95"
+            ],
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": [
+            "inventory-concurrency-control"
+          ]
+        },
+        {
           "id": "l5-file-sync",
           "title_vi": "Thiết kế lưu trữ và đồng bộ tệp",
           "title_en": "Designing file storage and sync",
@@ -6222,7 +6911,9 @@
             "dedupe",
             "sync-notification"
           ],
-          "research": [],
+          "research": [
+            "file-sync-and-object-storage"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6252,6 +6943,52 @@
           ]
         },
         {
+          "id": "l5-object-storage-design",
+          "title_vi": "Thiết kế kho đối tượng kiểu S3",
+          "title_en": "Designing an S3-like object store",
+          "format": "experiment",
+          "minutes": 25,
+          "difficulty": 3,
+          "prerequisites": [
+            "l5-file-sync",
+            "l4-replication-strategies"
+          ],
+          "concepts": [
+            "metadata-vs-data",
+            "erasure-coding",
+            "multipart-upload",
+            "durability"
+          ],
+          "research": [
+            "file-sync-and-object-storage"
+          ],
+          "engine": {
+            "components": [
+              "client",
+              "lb",
+              "web-server",
+              "object-storage",
+              "postgres"
+            ],
+            "faults": [
+              "object-storage-down"
+            ],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [
+              "availability",
+              "costPerMonth"
+            ],
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": [
+            "erasure-coding-and-durability"
+          ]
+        },
+        {
           "id": "l5-video-streaming",
           "title_vi": "Thiết kế dịch vụ xem video",
           "title_en": "Designing a video streaming service",
@@ -6267,7 +7004,9 @@
             "adaptive-bitrate",
             "cdn-offload"
           ],
-          "research": [],
+          "research": [
+            "video-streaming"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6291,7 +7030,8 @@
             "experimentUpgrade": null
           },
           "engine_gaps": [
-            "static-request-share-and-cdn-hit-model"
+            "static-request-share-and-cdn-hit-model",
+            "bandwidth-egress-model"
           ]
         },
         {
@@ -6310,7 +7050,10 @@
             "idempotent-payment",
             "reconciliation"
           ],
-          "research": [],
+          "research": [
+            "delivery-semantics-and-idempotency",
+            "payment-system"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6358,7 +7101,9 @@
             "top-n",
             "write-heavy"
           ],
-          "research": [],
+          "research": [
+            "leaderboard"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6399,7 +7144,9 @@
             "quadtree",
             "geo-sharding"
           ],
-          "research": [],
+          "research": [
+            "proximity-service"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6425,6 +7172,54 @@
           ]
         },
         {
+          "id": "l5-distributed-message-queue",
+          "title_vi": "Thiết kế hàng đợi thông điệp phân tán kiểu Kafka",
+          "title_en": "Designing a Kafka-style distributed log",
+          "format": "experiment",
+          "minutes": 25,
+          "difficulty": 3,
+          "prerequisites": [
+            "l3-consumer-prefetch-and-partitions",
+            "l3-delivery-semantics",
+            "l4-replication-strategies"
+          ],
+          "concepts": [
+            "partitioned-log",
+            "consumer-offset",
+            "in-sync-replicas",
+            "retention"
+          ],
+          "research": [
+            "distributed-message-queue"
+          ],
+          "engine": {
+            "components": [
+              "client",
+              "lb",
+              "web-server",
+              "queue",
+              "worker"
+            ],
+            "faults": [
+              "broker-down"
+            ],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [
+              "lostMessages",
+              "peakQueueDepth",
+              "throughputRps"
+            ],
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": [
+            "event-log-stream"
+          ]
+        },
+        {
           "id": "l5-metrics-pipeline",
           "title_vi": "Thiết kế hệ thống thu thập metric và log",
           "title_en": "Designing a metrics and logging pipeline",
@@ -6440,7 +7235,10 @@
             "time-series",
             "downsampling"
           ],
-          "research": [],
+          "research": [
+            "distributed-message-queue",
+            "metrics-and-logging-pipeline"
+          ],
           "engine": {
             "components": [
               "client",
@@ -6484,7 +7282,10 @@
             "exactly-once-execution",
             "leader"
           ],
-          "research": [],
+          "research": [
+            "distributed-job-scheduler",
+            "failure-detection-and-leader-election"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7255,6 +8056,174 @@
             "static-request-share-and-cdn-hit-model"
           ],
           "readiness": "blocked-by-gap"
+        },
+        {
+          "id": "c-l5-payments",
+          "level": "L5",
+          "title_vi": "Thanh toán không trừ tiền hai lần",
+          "title_en": "Payments that never charge twice",
+          "prerequisites": [
+            "l5-payment-system"
+          ],
+          "allowedKinds": [
+            "client",
+            "api-gateway",
+            "lb",
+            "web-server",
+            "queue",
+            "worker",
+            "postgres"
+          ],
+          "workload": {
+            "profile": "mixed",
+            "baseRps": 3000,
+            "writeRatio": 0.4,
+            "clientTimeoutMs": 2000
+          },
+          "goals": [
+            {
+              "id": "no-dupes",
+              "metric": "duplicateWrites",
+              "op": "==",
+              "value": 0
+            },
+            {
+              "id": "up",
+              "metric": "availability",
+              "op": ">=",
+              "value": 0.97
+            },
+            {
+              "id": "fast",
+              "metric": "p95",
+              "op": "<=",
+              "value": 300
+            }
+          ],
+          "modes": [
+            {
+              "id": "standard",
+              "budgetPerMonth": 900,
+              "faults": [
+                {
+                  "kind": "third-party-slow",
+                  "atMs": 3000
+                }
+              ],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            },
+            {
+              "id": "provider-down",
+              "budgetPerMonth": 900,
+              "faults": [
+                {
+                  "kind": "third-party-down",
+                  "atMs": 3000
+                }
+              ]
+            },
+            {
+              "id": "chaos",
+              "budgetPerMonth": 1000,
+              "faults": [
+                {
+                  "kind": "third-party-slow",
+                  "atMs": 2000
+                },
+                {
+                  "kind": "broker-down",
+                  "atMs": 4000
+                },
+                {
+                  "kind": "instance-down",
+                  "atMs": 6000
+                }
+              ]
+            }
+          ],
+          "brief_en": "A payment provider slows down and times out; retry safely so no customer is charged twice and no paid order is lost.",
+          "brief_vi": "Nhà cung cấp thanh toán chậm đi và quá thời gian chờ; thử lại an toàn để không ai bị trừ tiền hai lần và không mất đơn đã trả.",
+          "engine_gaps": [
+            "third-party-node",
+            "idempotency-keys"
+          ],
+          "readiness": "blocked-by-gap"
+        },
+        {
+          "id": "c-l5-video-platform",
+          "level": "L5",
+          "title_vi": "Nền tảng video buổi tối",
+          "title_en": "The evening video rush",
+          "prerequisites": [
+            "l5-video-streaming"
+          ],
+          "allowedKinds": [
+            "client",
+            "lb",
+            "web-server",
+            "queue",
+            "worker",
+            "cdn",
+            "object-storage"
+          ],
+          "workload": {
+            "profile": "read-heavy",
+            "baseRps": 40000,
+            "writeRatio": 0.01,
+            "surge": {
+              "factor": 2,
+              "atMs": 3000,
+              "durationMs": 3000
+            },
+            "params": {
+              "staticShare": 0.95
+            }
+          },
+          "goals": [
+            {
+              "id": "fast",
+              "metric": "p95",
+              "op": "<=",
+              "value": 80
+            },
+            {
+              "id": "up",
+              "metric": "availability",
+              "op": ">=",
+              "value": 0.995
+            },
+            {
+              "id": "budget",
+              "metric": "costPerMonth",
+              "op": "<=",
+              "value": 3000
+            }
+          ],
+          "modes": [
+            {
+              "id": "standard",
+              "budgetPerMonth": 3000,
+              "faults": [],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            },
+            {
+              "id": "origin-down",
+              "budgetPerMonth": 3200,
+              "faults": [
+                {
+                  "kind": "object-storage-down",
+                  "atMs": 4000
+                }
+              ]
+            }
+          ],
+          "brief_en": "Evening viewers double; serve video segments from the edge and keep uploads transcoding in the background within budget.",
+          "brief_vi": "Lượng người xem buổi tối tăng gấp đôi; phục vụ các đoạn video từ biên mạng và vẫn chuyển mã video tải lên ở nền trong ngân sách.",
+          "engine_gaps": [
+            "static-request-share-and-cdn-hit-model",
+            "bandwidth-egress-model"
+          ],
+          "readiness": "blocked-by-gap"
         }
       ]
     },
@@ -7309,7 +8278,11 @@
             "multi-region",
             "data-residency"
           ],
-          "research": [],
+          "research": [
+            "availability-zones-and-redundancy",
+            "latency-and-distance",
+            "multi-region-and-geo-routing"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -7341,7 +8314,10 @@
             "latency-routing",
             "regional-failover"
           ],
-          "research": [],
+          "research": [
+            "global-entry-dns-anycast",
+            "multi-region-and-geo-routing"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7383,7 +8359,9 @@
             "rto",
             "warm-standby"
           ],
-          "research": [],
+          "research": [
+            "disaster-recovery-rpo-rto"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7426,7 +8404,10 @@
             "write-conflict",
             "home-region"
           ],
-          "research": [],
+          "research": [
+            "conflict-resolution-and-crdts",
+            "multi-region-writes"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7467,7 +8448,9 @@
             "log-replication",
             "majority-quorum"
           ],
-          "research": [],
+          "research": [
+            "consensus-raft"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7505,7 +8488,9 @@
             "coordination-service",
             "distributed-lock"
           ],
-          "research": [],
+          "research": [
+            "paxos-and-coordination-services"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -7535,7 +8520,10 @@
             "coordinator",
             "blocking"
           ],
-          "research": [],
+          "research": [
+            "transactions-and-isolation",
+            "two-phase-commit"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7575,7 +8563,10 @@
             "compensation",
             "orchestration-vs-choreography"
           ],
-          "research": [],
+          "research": [
+            "payment-system",
+            "sagas"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7619,7 +8610,10 @@
             "dual-write",
             "transactional-outbox"
           ],
-          "research": [],
+          "research": [
+            "delivery-semantics-and-idempotency",
+            "transactional-outbox"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7662,7 +8656,10 @@
             "wal",
             "derived-data"
           ],
-          "research": [],
+          "research": [
+            "change-data-capture",
+            "search-indexing"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7704,7 +8701,10 @@
             "cqrs",
             "projection"
           ],
-          "research": [],
+          "research": [
+            "change-data-capture",
+            "event-sourcing-and-cqrs"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -7735,7 +8735,10 @@
             "backpressure",
             "bounded-queue"
           ],
-          "research": [],
+          "research": [
+            "backpressure-and-flow-control",
+            "load-shedding-and-backpressure"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7777,7 +8780,10 @@
             "concurrency-limit",
             "little-law-limits"
           ],
-          "research": [],
+          "research": [
+            "adaptive-concurrency-limits",
+            "load-shedding-and-backpressure"
+          ],
           "engine": {
             "components": [
               "client",
@@ -7819,7 +8825,8 @@
             "fan-out-latency"
           ],
           "research": [
-            "percentiles-and-tail-latency"
+            "percentiles-and-tail-latency",
+            "hedged-requests-and-tail-tolerance"
           ],
           "engine": {
             "components": [
@@ -7863,7 +8870,9 @@
           ],
           "research": [
             "estimation-basics",
-            "queueing-and-utilization"
+            "queueing-and-utilization",
+            "autoscaling",
+            "capacity-planning"
           ],
           "engine": {
             "components": [
@@ -7908,7 +8917,9 @@
             "cost-per-request"
           ],
           "research": [
-            "cost-basics"
+            "cost-basics",
+            "autoscaling",
+            "cost-tradeoffs"
           ],
           "engine": {
             "components": [
@@ -7951,7 +8962,10 @@
             "alerting",
             "symptom-based-alerts"
           ],
-          "research": [],
+          "research": [
+            "observability-and-slos",
+            "slo-burn-rate-alerting"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -7961,9 +8975,48 @@
             "nodeOverrides": [],
             "metrics": [],
             "readiness": "not-needed",
-            "experimentUpgrade": null
+            "experimentUpgrade": "blocked-by-gap"
           },
-          "engine_gaps": []
+          "engine_gaps": [
+            "alert-evaluation"
+          ]
+        },
+        {
+          "id": "l6-observability-at-scale",
+          "title_vi": "Quan sát ở quy mô lớn: trace, lấy mẫu, cardinality",
+          "title_en": "Observability at scale: tracing, sampling and cardinality",
+          "format": "reading+check",
+          "minutes": 15,
+          "difficulty": 3,
+          "prerequisites": [
+            "l6-slo-alerting",
+            "l5-metrics-pipeline"
+          ],
+          "concepts": [
+            "distributed-tracing",
+            "tail-sampling",
+            "cardinality",
+            "exemplar"
+          ],
+          "research": [
+            "observability-at-scale",
+            "metrics-and-logging-pipeline"
+          ],
+          "engine": {
+            "components": [],
+            "faults": [],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [],
+            "readiness": "not-needed",
+            "experimentUpgrade": "blocked-by-gap"
+          },
+          "engine_gaps": [
+            "per-node-timeseries-and-traces",
+            "cardinality-cost"
+          ]
         },
         {
           "id": "l6-incident-debugging",
@@ -7981,7 +9034,13 @@
             "root-cause",
             "timeline-reading"
           ],
-          "research": [],
+          "research": [
+            "cache-failures-and-hot-keys",
+            "incident-response-and-debugging",
+            "metrics-and-logging-pipeline",
+            "observability-at-scale",
+            "slo-burn-rate-alerting"
+          ],
           "engine": {
             "components": [
               "client",
@@ -8023,7 +9082,9 @@
             "blast-radius",
             "steady-state"
           ],
-          "research": [],
+          "research": [
+            "chaos-engineering"
+          ],
           "engine": {
             "components": [
               "client",
@@ -8068,7 +9129,10 @@
             "rollback",
             "feature-flag"
           ],
-          "research": [],
+          "research": [
+            "safe-deployments",
+            "slo-burn-rate-alerting"
+          ],
           "engine": {
             "components": [
               "client",
@@ -8092,6 +9156,52 @@
           ]
         },
         {
+          "id": "l6-cells-and-blast-radius",
+          "title_vi": "Kiến trúc tế bào và shuffle sharding: thu nhỏ bán kính sự cố",
+          "title_en": "Cells and shuffle sharding: shrinking the blast radius",
+          "format": "experiment",
+          "minutes": 20,
+          "difficulty": 3,
+          "prerequisites": [
+            "l6-safe-deployments",
+            "l3-bulkheads"
+          ],
+          "concepts": [
+            "cell",
+            "blast-radius",
+            "shuffle-sharding",
+            "noisy-neighbor"
+          ],
+          "research": [
+            "cells-and-shuffle-sharding"
+          ],
+          "engine": {
+            "components": [
+              "client",
+              "lb",
+              "web-server",
+              "postgres"
+            ],
+            "faults": [
+              "instance-down"
+            ],
+            "dynamic": [],
+            "behaviors": [],
+            "calibration": [],
+            "nodeOverrides": [],
+            "metrics": [
+              "availability",
+              "p95",
+              "costPerMonth"
+            ],
+            "readiness": "blocked-by-gap",
+            "experimentUpgrade": null
+          },
+          "engine_gaps": [
+            "cells-and-shuffle-sharding"
+          ]
+        },
+        {
           "id": "l6-zero-downtime-migrations",
           "title_vi": "Di chuyển dữ liệu không gián đoạn",
           "title_en": "Zero-downtime data migrations",
@@ -8107,7 +9217,10 @@
             "backfill",
             "dual-read"
           ],
-          "research": [],
+          "research": [
+            "change-data-capture",
+            "zero-downtime-migrations"
+          ],
           "engine": {
             "components": [],
             "faults": [],
@@ -8117,9 +9230,12 @@
             "nodeOverrides": [],
             "metrics": [],
             "readiness": "not-needed",
-            "experimentUpgrade": null
+            "experimentUpgrade": "blocked-by-gap"
           },
-          "engine_gaps": []
+          "engine_gaps": [
+            "background-batch-load",
+            "outbox-cdc"
+          ]
         }
       ],
       "challenges": [
@@ -8509,43 +9625,106 @@
             "third-party-node"
           ],
           "readiness": "blocked-by-gap"
+        },
+        {
+          "id": "c-l6-noisy-neighbor",
+          "level": "L6",
+          "title_vi": "Khách hàng ồn ào",
+          "title_en": "The noisy neighbour",
+          "prerequisites": [
+            "l6-cells-and-blast-radius"
+          ],
+          "allowedKinds": [
+            "client",
+            "lb",
+            "web-server",
+            "postgres"
+          ],
+          "workload": {
+            "profile": "mixed",
+            "baseRps": 20000,
+            "writeRatio": 0.2,
+            "params": {
+              "poisonTenantShare": 0.01
+            }
+          },
+          "goals": [
+            {
+              "id": "up",
+              "metric": "availability",
+              "op": ">=",
+              "value": 0.99
+            },
+            {
+              "id": "fast",
+              "metric": "p95",
+              "op": "<=",
+              "value": 60
+            },
+            {
+              "id": "budget",
+              "metric": "costPerMonth",
+              "op": "<=",
+              "value": 2500
+            }
+          ],
+          "modes": [
+            {
+              "id": "standard",
+              "budgetPerMonth": 2500,
+              "faults": [],
+              "note": "Thresholds provisional until confirmed with sim-cli check."
+            },
+            {
+              "id": "bad-deploy",
+              "budgetPerMonth": 2500,
+              "faults": [],
+              "note": "A bad change reaches one cell first once deployment-model exists."
+            }
+          ],
+          "brief_en": "One tenant's requests crash whichever servers handle them; arrange cells or shuffle shards so almost everyone else stays up.",
+          "brief_vi": "Request của một khách hàng làm sập bất kỳ máy nào xử lý chúng; sắp xếp cell hoặc shuffle shard để gần như mọi người khác vẫn dùng được.",
+          "engine_gaps": [
+            "cells-and-shuffle-sharding"
+          ],
+          "readiness": "blocked-by-gap"
         }
       ]
     }
   ],
   "counts": {
     "levels": 7,
-    "lessons": 127,
-    "challenges": 37,
-    "engineGaps": 51,
+    "lessons": 136,
+    "challenges": 44,
+    "engineGaps": 59,
     "lessonsByLevel": {
       "L0": 13,
       "L1": 18,
-      "L2": 20,
-      "L3": 19,
+      "L2": 21,
+      "L3": 22,
       "L4": 16,
-      "L5": 20,
-      "L6": 21
+      "L5": 23,
+      "L6": 23
     },
     "challengesByLevel": {
-      "L0": 3,
+      "L0": 4,
       "L1": 5,
-      "L2": 5,
-      "L3": 5,
-      "L4": 4,
-      "L5": 10,
-      "L6": 5
+      "L2": 6,
+      "L3": 6,
+      "L4": 5,
+      "L5": 12,
+      "L6": 6
     },
     "lessonReadiness": {
       "ready-1a": 22,
       "needs-1b": 19,
-      "blocked-by-gap": 54,
-      "not-needed": 32
+      "blocked-by-gap": 59,
+      "not-needed": 36
     },
     "challengeReadiness": {
-      "ready-1a": 5,
+      "ready-1a": 6,
       "needs-1b": 11,
-      "blocked-by-gap": 21
+      "blocked-by-gap": 27
     }
   }
 }
