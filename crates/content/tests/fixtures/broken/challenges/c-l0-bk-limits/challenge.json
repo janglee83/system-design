@@ -1,0 +1,194 @@
+{
+  "formatVersion": 1,
+  "id": "c-l0-bk-limits",
+  "level": "L0",
+  "prerequisites": [
+    "l0-bk-key"
+  ],
+  "status": "draft",
+  "start": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "users",
+          "kind": "client"
+        },
+        {
+          "id": "web",
+          "kind": "web-server"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "users",
+          "to": "web",
+          "kind": "http"
+        }
+      ]
+    },
+    "workload": {
+      "baseRps": 12000
+    }
+  },
+  "lockedNodes": [
+    "users"
+  ],
+  "limits": {
+    "maxNodes": 4,
+    "maxInstances": 6,
+    "allowedKinds": [
+      "client",
+      "lb",
+      "web-server"
+    ]
+  },
+  "goals": [
+    {
+      "id": "fast",
+      "metric": "p95",
+      "op": "<=",
+      "value": 50
+    },
+    {
+      "id": "up",
+      "metric": "availability",
+      "op": ">=",
+      "value": 0.98
+    }
+  ],
+  "modes": [
+    {
+      "id": "standard",
+      "budgetPerMonth": 60,
+      "reference": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client",
+              "label": "visitors"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 2
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            }
+          ]
+        }
+      },
+      "naive": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server"
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            }
+          ]
+        },
+        "failsGoals": [
+          "fast",
+          "up"
+        ]
+      }
+    },
+    {
+      "id": "chaos",
+      "budgetPerMonth": 100,
+      "faults": [
+        {
+          "kind": "instance-down",
+          "target": "web",
+          "atMs": 3000
+        }
+      ],
+      "reference": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "lb",
+              "kind": "lb"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "replicas": 6
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "lb",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "lb",
+              "to": "web",
+              "kind": "http"
+            }
+          ]
+        }
+      },
+      "naive": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 2
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            }
+          ]
+        },
+        "failsGoals": [
+          "up"
+        ]
+      }
+    }
+  ],
+  "hints": [
+    "h1",
+    "h2"
+  ]
+}

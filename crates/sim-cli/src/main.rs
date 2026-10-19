@@ -19,6 +19,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Validate lessons and challenges, or regenerate the curriculum.
+    Content {
+        #[command(subcommand)]
+        cmd: ContentCmd,
+    },
     /// Run inputs or fixtures and print metrics and events.
     Run { files: Vec<PathBuf> },
     /// Print the full result of one input or fixture as compact JSON.
@@ -74,8 +79,113 @@ fn expand(paths: &[PathBuf]) -> Vec<PathBuf> {
     out
 }
 
+#[derive(Subcommand)]
+enum ContentCmd {
+    /// Validate every lesson and challenge in a content directory on the engine.
+    Validate {
+        dir: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Write <dir>/curriculum.json; with --check, fail if the committed file is out of date.
+    Curriculum {
+        dir: PathBuf,
+        #[arg(long)]
+        check: bool,
+        /// Print the validation report as JSON when blocking issues refuse the build.
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+fn print_report(r: &content::Report, json: bool) {
+    if json {
+        println!("{}", serde_json::to_string_pretty(r).expect("serializable"));
+    } else {
+        print!("{}", r.to_text());
+    }
+}
+
+/// Exit codes: 0 no blocking issue, 1 any blocking issue, 2 unusable directory.
+fn content_cmd(cmd: ContentCmd) -> ExitCode {
+    match cmd {
+        ContentCmd::Validate { dir, json } => match content::validate_dir(&dir) {
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(2)
+            }
+            Ok(r) => {
+                print_report(&r, json);
+                if r.has_blocking() {
+                    ExitCode::from(1)
+                } else {
+                    ExitCode::SUCCESS
+                }
+            }
+        },
+        ContentCmd::Curriculum { dir, check, json } => {
+            let tree = match content::load_dir(&dir) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(2);
+                }
+            };
+            let text = match content::curriculum_json(&tree) {
+                Ok(t) => t,
+                Err(report) => {
+                    print_report(&report, json);
+                    return ExitCode::from(1);
+                }
+            };
+            let target = dir.join("curriculum.json");
+            if check {
+                // A missing file is stale (exit 1); any other read failure is an unusable
+                // directory (exit 2). The comparison is byte-exact, so CRLF is stale too.
+                let committed = match std::fs::read(&target) {
+                    Ok(bytes) => Some(bytes),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                    Err(e) => {
+                        eprintln!("{}: {e}", target.display());
+                        return ExitCode::from(2);
+                    }
+                };
+                if committed.as_deref() == Some(text.as_bytes()) {
+                    println!("curriculum.json is up to date");
+                    ExitCode::SUCCESS
+                } else {
+                    eprintln!(
+                        "curriculum.json is STALE: run sim-cli content curriculum {}",
+                        dir.display()
+                    );
+                    ExitCode::from(1)
+                }
+            } else {
+                // Write next to the target, then rename: a reader never sees a half-written file.
+                let tmp = dir.join(".curriculum.json.tmp");
+                let written =
+                    std::fs::write(&tmp, &text).and_then(|()| std::fs::rename(&tmp, &target));
+                if written.is_err() {
+                    let _ = std::fs::remove_file(&tmp);
+                }
+                match written {
+                    Ok(()) => {
+                        println!("wrote {}", target.display());
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {e}", target.display());
+                        ExitCode::from(2)
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn main() -> ExitCode {
     match Cli::parse().command {
+        Cmd::Content { cmd } => content_cmd(cmd),
         Cmd::Run { files } => {
             let mut rows = Vec::new();
             for f in &files {

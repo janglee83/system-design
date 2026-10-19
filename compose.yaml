@@ -10,6 +10,7 @@ services:
       - cargo-git:/usr/local/cargo/git
       - node-modules-root:/work/node_modules
       - node-modules-sim:/work/packages/sim/node_modules
+      - node-modules-content:/work/packages/content/node_modules
       - pnpm-store:/pnpm-store
 
 volumes:
@@ -18,4 +19,5 @@ volumes:
   cargo-git:
   node-modules-root:
   node-modules-sim:
+  node-modules-content:
   pnpm-store:

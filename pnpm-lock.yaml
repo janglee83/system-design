@@ -8,6 +8,12 @@ importers:
 
   .: {}
 
+  packages/content:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   packages/sim:
     devDependencies:
       '@types/node':

@@ -1,0 +1,9 @@
+---
+source: crates/content/tests/golden.rs
+expression: r.to_text()
+---
+PASS levels
+PASS c-l0-fx-shop
+PASS l0-fx-capacity
+PASS l0-fx-reading
+4 items: 4 passed, 0 failed, 0 warnings, 0 blocked

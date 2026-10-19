@@ -169,6 +169,28 @@ pub enum FaultKind {
 }
 }
 
+impl FaultKind {
+    /// The kebab-case name used in JSON (`"instance-down"`).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FaultKind::TrafficSurge3x => "traffic-surge-3x",
+            FaultKind::InstanceDown => "instance-down",
+            FaultKind::InstanceSlow => "instance-slow",
+            FaultKind::LbNodeDown => "lb-node-down",
+            FaultKind::CacheDown => "cache-down",
+            FaultKind::DbOverloaded => "db-overloaded",
+            FaultKind::DbPrimaryDown => "db-primary-down",
+            FaultKind::DbReplicaDown => "db-replica-down",
+            FaultKind::DbStalled => "db-stalled",
+            FaultKind::BrokerDown => "broker-down",
+            FaultKind::ObjectStorageDown => "object-storage-down",
+            FaultKind::KvNodeDown => "kv-node-down",
+            FaultKind::ThirdPartyDown => "third-party-down",
+            FaultKind::ThirdPartySlow => "third-party-slow",
+        }
+    }
+}
+
 exported! {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

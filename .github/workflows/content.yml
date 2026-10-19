@@ -1,15 +1,28 @@
 name: content
 
-# Runs only when curriculum content or its generator changes.
+# Runs when lessons, challenges or levels change, and when the validator, the CLI or the
+# engine changes (an engine change can break content), or on a dependency/toolchain bump.
 on:
   pull_request:
     paths:
       - "content/**"
+      - "crates/content/**"
+      - "crates/sim-cli/**"
+      - "crates/sim-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
       - ".github/workflows/content.yml"
   push:
     branches: [main]
     paths:
       - "content/**"
+      - "crates/content/**"
+      - "crates/sim-cli/**"
+      - "crates/sim-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
       - ".github/workflows/content.yml"
 
 concurrency:
@@ -17,18 +30,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  curriculum:
-    name: curriculum generator check
+  validate:
+    name: content validate and curriculum check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      # The generator fails on any broken lesson/note/challenge link; the diff
-      # fails if the committed curriculum.json is stale.
-      - name: Regenerate curriculum and compare
+
+      # rustup reads rust-toolchain.toml and installs exactly that toolchain.
+      - name: Install pinned Rust toolchain
         run: |
-          python3 content/tools/gen_curriculum.py "$RUNNER_TEMP/curriculum.json"
-          diff -u content/curriculum.json "$RUNNER_TEMP/curriculum.json"
+          rustup toolchain install
+          rustc --version | grep -q '^rustc 1\.85\.1 '
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: content
+
+      - name: Build sim-cli
+        run: cargo build --locked --profile ci -p sim-cli
+
+      # Every lesson and challenge behaves as written on the real engine.
+      - name: Validate lessons and challenges
+        run: ./target/ci/sim-cli content validate content
+
+      # The committed curriculum.json is what the folders and levels.json generate.
+      - name: Curriculum is up to date
+        run: ./target/ci/sim-cli content curriculum content --check

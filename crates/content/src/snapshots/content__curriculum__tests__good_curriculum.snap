@@ -1,0 +1,309 @@
+---
+source: crates/content/src/curriculum.rs
+expression: a
+---
+{
+  "version": 2,
+  "description": "Fixture curriculum for crates/content tests.",
+  "fields": {},
+  "engine": {
+    "available": {
+      "components": [
+        "client",
+        "lb",
+        "postgres",
+        "web-server"
+      ],
+      "faults": [
+        "traffic-surge-3x",
+        "instance-down",
+        "lb-node-down",
+        "db-primary-down"
+      ],
+      "metrics": [
+        "availability",
+        "cacheOps",
+        "costPerMonth",
+        "exposedBackends",
+        "p50",
+        "p95",
+        "p99",
+        "peakBusy",
+        "peakDbConnections",
+        "requestsOk",
+        "requestsRejected",
+        "requestsTimedOut",
+        "requestsTotal",
+        "requestsUnreachable",
+        "spofCount",
+        "throughputRps"
+      ]
+    },
+    "planned": {
+      "components": [
+        "redis"
+      ],
+      "faults": [
+        "instance-slow"
+      ],
+      "fields": [
+        "workload.params.hotKeyShare"
+      ],
+      "dynamic": [
+        "autoscaling"
+      ],
+      "behaviors": []
+    }
+  },
+  "engineGaps": {
+    "fx-gap": {
+      "description": "A gap used by the roadmap fixture.",
+      "neededBy": [
+        "l0-fx-planned"
+      ]
+    }
+  },
+  "levels": [
+    {
+      "id": "L0",
+      "titleVi": "Nền tảng",
+      "titleEn": "Foundations",
+      "score": [
+        0,
+        10
+      ],
+      "entryAssumptionsVi": [
+        "Không cần kiến thức trước"
+      ],
+      "entryAssumptionsEn": [
+        "No prior knowledge"
+      ],
+      "outcomesVi": [
+        "Chọn cấu hình đủ sức chứa"
+      ],
+      "outcomesEn": [
+        "Pick a configuration with enough capacity"
+      ],
+      "exitCheck": {
+        "challenge": "c-l0-fx-shop",
+        "mode": "standard",
+        "reviewMinScore": 0.8,
+        "descriptionVi": "Vượt qua chế độ standard.",
+        "descriptionEn": "Pass the standard mode."
+      },
+      "lessons": [
+        {
+          "id": "l0-fx-capacity",
+          "titleVi": "Sức chứa của một máy chủ (bài mẫu)",
+          "titleEn": "The capacity of one server (fixture)",
+          "kind": "experiment",
+          "minutes": 12,
+          "difficulty": 1,
+          "prerequisites": [],
+          "concepts": [
+            "capacity"
+          ],
+          "research": [
+            "fx-capacity"
+          ],
+          "status": "draft",
+          "path": "lessons/l0-fx-capacity",
+          "engine": {
+            "needs": {
+              "components": [
+                "client",
+                "web-server"
+              ],
+              "faults": [],
+              "dynamic": [],
+              "behaviors": [],
+              "calibration": [],
+              "nodeOverrides": [],
+              "metrics": [
+                "p95",
+                "requestsRejected"
+              ]
+            },
+            "missing": [],
+            "readiness": "ready"
+          },
+          "engineGaps": []
+        },
+        {
+          "id": "l0-fx-reading",
+          "titleVi": "Sẵn sàng: bài đọc mẫu",
+          "titleEn": "Availability: a fixture reading",
+          "kind": "reading",
+          "minutes": 8,
+          "difficulty": 1,
+          "prerequisites": [
+            "l0-fx-capacity"
+          ],
+          "concepts": [
+            "availability"
+          ],
+          "research": [
+            "fx-capacity"
+          ],
+          "status": "draft",
+          "path": "lessons/l0-fx-reading",
+          "engine": {
+            "needs": {
+              "components": [],
+              "faults": [],
+              "dynamic": [],
+              "behaviors": [],
+              "calibration": [],
+              "nodeOverrides": [],
+              "metrics": []
+            },
+            "missing": [],
+            "readiness": "not-needed"
+          },
+          "engineGaps": []
+        },
+        {
+          "id": "l0-fx-planned",
+          "titleVi": "Bài dự kiến",
+          "titleEn": "A planned lesson",
+          "kind": "experiment",
+          "minutes": 10,
+          "difficulty": 1,
+          "prerequisites": [
+            "l0-fx-capacity"
+          ],
+          "concepts": [
+            "cache"
+          ],
+          "research": [
+            "fx-capacity"
+          ],
+          "status": null,
+          "path": null,
+          "engine": {
+            "needs": {
+              "components": [
+                "client",
+                "redis"
+              ],
+              "faults": [],
+              "dynamic": [],
+              "behaviors": [],
+              "calibration": [],
+              "nodeOverrides": [],
+              "metrics": []
+            },
+            "missing": [
+              "component:redis"
+            ],
+            "readiness": "planned"
+          },
+          "engineGaps": [
+            "fx-gap"
+          ]
+        }
+      ],
+      "challenges": [
+        {
+          "id": "c-l0-fx-shop",
+          "titleVi": "Cửa hàng mẫu",
+          "titleEn": "The fixture shop",
+          "prerequisites": [
+            "l0-fx-capacity"
+          ],
+          "allowedKinds": [
+            "client",
+            "lb",
+            "web-server"
+          ],
+          "workload": {
+            "baseRps": 12000
+          },
+          "goals": [
+            {
+              "id": "fast",
+              "metric": "p95",
+              "op": "<=",
+              "value": 50.0
+            },
+            {
+              "id": "up",
+              "metric": "availability",
+              "op": ">=",
+              "value": 0.98
+            }
+          ],
+          "modes": [
+            {
+              "id": "standard",
+              "budgetPerMonth": 60.0,
+              "faults": []
+            },
+            {
+              "id": "chaos",
+              "budgetPerMonth": 100.0,
+              "faults": [
+                {
+                  "atMs": 3000,
+                  "kind": "instance-down",
+                  "target": "web"
+                }
+              ]
+            }
+          ],
+          "briefVi": null,
+          "briefEn": null,
+          "status": "draft",
+          "path": "challenges/c-l0-fx-shop",
+          "engine": {
+            "needs": {
+              "components": [
+                "client",
+                "lb",
+                "web-server"
+              ],
+              "faults": [
+                "instance-down"
+              ],
+              "dynamic": [],
+              "behaviors": [],
+              "calibration": [],
+              "nodeOverrides": [],
+              "metrics": [
+                "availability",
+                "costPerMonth",
+                "p95"
+              ]
+            },
+            "missing": [],
+            "readiness": "ready"
+          },
+          "engineGaps": []
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "levels": 1,
+    "lessons": 3,
+    "challenges": 1,
+    "engineGaps": 1,
+    "lessonsByLevel": {
+      "L0": 3
+    },
+    "challengesByLevel": {
+      "L0": 1
+    },
+    "lessonReadiness": {
+      "blocked": 0,
+      "not-needed": 1,
+      "planned": 1,
+      "ready": 1
+    },
+    "challengeReadiness": {
+      "blocked": 0,
+      "planned": 0,
+      "ready": 1
+    }
+  }
+}

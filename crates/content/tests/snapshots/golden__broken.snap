@@ -1,0 +1,39 @@
+---
+source: crates/content/tests/golden.rs
+expression: r.to_text()
+---
+PASS levels
+FAIL c-l0-bk-limits content.limits challenges/c-l0-bk-limits/challenge.json id=standard/reference field=users detail="locked node changed"
+FAIL c-l0-bk-limits content.limits challenges/c-l0-bk-limits/challenge.json id=chaos/reference engine=limits.too-many-instances
+FAIL c-l0-bk-limits content.reference-fails challenges/c-l0-bk-limits/challenge.json id=chaos/reference field=budget measured=160
+FAIL c-l0-bk-naive content.naive-passes challenges/c-l0-bk-naive/challenge.json id=standard/naive field=fast measured=4.6757543095443195
+FAIL c-l0-bk-ref content.reference-fails challenges/c-l0-bk-ref/challenge.json id=standard/reference field=fast measured=953.8614152175433
+FAIL c-l0-bk-ref content.reference-fails challenges/c-l0-bk-ref/challenge.json id=standard/reference field=up measured=0.8210661915397292
+PASS l0-bk-blocked
+WARN l0-bk-blocked content.blocked lessons/l0-bk-blocked/lesson.json missing=fault:instance-slow
+FAIL l0-bk-choice content.prose-key lessons/l0-bk-choice/vi.md id=M1 field=Phản hồi detail="misconception without feedback"
+FAIL l0-bk-choice content.prose-key lessons/l0-bk-choice/en.md id=M1 field=Feedback detail="misconception without feedback"
+FAIL l0-bk-choice content.choice lessons/l0-bk-choice/lesson.json field=correct detail="needs exactly one correct choice"
+FAIL l0-bk-choice content.choice lessons/l0-bk-choice/lesson.json id=B field=correct detail="the correct choice has no misconception or failsGoals"
+FAIL l0-bk-control content.control lessons/l0-bk-control/lesson.json id=cpu field=path detail="no node ghost"
+FAIL l0-bk-correct content.correct-fails lessons/l0-bk-correct/lesson.json id=A field=fast measured=4.6757543095443195
+FAIL l0-bk-cycle-a content.prerequisite-cycle lessons/l0-bk-cycle-a/lesson.json id=l0-bk-cycle-b field=prerequisites detail="listed after"
+FAIL l0-bk-cycle-a content.prerequisite-cycle lessons/l0-bk-cycle-a/lesson.json id=l0-bk-cycle-a field=prerequisites detail="cycle"
+FAIL l0-bk-cycle-b content.prerequisite-cycle lessons/l0-bk-cycle-b/lesson.json id=l0-bk-cycle-b field=prerequisites detail="cycle"
+FAIL l0-bk-dup-goal content.duplicate-id lessons/l0-bk-dup-goal/lesson.json id=fast field=goals
+FAIL l0-bk-engine content.engine-invalid lessons/l0-bk-engine/lesson.json field=base engine=edge.not-accepted@e1
+FAIL l0-bk-expect content.expect lessons/l0-bk-expect/lesson.json id=A field=p95 measured=4.6757543095443195 detail="<= 1"
+FAIL l0-bk-expect content.expect lessons/l0-bk-expect/lesson.json id=B field=event:db.promoted detail="event did not occur"
+PASS l0-bk-extra-fail
+WARN l0-bk-extra-fail content.wrong-extra-fail lessons/l0-bk-extra-fail/lesson.json id=C field=no-drops measured=21391
+FAIL l0-bk-folder content.id lessons/l0-bk-folder/lesson.json id=l0-bk-other field=id detail="folder name differs"
+FAIL l0-bk-folder content.id lessons/l0-bk-folder/lesson.json id=l0-bk-other field=levels detail="not listed in levels.json"
+FAIL l0-bk-key content.prose-key lessons/l0-bk-key/vi.md id=M2 field=Hiểu lầm thường gặp
+FAIL l0-bk-parse content.parse lessons/l0-bk-parse/lesson.json detail="EOF while parsing a value at line 2 column 0"
+FAIL l0-bk-prereq content.prerequisite-missing lessons/l0-bk-prereq/lesson.json id=l0-nope field=prerequisites
+FAIL l0-bk-research content.research-missing lessons/l0-bk-research/lesson.json id=no-such-note field=research
+FAIL l0-bk-section content.prose-section lessons/l0-bk-section/en.md field=Takeaways detail="missing"
+FAIL l0-bk-version content.format-version lessons/l0-bk-version/lesson.json field=formatVersion detail="2"
+FAIL l0-bk-wrong-passes content.wrong-passes lessons/l0-bk-wrong-passes/lesson.json id=C field=fast measured=4.6757543095443195
+FAIL l0-bk-wrong-passes content.wrong-passes lessons/l0-bk-wrong-passes/lesson.json id=C field=no-drops measured=0
+22 items: 3 passed, 19 failed, 2 warnings, 1 blocked

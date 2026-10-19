@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "id": "l0-fx-reading",
+  "level": "L0",
+  "kind": "reading",
+  "minutes": 8,
+  "difficulty": 1,
+  "prerequisites": ["l0-fx-capacity"],
+  "concepts": ["availability"],
+  "research": ["fx-capacity"],
+  "status": "draft",
+  "check": {
+    "passMark": 2,
+    "questions": [
+      { "id": "q1", "type": "single", "options": ["a", "b", "c"], "answer": "b", "misconception": "M1" },
+      { "id": "q2", "type": "numeric", "answer": 525.6, "tolerance": 1, "unit": "min" }
+    ]
+  }
+}

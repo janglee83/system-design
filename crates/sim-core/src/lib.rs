@@ -101,9 +101,12 @@ pub(crate) mod test_util;
 
 mod engine;
 pub mod simulate;
-pub use simulate::simulate;
+pub use simulate::{check_input, simulate};
 mod faults;
 mod traces;
+
+pub mod capabilities;
+pub use capabilities::{capabilities, Capabilities};
 
 pub mod fixture;
 pub mod parity;

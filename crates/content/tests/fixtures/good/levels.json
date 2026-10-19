@@ -1,0 +1,55 @@
+{
+  "formatVersion": 1,
+  "description": "Fixture curriculum for crates/content tests.",
+  "fields": {},
+  "engine": {
+    "planned": {
+      "components": ["redis"],
+      "faults": ["instance-slow"],
+      "fields": ["workload.params.hotKeyShare"],
+      "dynamic": ["autoscaling"],
+      "behaviors": []
+    }
+  },
+  "engineGaps": {
+    "fx-gap": { "description": "A gap used by the roadmap fixture.", "neededBy": ["l0-fx-planned"] }
+  },
+  "levels": [
+    {
+      "id": "L0",
+      "titleVi": "Nền tảng",
+      "titleEn": "Foundations",
+      "score": [0, 10],
+      "entryAssumptionsVi": ["Không cần kiến thức trước"],
+      "entryAssumptionsEn": ["No prior knowledge"],
+      "outcomesVi": ["Chọn cấu hình đủ sức chứa"],
+      "outcomesEn": ["Pick a configuration with enough capacity"],
+      "exitCheck": {
+        "challenge": "c-l0-fx-shop",
+        "mode": "standard",
+        "reviewMinScore": 0.8,
+        "descriptionVi": "Vượt qua chế độ standard.",
+        "descriptionEn": "Pass the standard mode."
+      },
+      "lessons": ["l0-fx-capacity", "l0-fx-reading", "l0-fx-planned"],
+      "challenges": ["c-l0-fx-shop"]
+    }
+  ],
+  "roadmap": {
+    "lessons": [
+      {
+        "id": "l0-fx-planned",
+        "titleVi": "Bài dự kiến",
+        "titleEn": "A planned lesson",
+        "kind": "experiment",
+        "minutes": 10,
+        "difficulty": 1,
+        "prerequisites": ["l0-fx-capacity"],
+        "concepts": ["cache"],
+        "research": ["fx-capacity"],
+        "needs": { "components": ["client", "redis"] }
+      }
+    ],
+    "challenges": []
+  }
+}

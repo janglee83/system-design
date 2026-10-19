@@ -5,7 +5,9 @@ use crate::engine::Engine;
 use crate::types::{SimInput, SimResult, ValidationIssue};
 use crate::validate::{codes, field_issue, has_blocking, validate_graph, validate_workload};
 
-pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>> {
+/// Every issue `simulate` checks before running, warnings (such as `node.unreachable`)
+/// included. Content tooling calls it to vet inputs without running them.
+pub fn check_input(input: &SimInput) -> Vec<ValidationIssue> {
     let mut issues = validate_graph(&input.graph, None);
     issues.extend(validate_workload(input));
     if let Some(o) = &input.calibration {
@@ -13,6 +15,11 @@ pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>> {
             issues.push(field_issue(codes::CALIBRATION_INVALID, None, field));
         }
     }
+    issues
+}
+
+pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>> {
+    let issues = check_input(input);
     if has_blocking(&issues) {
         return Err(issues.into_iter().filter(|i| i.blocking).collect());
     }
@@ -35,6 +42,21 @@ mod tests {
             duration_ms: 6_000,
         });
         i
+    }
+
+    #[test]
+    fn check_input_reports_what_simulate_rejects_and_keeps_warnings() {
+        let mut g = web_tier(1, 1);
+        g.nodes.push(node("orphan", "web-server", 1, &[]));
+        let mut i = input(g, 100.0);
+        i.workload.write_ratio = 2.0;
+        let issues = super::check_input(&i);
+        let codes: Vec<&str> = issues.iter().map(|x| x.code.as_str()).collect();
+        assert!(codes.contains(&"node.unreachable")); // warning kept
+        assert!(codes.contains(&"workload.invalid"));
+        let err = simulate(&i).unwrap_err();
+        assert!(err.iter().all(|x| x.blocking));
+        assert_eq!(err.len(), issues.iter().filter(|x| x.blocking).count());
     }
 
     fn conserved(m: &Metrics) -> bool {
