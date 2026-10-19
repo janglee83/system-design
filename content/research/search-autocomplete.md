@@ -12,7 +12,7 @@
    lookup into one walk of the prefix. [3][9]
 3. **Separate the read path from the data-gathering path**: query logs are aggregated offline (hourly
    or daily) into new top-k tables, then swapped in; the serving tier never computes rankings
-   live. [4][9]
+   live. [5][9]
 4. **Approximate counting** (Count-Min sketch) estimates frequent queries with small memory. [5]
 5. **Real systems**: LinkedIn open-sourced Cleo, its library for partial, out-of-order, real-time
    typeahead; Elasticsearch's completion suggester uses in-memory FSTs. [4][6]
