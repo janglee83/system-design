@@ -9,7 +9,7 @@
       ],
       "edges": [{"id": "e1", "from": "users", "to": "web", "kind": "http"}]
     },
-    "workload": {"baseRps": 8000, "writeRatio": 0, "clientTimeoutMs": 1000, "surge": {"factor": 3, "atMs": 4000, "durationMs": 1500}},
+    "workload": {"baseRps": 8000, "writeRatio": 0, "clientTimeoutMs": 1000, "surge": {"factor": 3, "atMs": 4000, "durationMs": 2000}, "trafficEndMs": 10000, "arrivals": "uniform"},
     "durationMs": 11000,
     "seed": 1
   },
@@ -22,6 +22,5 @@
       {"id": "no-single-point", "metric": "spofCount", "op": "==", "value": 0, "passed": false},
       {"id": "budget", "metric": "costPerMonth", "op": "<=", "value": 200, "passed": true}
     ]
-  },
-  "tolerance": {"availability": {"abs": 0.08}}
+  }
 }

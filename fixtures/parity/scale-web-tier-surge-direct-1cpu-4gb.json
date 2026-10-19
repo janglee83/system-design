@@ -1,0 +1,98 @@
+{
+  "id": "scale-web-tier-surge-direct-1cpu-4gb",
+  "source": {
+    "site": "reference",
+    "runId": "6772a1ab-13ea-44dc-bb25-a30560169cbf",
+    "engineVersion": "2.2.4",
+    "capturedAt": "2026-10-19"
+  },
+  "input": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "users",
+          "kind": "client",
+          "replicas": 1,
+          "config": {}
+        },
+        {
+          "id": "web",
+          "kind": "web-server",
+          "replicas": 1,
+          "config": {
+            "cpu": 1,
+            "memoryGb": 4
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-b0341b46",
+          "from": "users",
+          "to": "web",
+          "kind": "http"
+        }
+      ]
+    },
+    "workload": {
+      "baseRps": 8000,
+      "writeRatio": 0,
+      "clientTimeoutMs": 1000,
+      "surge": {
+        "factor": 3,
+        "atMs": 4000,
+        "durationMs": 2000
+      },
+      "trafficEndMs": 10000,
+      "arrivals": "uniform"
+    },
+    "durationMs": 11000,
+    "seed": 1
+  },
+  "reference": {
+    "metrics": {
+      "p95": 1820.5,
+      "availability": 0.4138,
+      "costPerMonth": 22.5,
+      "p99": 1820.5,
+      "requestsTotal": 112000
+    },
+    "goals": [
+      {
+        "id": "latency-p95",
+        "metric": "p95",
+        "op": "<=",
+        "value": 100,
+        "passed": false
+      },
+      {
+        "id": "availability",
+        "metric": "availability",
+        "op": ">=",
+        "value": 0.999,
+        "passed": false
+      },
+      {
+        "id": "single-entry",
+        "metric": "exposedBackends",
+        "op": "==",
+        "value": 0,
+        "passed": false
+      },
+      {
+        "id": "no-single-point",
+        "metric": "spofCount",
+        "op": "==",
+        "value": 0,
+        "passed": false
+      },
+      {
+        "id": "budget",
+        "metric": "costPerMonth",
+        "op": "<=",
+        "value": 200,
+        "passed": true
+      }
+    ]
+  }
+}
