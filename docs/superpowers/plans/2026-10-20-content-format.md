@@ -1838,3 +1838,1775 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
+## Phase 2: Structural validation
+
+### Task 6: Parse stage, report skeleton, ids and duplicates
+
+**Files:**
+- Create: `crates/content/src/ids.rs`, `crates/content/src/structure.rs`, `crates/content/src/checks.rs`, `crates/content/src/report.rs`
+- Modify: `crates/content/src/lib.rs`, `crates/content/src/test_util.rs`
+
+**Interfaces:**
+- Produces: `Readiness`, `ItemKind`, `RunSummary`, `ItemReport`, `Report` (`Report::new(items)`, `has_blocking()`). `validate_tree(&ContentTree) -> Report` runs sequentially for now; Task 18 adds rayon. Internal: `structure::{Item<T>, Parsed, Listing, parse_tree, check_cross}` and `checks::{Ctx, Outcome, check_lesson, check_challenge}`. Every later check plugs into `check_cross` (cross-item) or into `check_lesson` / `check_challenge` (per item).
+- Codes covered: `content.parse`, `content.format-version`, `content.id`, and `content.duplicate-id` at item level.
+
+- [ ] **Step 1: Add test helpers** to `crates/content/src/test_util.rs`:
+
+```rust
+use crate::issue::ContentIssue;
+use crate::report::Report;
+
+pub fn issues_of(report: &Report, id: &str) -> Vec<ContentIssue> {
+    report.items.iter().filter(|i| i.id == id).flat_map(|i| i.issues.clone()).collect()
+}
+
+pub fn codes_of(report: &Report, id: &str) -> Vec<String> {
+    issues_of(report, id).into_iter().map(|i| i.code).collect()
+}
+
+pub fn has(report: &Report, id: &str, code: &str) -> bool {
+    codes_of(report, id).iter().any(|c| c == code)
+}
+```
+
+- [ ] **Step 2: Write the failing tests** in `crates/content/src/structure.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::issue::codes;
+    use crate::test_util::*;
+    use crate::validate_tree;
+    use serde_json::json;
+
+    #[test]
+    fn good_tree_has_no_issues() {
+        let r = validate_tree(&good_tree());
+        let all: Vec<_> = r.items.iter().flat_map(|i| i.issues.clone()).collect();
+        assert!(all.is_empty(), "{all:#?}");
+        let ids: Vec<&str> = r.items.iter().map(|i| i.id.as_str()).collect();
+        assert_eq!(ids, vec!["levels", "c-l0-fx-shop", "l0-fx-capacity", "l0-fx-reading"]);
+    }
+
+    #[test]
+    fn unreadable_json_and_prose_are_parse_issues() {
+        let mut t = good_tree();
+        t.lessons[0].json = Ok("{".into());
+        t.lessons[1].vi = Err("missing".into());
+        t.levels = Ok("[]".into());
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::PARSE));
+        let vi = issues_of(&r, "l0-fx-reading");
+        assert_eq!(vi[0].path, "lessons/l0-fx-reading/vi.md");
+        assert!(has(&r, "levels", codes::PARSE));
+    }
+
+    #[test]
+    fn shape_errors_are_parse_issues_with_a_field() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["minutes"] = 0.into());
+        edit_json(&mut t, "l0-fx-reading", |v| v["kind"] = "experiment".into());
+        edit_json(&mut t, "c-l0-fx-shop", |v| v["start"] = json!([]));
+        let r = validate_tree(&t);
+        let f: Vec<_> = issues_of(&r, "l0-fx-capacity").into_iter().filter_map(|i| i.field).collect();
+        assert!(f.contains(&"minutes".to_string()));
+        assert!(has(&r, "l0-fx-reading", codes::PARSE));
+        assert!(has(&r, "c-l0-fx-shop", codes::PARSE));
+    }
+
+    #[test]
+    fn unknown_or_missing_format_version() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["formatVersion"] = 2.into());
+        edit_json(&mut t, "c-l0-fx-shop", |v| {
+            v.as_object_mut().unwrap().remove("formatVersion");
+        });
+        let r = validate_tree(&t);
+        assert_eq!(codes_of(&r, "l0-fx-capacity")[0], codes::FORMAT_VERSION);
+        assert!(has(&r, "c-l0-fx-shop", codes::FORMAT_VERSION));
+    }
+
+    #[test]
+    fn id_rules() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["id"] = "l0-fx-other".into());
+        edit_json(&mut t, "l0-fx-reading", |v| v["level"] = "L1".into());
+        edit_prose(&mut t, "c-l0-fx-shop", "en", |s| s.replace("id: c-l0-fx-shop", "id: c-l0-fx-shopp"));
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::ID)); // folder name differs
+        assert!(has(&r, "l0-fx-reading", codes::ID)); // level digit differs
+        let shop = issues_of(&r, "c-l0-fx-shop");
+        assert!(shop.iter().any(|i| i.code == codes::ID && i.path.ends_with("en.md")));
+    }
+
+    #[test]
+    fn bad_id_pattern_and_unlisted_item() {
+        let mut t = good_tree();
+        edit_levels(&mut t, |v| v["levels"][0]["lessons"] = json!(["l0-fx-capacity", "l0-fx-planned"]));
+        edit_json(&mut t, "l0-fx-capacity", |v| v["id"] = "L0-Bad".into());
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::ID));
+        assert!(has(&r, "l0-fx-reading", codes::ID)); // not listed in levels.json
+    }
+
+    #[test]
+    fn duplicates_at_item_level() {
+        let mut t = good_tree();
+        let mut copy = t.lessons[0].clone();
+        copy.folder = "l0-fx-capacity2".into();
+        t.lessons.push(copy);
+        edit_levels(&mut t, |v| {
+            v["levels"][0]["lessons"].as_array_mut().unwrap().push("l0-fx-reading".into());
+            v["roadmap"]["lessons"][0]["id"] = "l0-fx-reading".into();
+        });
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity2", codes::DUPLICATE_ID));
+        let dup: Vec<_> = issues_of(&r, "levels").into_iter().filter(|i| i.code == codes::DUPLICATE_ID).collect();
+        assert_eq!(dup.len(), 2, "{dup:#?}"); // listed twice, and a roadmap entry that has a folder
+    }
+}
+```
+
+- [ ] **Step 3: Run and see them fail**
+
+Run: `./dev cargo test -p content structure`
+Expected: compile errors (`validate_tree`, `structure`, `report` missing).
+
+- [ ] **Step 4: Implement `crates/content/src/ids.rs`**
+
+```rust
+//! Id patterns (spec §2, ruling R7). Plain byte checks, no regex dependency.
+
+fn slug(s: &str, min: usize, max: usize) -> bool {
+    (min..=max).contains(&s.len())
+        && s.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+}
+
+/// `^l[0-6]-[a-z0-9-]{2,60}$`
+pub fn is_lesson_id(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() > 3 && b[0] == b'l' && (b'0'..=b'6').contains(&b[1]) && b[2] == b'-' && slug(&s[3..], 2, 60)
+}
+
+/// `^c-l[0-6]-[a-z0-9-]{2,60}$`
+pub fn is_challenge_id(s: &str) -> bool {
+    s.strip_prefix("c-").is_some_and(is_lesson_id)
+}
+
+/// The level digit of a lesson or challenge id.
+pub fn level_digit(s: &str) -> Option<char> {
+    s.strip_prefix("c-").unwrap_or(s).chars().nth(1)
+}
+
+/// `A`..`F`
+pub fn is_choice_id(s: &str) -> bool {
+    s.len() == 1 && (b'A'..=b'F').contains(&s.as_bytes()[0])
+}
+
+/// `^<prefix>[0-9]+$`, for `M1`, `q1`, `h1`.
+pub fn numbered(s: &str, prefix: char) -> bool {
+    s.strip_prefix(prefix).is_some_and(|d| !d.is_empty() && d.bytes().all(|c| c.is_ascii_digit()))
+}
+
+/// `^[a-z]$`
+pub fn is_option_id(s: &str) -> bool {
+    s.len() == 1 && s.as_bytes()[0].is_ascii_lowercase()
+}
+
+/// `^[a-z0-9-]{2,40}$`
+pub fn is_mode_id(s: &str) -> bool {
+    slug(s, 2, 40)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn patterns() {
+        assert!(is_lesson_id("l0-client-server"));
+        assert!(!is_lesson_id("l7-x1"));
+        assert!(!is_lesson_id("l0-x"));
+        assert!(!is_lesson_id("l0-Upper"));
+        assert!(is_challenge_id("c-l0-first-launch"));
+        assert!(!is_challenge_id("l0-first-launch"));
+        assert_eq!(level_digit("c-l3-x1"), Some('3'));
+        assert!(is_choice_id("F") && !is_choice_id("G") && !is_choice_id("a"));
+        assert!(numbered("M12", 'M') && !numbered("M", 'M') && !numbered("Mx", 'M'));
+        assert!(is_mode_id("tight-budget") && !is_mode_id("x"));
+    }
+}
+```
+
+- [ ] **Step 5: Implement `crates/content/src/report.rs`**
+
+```rust
+//! Per-item results and the whole report. Text output is added in Task 18.
+
+use crate::issue::ContentIssue;
+use serde::{Deserialize, Serialize};
+use sim_core::Metrics;
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Readiness { Ready, Blocked, NotNeeded, Planned }
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ItemKind { Levels, Challenge, Lesson }
+
+/// One engine run made while validating: `choice:B` or `mode:chaos/reference`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunSummary {
+    pub label: String,
+    pub metrics: Metrics,
+    /// Distinct event codes, sorted.
+    pub events: Vec<String>,
+}
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemReport {
+    pub id: String,
+    pub kind: ItemKind,
+    /// Folder (or `levels.json`) relative to the content dir.
+    pub path: String,
+    pub readiness: Option<Readiness>,
+    pub passed: bool,
+    pub issues: Vec<ContentIssue>,
+    pub runs: Vec<RunSummary>,
+}
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Report {
+    pub items: Vec<ItemReport>,
+    pub passed: u32,
+    pub failed: u32,
+    pub warnings: u32,
+    pub blocked: u32,
+}
+
+impl Report {
+    /// Sorts items (`levels` first, then by id) and counts. Issue order inside an item is the
+    /// fixed check order and is kept, never sorted.
+    pub fn new(mut items: Vec<ItemReport>) -> Report {
+        for it in &mut items {
+            it.passed = !it.issues.iter().any(|i| i.blocking);
+        }
+        items.sort_by(|a, b| (a.kind != ItemKind::Levels, &a.id).cmp(&(b.kind != ItemKind::Levels, &b.id)));
+        let count = |f: &dyn Fn(&ItemReport) -> bool| items.iter().filter(|i| f(i)).count() as u32;
+        Report {
+            passed: count(&|i| i.passed),
+            failed: count(&|i| !i.passed),
+            warnings: items.iter().flat_map(|i| &i.issues).filter(|i| !i.blocking).count() as u32,
+            blocked: count(&|i| i.readiness == Some(Readiness::Blocked)),
+            items,
+        }
+    }
+
+    pub fn has_blocking(&self) -> bool {
+        self.failed > 0
+    }
+}
+```
+
+- [ ] **Step 6: Implement `crates/content/src/structure.rs`**: the parse stage, plus the id and duplicate part of the cross checks. Task 7 replaces the `check_references` stub at the end.
+
+```rust
+//! Stage 1: parse every file, then run checks that need the whole tree (ids, duplicates,
+//! listing in levels.json; prerequisites, research and references in Task 7).
+
+use crate::ids;
+use crate::issue::{codes, ContentIssue};
+use crate::prose::{parse_prose, Prose};
+use crate::tree::{ContentTree, FileText, RawItem};
+use crate::types::*;
+use serde::de::DeserializeOwned;
+use serde_json::Value;
+use std::collections::{BTreeMap, BTreeSet};
+
+pub(crate) const LEVELS_ID: &str = "levels";
+pub(crate) const LEVELS_PATH: &str = "levels.json";
+
+pub(crate) struct Item<T> {
+    /// Folder name; the report id.
+    pub id: String,
+    /// `lessons/<folder>` or `challenges/<folder>`.
+    pub dir: String,
+    pub doc: Option<T>,
+    pub vi: Option<Prose>,
+    pub en: Option<Prose>,
+    pub issues: Vec<ContentIssue>,
+}
+
+impl<T> Item<T> {
+    pub fn file(&self, name: &str) -> String {
+        format!("{}/{name}", self.dir)
+    }
+}
+
+pub(crate) struct Parsed {
+    pub levels: Option<Levels>,
+    /// Issues about levels.json and roadmap entries (report item `levels`).
+    pub global: Vec<ContentIssue>,
+    pub research: BTreeSet<String>,
+    pub lessons: Vec<Item<Lesson>>,
+    pub challenges: Vec<Item<Challenge>>,
+}
+
+fn parse_issue(path: &str) -> ContentIssue {
+    ContentIssue::new(codes::PARSE, path)
+}
+
+/// JSON -> object -> formatVersion gate (ruling R6) -> typed document.
+fn parse_doc<T: DeserializeOwned>(text: &FileText, path: &str, issues: &mut Vec<ContentIssue>) -> Option<T> {
+    let text = match text {
+        Ok(t) => t,
+        Err(e) => {
+            issues.push(parse_issue(path).detail(e.clone()));
+            return None;
+        }
+    };
+    let value: Value = match serde_json::from_str(text) {
+        Ok(v) => v,
+        Err(e) => {
+            issues.push(parse_issue(path).detail(e.to_string()));
+            return None;
+        }
+    };
+    if !value.is_object() {
+        issues.push(parse_issue(path).detail("expected a JSON object"));
+        return None;
+    }
+    match value.get("formatVersion") {
+        Some(v) if v.as_u64() == Some(FORMAT_VERSION) => {}
+        other => {
+            let found = other.map_or("missing".to_string(), Value::to_string);
+            issues.push(ContentIssue::new(codes::FORMAT_VERSION, path).field("formatVersion").detail(found));
+            return None;
+        }
+    }
+    match serde_json::from_value(value) {
+        Ok(doc) => Some(doc),
+        Err(e) => {
+            issues.push(parse_issue(path).detail(e.to_string()));
+            None
+        }
+    }
+}
+
+fn parse_md(text: &FileText, path: &str, issues: &mut Vec<ContentIssue>) -> Option<Prose> {
+    let result = match text {
+        Ok(t) => parse_prose(t),
+        Err(e) => Err(e.clone()),
+    };
+    result.map_err(|e| issues.push(parse_issue(path).detail(e))).ok()
+}
+
+fn parse_item<T: DeserializeOwned>(raw: &RawItem, parent: &str, json_name: &str) -> Item<T> {
+    let dir = format!("{parent}/{}", raw.folder);
+    let mut issues = vec![];
+    let doc = parse_doc(&raw.json, &format!("{dir}/{json_name}"), &mut issues);
+    let vi = parse_md(&raw.vi, &format!("{dir}/vi.md"), &mut issues);
+    let en = parse_md(&raw.en, &format!("{dir}/en.md"), &mut issues);
+    Item { id: raw.folder.clone(), dir, doc, vi, en, issues }
+}
+
+/// Ruling R5: ranges and kind/body consistency of a lesson.
+fn lesson_shape(item: &Item<Lesson>) -> Vec<ContentIssue> {
+    let Some(l) = &item.doc else { return vec![] };
+    let path = item.file("lesson.json");
+    let mut out = vec![];
+    if !(1..=60).contains(&l.minutes) {
+        out.push(parse_issue(&path).field("minutes").detail("must be 1-60"));
+    }
+    if !(1..=3).contains(&l.difficulty) {
+        out.push(parse_issue(&path).field("difficulty").detail("must be 1-3"));
+    }
+    let body_ok = match l.kind {
+        LessonKind::Experiment => l.experiment.is_some() && l.check.is_none(),
+        LessonKind::Reading => l.check.is_some() && l.experiment.is_none(),
+    };
+    if !body_ok {
+        out.push(parse_issue(&path).field("kind").detail("experiment needs `experiment`, reading needs `check`, not both"));
+    }
+    if let Some(e) = &l.experiment {
+        if !e.base.is_object() {
+            out.push(parse_issue(&path).field("experiment.base").detail("must be an object"));
+        }
+    }
+    out
+}
+
+fn challenge_shape(item: &Item<Challenge>) -> Vec<ContentIssue> {
+    let Some(c) = &item.doc else { return vec![] };
+    if c.start.is_object() {
+        vec![]
+    } else {
+        vec![parse_issue(&item.file("challenge.json")).field("start").detail("must be an object")]
+    }
+}
+
+/// Pattern, folder name, level digit and prose front matter ids.
+fn id_issues<T>(item: &Item<T>, doc_id: &str, level: LevelId, json_name: &str, valid: fn(&str) -> bool) -> Vec<ContentIssue> {
+    let path = item.file(json_name);
+    let mut out = vec![];
+    if !valid(doc_id) {
+        out.push(ContentIssue::new(codes::ID, &path).id(doc_id).field("id").detail("bad id"));
+    }
+    if doc_id != item.id {
+        out.push(ContentIssue::new(codes::ID, &path).id(doc_id).field("id").detail("folder name differs"));
+    }
+    if ids::level_digit(doc_id) != Some(level.digit()) {
+        out.push(ContentIssue::new(codes::ID, &path).id(doc_id).field("level"));
+    }
+    for (name, prose) in [("vi.md", &item.vi), ("en.md", &item.en)] {
+        if let Some(p) = prose {
+            if p.id != item.id {
+                out.push(ContentIssue::new(codes::ID, item.file(name)).id(p.id.clone()).field("id"));
+            }
+        }
+    }
+    out
+}
+
+pub(crate) fn parse_tree(tree: &ContentTree) -> Parsed {
+    let mut global = vec![];
+    let levels = parse_doc::<Levels>(&tree.levels, LEVELS_PATH, &mut global);
+    let mut lessons: Vec<Item<Lesson>> = tree.lessons.iter().map(|r| parse_item(r, "lessons", "lesson.json")).collect();
+    let mut challenges: Vec<Item<Challenge>> =
+        tree.challenges.iter().map(|r| parse_item(r, "challenges", "challenge.json")).collect();
+    for item in &mut lessons {
+        let mut more = lesson_shape(item);
+        if let Some(l) = &item.doc {
+            more.extend(id_issues(item, &l.id, l.level, "lesson.json", ids::is_lesson_id));
+        }
+        item.issues.extend(more);
+    }
+    for item in &mut challenges {
+        let mut more = challenge_shape(item);
+        if let Some(c) = &item.doc {
+            more.extend(id_issues(item, &c.id, c.level, "challenge.json", ids::is_challenge_id));
+        }
+        item.issues.extend(more);
+    }
+    Parsed { levels, global, research: tree.research.clone(), lessons, challenges }
+}
+
+/// What levels.json lists: id -> (level, is_lesson), plus the global lesson order.
+pub(crate) struct Listing {
+    pub listed: BTreeMap<String, (LevelId, bool)>,
+    pub lesson_order: Vec<String>,
+}
+
+fn listing(levels: &Levels, global: &mut Vec<ContentIssue>) -> Listing {
+    let mut listed = BTreeMap::new();
+    let mut lesson_order = vec![];
+    let mut seen_levels = BTreeSet::new();
+    for lv in &levels.levels {
+        if !seen_levels.insert(lv.id) {
+            global.push(ContentIssue::new(codes::DUPLICATE_ID, LEVELS_PATH).id(format!("{:?}", lv.id)).field("levels"));
+        }
+        for (list, is_lesson) in [(&lv.lessons, true), (&lv.challenges, false)] {
+            for id in list {
+                if listed.insert(id.clone(), (lv.id, is_lesson)).is_some() {
+                    global.push(ContentIssue::new(codes::DUPLICATE_ID, LEVELS_PATH).id(id.clone()).field("levels"));
+                } else if is_lesson {
+                    lesson_order.push(id.clone());
+                }
+            }
+        }
+    }
+    Listing { listed, lesson_order }
+}
+
+fn listing_issue(l: &Listing, id: &str, level: LevelId, is_lesson: bool, path: &str) -> Option<ContentIssue> {
+    match l.listed.get(id) {
+        None => Some(ContentIssue::new(codes::ID, path).id(id).field("levels").detail("not listed in levels.json")),
+        Some(&(lv, lesson)) if lv != level || lesson != is_lesson => {
+            Some(ContentIssue::new(codes::ID, path).id(id).field("level").detail("listed under another level or kind"))
+        }
+        Some(_) => None,
+    }
+}
+
+/// Stage 1b: checks across items. Without a readable levels.json there is nothing to check
+/// against; its parse issue already fails the run.
+pub(crate) fn check_cross(p: &mut Parsed) {
+    let Some(levels) = p.levels.clone() else { return };
+    let listing = listing(&levels, &mut p.global);
+
+    // A second folder declaring an id already seen is a duplicate (items are in folder order).
+    let mut authored: BTreeSet<String> = BTreeSet::new();
+    for item in &mut p.lessons {
+        if let Some(id) = item.doc.as_ref().map(|d| d.id.clone()) {
+            if !authored.insert(id.clone()) {
+                item.issues.push(ContentIssue::new(codes::DUPLICATE_ID, item.file("lesson.json")).id(id).field("id"));
+            }
+        }
+    }
+    for item in &mut p.challenges {
+        if let Some(id) = item.doc.as_ref().map(|d| d.id.clone()) {
+            if !authored.insert(id.clone()) {
+                item.issues.push(ContentIssue::new(codes::DUPLICATE_ID, item.file("challenge.json")).id(id).field("id"));
+            }
+        }
+    }
+    let mut roadmap: BTreeSet<String> = BTreeSet::new();
+    let stubs = levels.roadmap.lessons.iter().map(|s| &s.id).chain(levels.roadmap.challenges.iter().map(|s| &s.id));
+    for id in stubs {
+        if authored.contains(id) || !roadmap.insert(id.clone()) {
+            p.global.push(ContentIssue::new(codes::DUPLICATE_ID, LEVELS_PATH).id(id.clone()).field("roadmap"));
+        }
+    }
+
+    // Every authored item is listed under its own level and kind.
+    for item in &mut p.lessons {
+        let Some(l) = &item.doc else { continue };
+        if let Some(issue) = listing_issue(&listing, &l.id, l.level, true, &item.file("lesson.json")) {
+            item.issues.push(issue);
+        }
+    }
+    for item in &mut p.challenges {
+        let Some(c) = &item.doc else { continue };
+        if let Some(issue) = listing_issue(&listing, &c.id, c.level, false, &item.file("challenge.json")) {
+            item.issues.push(issue);
+        }
+    }
+    // Every listed id exists; every roadmap stub is listed.
+    for id in listing.listed.keys() {
+        if !authored.contains(id) && !roadmap.contains(id) {
+            p.global.push(ContentIssue::new(codes::ID, LEVELS_PATH).id(id.clone()).detail("listed but has no folder or roadmap entry"));
+        }
+    }
+    for id in &roadmap {
+        if !listing.listed.contains_key(id) {
+            p.global.push(ContentIssue::new(codes::ID, LEVELS_PATH).id(id.clone()).detail("roadmap entry is not listed in any level"));
+        }
+    }
+
+    check_references(p, &levels, &listing);
+}
+
+/// Prerequisites, research and references from levels.json. Replaced in Task 7.
+fn check_references(_p: &mut Parsed, _levels: &Levels, _listing: &Listing) {}
+```
+
+- [ ] **Step 7: Implement `crates/content/src/checks.rs`**: the per-item stage. Later tasks add to it.
+
+```rust
+//! Stage 2: checks on one item. Pure; runs in parallel from Task 18 on.
+
+use crate::issue::ContentIssue;
+use crate::report::{Readiness, RunSummary};
+use crate::structure::Item;
+use crate::types::*;
+use sim_core::Capabilities;
+
+pub(crate) struct Ctx {
+    pub planned: PlannedFeatures,
+    pub caps: Capabilities,
+}
+
+impl Ctx {
+    pub fn new(levels: Option<&Levels>) -> Ctx {
+        Ctx {
+            planned: levels.map(|l| l.engine.planned.clone()).unwrap_or_default(),
+            caps: sim_core::capabilities(),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Outcome {
+    pub issues: Vec<ContentIssue>,
+    pub runs: Vec<RunSummary>,
+    pub readiness: Option<Readiness>,
+    /// What the item's engine inputs use (for curriculum.json).
+    pub needs: EngineNeeds,
+    /// Engine features a blocked item lacks.
+    pub missing: Vec<String>,
+}
+
+pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
+    let mut out = Outcome::default();
+    let Some(l) = &item.doc else { return out };
+    out.readiness = Some(match l.kind {
+        LessonKind::Reading => Readiness::NotNeeded,
+        LessonKind::Experiment => Readiness::Ready,
+    });
+    out
+}
+
+pub(crate) fn check_challenge(item: &Item<Challenge>, _ctx: &Ctx) -> Outcome {
+    let mut out = Outcome::default();
+    if item.doc.is_some() {
+        out.readiness = Some(Readiness::Ready);
+    }
+    out
+}
+```
+
+- [ ] **Step 8: Wire `validate_tree`** in `crates/content/src/lib.rs`:
+
+```rust
+pub mod ids;
+pub mod prose;
+pub mod report;
+pub(crate) mod checks;
+pub(crate) mod structure;
+
+pub use report::{ItemKind, ItemReport, Readiness, Report, RunSummary};
+
+use structure::{Item, LEVELS_ID, LEVELS_PATH};
+
+fn item_report<T>(kind: ItemKind, item: &Item<T>, o: checks::Outcome) -> ItemReport {
+    let mut issues = item.issues.clone();
+    issues.extend(o.issues);
+    ItemReport { id: item.id.clone(), kind, path: item.dir.clone(), readiness: o.readiness, passed: true, issues, runs: o.runs }
+}
+
+/// Validate an in-memory tree. Deterministic: same tree, same report.
+pub fn validate_tree(tree: &ContentTree) -> Report {
+    let mut parsed = structure::parse_tree(tree);
+    structure::check_cross(&mut parsed);
+    let ctx = checks::Ctx::new(parsed.levels.as_ref());
+    let mut items = vec![ItemReport {
+        id: LEVELS_ID.into(),
+        kind: ItemKind::Levels,
+        path: LEVELS_PATH.into(),
+        readiness: None,
+        passed: true,
+        issues: parsed.global.clone(),
+        runs: vec![],
+    }];
+    for l in &parsed.lessons {
+        items.push(item_report(ItemKind::Lesson, l, checks::check_lesson(l, &ctx)));
+    }
+    for c in &parsed.challenges {
+        items.push(item_report(ItemKind::Challenge, c, checks::check_challenge(c, &ctx)));
+    }
+    Report::new(items)
+}
+```
+
+- [ ] **Step 9: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass (`ids::patterns`, the 7 structure tests and everything from Tasks 2–5). If `good_tree_has_no_issues` lists an issue, fix the code, not the fixture: the fixture was measured to be valid.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): parse stage, ids, duplicates and report skeleton
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 7: Prerequisites, cycles, research and levels references
+
+**Files:**
+- Modify: `crates/content/src/structure.rs` (replace the `check_references` stub)
+
+**Interfaces:**
+- Codes covered: `content.prerequisite-missing`, `content.prerequisite-cycle`, `content.research-missing`.
+
+- [ ] **Step 1: Write the failing tests** (add them to the `structure.rs` tests):
+
+```rust
+    #[test]
+    fn missing_prerequisites_and_references() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["prerequisites"] = json!(["l0-nope"]));
+        edit_json(&mut t, "c-l0-fx-shop", |v| v["prerequisites"] = json!(["c-l0-fx-shop"]));
+        edit_levels(&mut t, |v| {
+            v["levels"][0]["exitCheck"]["mode"] = "nightmare".into();
+            v["engineGaps"]["fx-gap"]["neededBy"] = json!(["l0-ghost"]);
+            v["roadmap"]["lessons"][0]["prerequisites"] = json!(["l0-gone"]);
+        });
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::PREREQUISITE_MISSING));
+        assert!(has(&r, "c-l0-fx-shop", codes::PREREQUISITE_MISSING)); // a challenge is not a lesson
+        let g: Vec<_> = issues_of(&r, "levels").into_iter()
+            .filter(|i| i.code == codes::PREREQUISITE_MISSING).filter_map(|i| i.id).collect();
+        // Fixed check order: roadmap entries, then exit checks, then gaps.
+        assert_eq!(g, vec!["l0-gone", "nightmare", "l0-ghost"]);
+    }
+
+    #[test]
+    fn prerequisite_listed_later_is_a_cycle_in_the_path() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["prerequisites"] = json!(["l0-fx-reading"]));
+        let r = validate_tree(&t);
+        let i: Vec<_> = issues_of(&r, "l0-fx-capacity").into_iter()
+            .filter(|i| i.code == codes::PREREQUISITE_CYCLE).collect();
+        assert!(i.iter().any(|i| i.detail.as_deref() == Some("listed after")));
+        assert!(i.iter().any(|i| i.detail.as_deref() == Some("cycle")));
+        assert!(has(&r, "l0-fx-reading", codes::PREREQUISITE_CYCLE)); // reading <-> capacity
+    }
+
+    #[test]
+    fn missing_research_notes() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-reading", |v| v["research"] = json!(["no-such-note"]));
+        edit_levels(&mut t, |v| v["roadmap"]["lessons"][0]["research"] = json!(["also-missing"]));
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-reading", codes::RESEARCH_MISSING));
+        assert!(has(&r, "levels", codes::RESEARCH_MISSING));
+    }
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content structure`
+Expected: the 3 new tests fail, because the stub produces no issues.
+
+- [ ] **Step 3: Implement**: replace the stub `check_references` in `structure.rs`:
+
+```rust
+/// True when `start` can reach itself through prerequisite edges.
+fn on_cycle(start: &str, edges: &BTreeMap<String, Vec<String>>) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<&str> = edges.get(start).map(|v| v.iter().map(String::as_str).collect()).unwrap_or_default();
+    while let Some(id) = stack.pop() {
+        if id == start {
+            return true;
+        }
+        if seen.insert(id) {
+            stack.extend(edges.get(id).into_iter().flatten().map(String::as_str));
+        }
+    }
+    false
+}
+
+fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
+    let mut lesson_ids: BTreeSet<String> = levels.roadmap.lessons.iter().map(|s| s.id.clone()).collect();
+    lesson_ids.extend(p.lessons.iter().filter_map(|i| i.doc.as_ref().map(|d| d.id.clone())));
+    // Challenge id -> its mode ids (authored or roadmap).
+    let mut modes: BTreeMap<String, Vec<String>> = levels.roadmap.challenges.iter()
+        .map(|s| (s.id.clone(), s.modes.iter().map(|m| m.id.clone()).collect()))
+        .collect();
+    for c in p.challenges.iter().filter_map(|i| i.doc.as_ref()) {
+        modes.insert(c.id.clone(), c.modes.iter().map(|m| m.id.clone()).collect());
+    }
+    let pos: BTreeMap<&str, usize> = listing.lesson_order.iter().enumerate().map(|(i, id)| (id.as_str(), i)).collect();
+    let mut edges: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for s in &levels.roadmap.lessons {
+        edges.insert(s.id.clone(), s.prerequisites.clone());
+    }
+    for l in p.lessons.iter().filter_map(|i| i.doc.as_ref()) {
+        edges.insert(l.id.clone(), l.prerequisites.clone());
+    }
+
+    let prereq_issues = |id: &str, prereqs: &[String], path: &str, field: &str| -> Vec<ContentIssue> {
+        let mut out = vec![];
+        for pr in prereqs {
+            if !lesson_ids.contains(pr) {
+                out.push(ContentIssue::new(codes::PREREQUISITE_MISSING, path).id(pr.clone()).field(field));
+            } else if let (Some(a), Some(b)) = (pos.get(pr.as_str()), pos.get(id)) {
+                if a >= b {
+                    out.push(ContentIssue::new(codes::PREREQUISITE_CYCLE, path).id(pr.clone()).field(field).detail("listed after"));
+                }
+            }
+        }
+        if on_cycle(id, &edges) {
+            out.push(ContentIssue::new(codes::PREREQUISITE_CYCLE, path).id(id).field(field).detail("cycle"));
+        }
+        out
+    };
+    let research_issues = |notes: &[String], path: &str, field: &str| -> Vec<ContentIssue> {
+        notes.iter().filter(|n| !p.research.contains(*n))
+            .map(|n| ContentIssue::new(codes::RESEARCH_MISSING, path).id(n.clone()).field(field))
+            .collect()
+    };
+
+    let mut lesson_issues = vec![];
+    for (k, item) in p.lessons.iter().enumerate() {
+        let Some(l) = &item.doc else { continue };
+        let path = item.file("lesson.json");
+        let mut out = prereq_issues(&l.id, &l.prerequisites, &path, "prerequisites");
+        out.extend(research_issues(&l.research, &path, "research"));
+        lesson_issues.push((k, out));
+    }
+    let mut challenge_issues = vec![];
+    for (k, item) in p.challenges.iter().enumerate() {
+        let Some(c) = &item.doc else { continue };
+        let path = item.file("challenge.json");
+        let out: Vec<ContentIssue> = c.prerequisites.iter().filter(|pr| !lesson_ids.contains(*pr))
+            .map(|pr| ContentIssue::new(codes::PREREQUISITE_MISSING, &path).id(pr.clone()).field("prerequisites"))
+            .collect();
+        challenge_issues.push((k, out));
+    }
+
+    let mut global = vec![];
+    for s in &levels.roadmap.lessons {
+        let field = format!("roadmap.lessons[{}]", s.id);
+        global.extend(prereq_issues(&s.id, &s.prerequisites, LEVELS_PATH, &field));
+        global.extend(research_issues(&s.research, LEVELS_PATH, &field));
+    }
+    for s in &levels.roadmap.challenges {
+        for pr in s.prerequisites.iter().filter(|pr| !lesson_ids.contains(*pr)) {
+            global.push(ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH).id(pr.clone()).field(format!("roadmap.challenges[{}]", s.id)));
+        }
+    }
+    for lv in &levels.levels {
+        let ec = &lv.exit_check;
+        let field = format!("levels[{:?}].exitCheck", lv.id);
+        match modes.get(&ec.challenge) {
+            Some(ms) if lv.challenges.contains(&ec.challenge) => {
+                if !ms.contains(&ec.mode) {
+                    global.push(ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH).id(ec.mode.clone()).field(format!("{field}.mode")));
+                }
+            }
+            _ => global.push(ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH).id(ec.challenge.clone()).field(format!("{field}.challenge"))),
+        }
+    }
+    for (gap, g) in &levels.engine_gaps {
+        for n in &g.needed_by {
+            if !lesson_ids.contains(n) && !modes.contains_key(n) {
+                global.push(ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH).id(n.clone()).field(format!("engineGaps.{gap}.neededBy")));
+            }
+        }
+    }
+
+    for (k, out) in lesson_issues {
+        p.lessons[k].issues.extend(out);
+    }
+    for (k, out) in challenge_issues {
+        p.challenges[k].issues.extend(out);
+    }
+    p.global.extend(global);
+}
+```
+
+Never sort issues: a fixed check order is part of determinism. If you reorder the blocks above, update the expected vector in `missing_prerequisites_and_references`.
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass, `good_tree_has_no_issues` included.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): prerequisites, cycles, research and levels references
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 8: Prose sections and keys
+
+**Files:**
+- Create: `crates/content/src/prose_check.rs`
+- Modify: `crates/content/src/checks.rs`, `crates/content/src/lib.rs` (`pub(crate) mod prose_check;`)
+
+**Interfaces:**
+- Produces: `prose_check::{check_lesson_prose, check_challenge_prose}`. Each returns `Vec<ContentIssue>` covering both languages.
+- Codes covered: `content.prose-section`, `content.prose-key`, and `content.duplicate-id` for a key repeated within one section.
+
+- [ ] **Step 1: Write the failing tests** at the bottom of `prose_check.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::issue::codes;
+    use crate::test_util::*;
+    use crate::validate_tree;
+
+    #[test]
+    fn missing_and_out_of_order_sections() {
+        let mut t = good_tree();
+        edit_prose(&mut t, "l0-fx-capacity", "en", |s| s.replace("## Takeaways\n- Capacity comes from CPU.\n", ""));
+        edit_prose(&mut t, "l0-fx-reading", "vi", |s| {
+            s.replace("## Mục tiêu", "## TMP").replace("## Điều cần nhớ", "## Mục tiêu").replace("## TMP", "## Điều cần nhớ")
+        });
+        let r = validate_tree(&t);
+        let cap = issues_of(&r, "l0-fx-capacity");
+        assert!(cap.iter().any(|i| i.code == codes::PROSE_SECTION
+            && i.field.as_deref() == Some("Takeaways") && i.path.ends_with("en.md")));
+        assert!(has(&r, "l0-fx-reading", codes::PROSE_SECTION));
+    }
+
+    #[test]
+    fn challenge_sections() {
+        let mut t = good_tree();
+        edit_prose(&mut t, "c-l0-fx-shop", "vi", |s| s.replace("## Bối cảnh", "## Bối cảnh chung"));
+        assert!(has(&validate_tree(&t), "c-l0-fx-shop", codes::PROSE_SECTION));
+    }
+
+    #[test]
+    fn missing_keys_in_one_language() {
+        let mut t = good_tree();
+        edit_prose(&mut t, "l0-fx-capacity", "vi", |s| s.replace("- **M2**: Vượt sức chứa một chút cũng không sao.\n", ""));
+        edit_prose(&mut t, "l0-fx-reading", "en", |s| s.replace("- **q1.c**: A week.\n", ""));
+        edit_prose(&mut t, "c-l0-fx-shop", "en", |s| s.replace("- **h2**", "- **h3**"));
+        let r = validate_tree(&t);
+        assert!(issues_of(&r, "l0-fx-capacity").iter()
+            .any(|i| i.code == codes::PROSE_KEY && i.id.as_deref() == Some("M2") && i.path.ends_with("vi.md")));
+        assert!(issues_of(&r, "l0-fx-reading").iter().any(|i| i.id.as_deref() == Some("q1.c")));
+        assert!(issues_of(&r, "c-l0-fx-shop").iter().any(|i| i.id.as_deref() == Some("h2")));
+    }
+
+    #[test]
+    fn every_misconception_needs_feedback_and_keys_are_unique() {
+        let mut t = good_tree();
+        edit_prose(&mut t, "l0-fx-capacity", "en", |s| {
+            s.replace("- **M2**: Going a little over capacity is fine.\n",
+                      "- **M2**: Going a little over capacity is fine.\n- **M3**: An extra one.\n- **M3**: Twice.\n")
+        });
+        let k = issues_of(&validate_tree(&t), "l0-fx-capacity");
+        assert!(k.iter().any(|i| i.code == codes::PROSE_KEY && i.id.as_deref() == Some("M3")));
+        assert!(k.iter().any(|i| i.code == codes::DUPLICATE_ID && i.id.as_deref() == Some("M3")));
+    }
+
+    #[test]
+    fn misconception_with_its_own_feedback_item_is_fine() {
+        let mut t = good_tree();
+        for (lang, sec) in [("en", "## Feedback\n"), ("vi", "## Phản hồi\n")] {
+            edit_prose(&mut t, "l0-fx-capacity", lang, |s| {
+                s.replace("- **M2**:", "- **M3**: extra.\n- **M2**:")
+                    .replace(sec, &format!("{sec}- **M3**: feedback for M3.\n"))
+            });
+        }
+        assert!(codes_of(&validate_tree(&t), "l0-fx-capacity").is_empty());
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content prose_check`
+Expected: a compile error while the module is missing, then failures once it exists but checks nothing.
+
+- [ ] **Step 3: Implement** (top of `prose_check.rs`):
+
+```rust
+//! Required sections and keys in vi.md / en.md (spec §5, rulings R10 and R11).
+
+use crate::issue::{codes, ContentIssue};
+use crate::prose::Prose;
+use crate::structure::Item;
+use crate::types::*;
+use std::collections::BTreeSet;
+
+#[derive(Clone, Copy, PartialEq)]
+enum Kind { Experiment, Reading, Challenge }
+
+#[derive(Clone, Copy)]
+enum Sec { Misconceptions, Feedback, Questions, Hints }
+
+fn heading(sec: Sec, vi: bool) -> &'static str {
+    match (sec, vi) {
+        (Sec::Misconceptions, true) => "Hiểu lầm thường gặp",
+        (Sec::Misconceptions, false) => "Common misconceptions",
+        (Sec::Feedback, true) => "Phản hồi",
+        (Sec::Feedback, false) => "Feedback",
+        (Sec::Questions, true) => "Câu hỏi",
+        (Sec::Questions, false) => "Questions",
+        (Sec::Hints, true) => "Gợi ý",
+        (Sec::Hints, false) => "Hints",
+    }
+}
+
+fn required(kind: Kind, vi: bool) -> Vec<&'static str> {
+    let exp = kind == Kind::Experiment;
+    match (kind, vi) {
+        (Kind::Challenge, true) => vec!["Bối cảnh", "Mục tiêu", "Gợi ý"],
+        (Kind::Challenge, false) => vec!["Scenario", "Outcome", "Hints"],
+        (_, true) => vec!["Mục tiêu", "Hình dung trước", "Thuật ngữ", "Hiểu lầm thường gặp",
+                          if exp { "Thí nghiệm" } else { "Câu hỏi" }, "Phản hồi", "Điều cần nhớ"],
+        (_, false) => vec!["Outcome", "Picture it first", "Terms", "Common misconceptions",
+                           if exp { "Experiment" } else { "Questions" }, "Feedback", "Takeaways"],
+    }
+}
+
+fn sections(p: &Prose, kind: Kind, vi: bool, path: &str) -> Vec<ContentIssue> {
+    let mut out = vec![];
+    let mut last: Option<usize> = None;
+    for h in required(kind, vi) {
+        match p.position(h) {
+            None => out.push(ContentIssue::new(codes::PROSE_SECTION, path).field(h).detail("missing")),
+            Some(i) if last.is_some_and(|l| i < l) => {
+                out.push(ContentIssue::new(codes::PROSE_SECTION, path).field(h).detail("out of order"))
+            }
+            Some(i) => last = Some(i),
+        }
+    }
+    out
+}
+
+fn keys(p: &Prose, vi: bool, path: &str, needs: &[(Sec, String)], used: &BTreeSet<String>) -> Vec<ContentIssue> {
+    let mut out = vec![];
+    for (sec, key) in needs {
+        let h = heading(*sec, vi);
+        if !p.keys_in(h).contains(&key.as_str()) {
+            out.push(ContentIssue::new(codes::PROSE_KEY, path).id(key.clone()).field(h));
+        }
+    }
+    let feedback = p.keys_in(heading(Sec::Feedback, vi));
+    for m in p.keys_in(heading(Sec::Misconceptions, vi)) {
+        if !used.contains(m) && !feedback.contains(&m) {
+            out.push(ContentIssue::new(codes::PROSE_KEY, path).id(m).field(heading(Sec::Feedback, vi))
+                .detail("misconception without feedback"));
+        }
+    }
+    for s in &p.sections {
+        let mut seen = BTreeSet::new();
+        for k in &s.keys {
+            if !seen.insert(k) {
+                out.push(ContentIssue::new(codes::DUPLICATE_ID, path).id(k.clone()).field(s.heading.clone()));
+            }
+        }
+    }
+    out
+}
+
+fn both<T>(item: &Item<T>, kind: Kind, needs: &[(Sec, String)], used: &BTreeSet<String>) -> Vec<ContentIssue> {
+    let mut out = vec![];
+    for (name, prose, vi) in [("vi.md", &item.vi, true), ("en.md", &item.en, false)] {
+        let Some(p) = prose else { continue };
+        let path = item.file(name);
+        out.extend(sections(p, kind, vi, &path));
+        out.extend(keys(p, vi, &path, needs, used));
+    }
+    out
+}
+
+pub(crate) fn check_lesson_prose(item: &Item<Lesson>) -> Vec<ContentIssue> {
+    let Some(l) = &item.doc else { return vec![] };
+    let mut needs = vec![];
+    let mut used = BTreeSet::new();
+    if let Some(e) = &l.experiment {
+        for c in e.choices.iter().filter(|c| !c.correct) {
+            if let Some(m) = &c.misconception {
+                needs.push((Sec::Misconceptions, m.clone()));
+                used.insert(m.clone());
+            }
+            needs.push((Sec::Feedback, c.id.clone()));
+        }
+    }
+    if let Some(c) = &l.check {
+        for q in &c.questions {
+            needs.push((Sec::Questions, q.id.clone()));
+            for o in &q.options {
+                needs.push((Sec::Questions, format!("{}.{o}", q.id)));
+            }
+            if let Some(m) = &q.misconception {
+                needs.push((Sec::Misconceptions, m.clone()));
+                needs.push((Sec::Feedback, q.id.clone()));
+                used.insert(m.clone());
+            }
+        }
+    }
+    let kind = if l.kind == LessonKind::Experiment { Kind::Experiment } else { Kind::Reading };
+    both(item, kind, &needs, &used)
+}
+
+pub(crate) fn check_challenge_prose(item: &Item<Challenge>) -> Vec<ContentIssue> {
+    let Some(c) = &item.doc else { return vec![] };
+    let needs: Vec<(Sec, String)> = c.hints.iter().map(|h| (Sec::Hints, h.clone())).collect();
+    both(item, Kind::Challenge, &needs, &BTreeSet::new())
+}
+```
+
+In `checks.rs`, add `out.issues.extend(crate::prose_check::check_lesson_prose(item));` to `check_lesson` right after `let Some(l) = …`. Add `out.issues.extend(crate::prose_check::check_challenge_prose(item));` to `check_challenge`.
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): required prose sections and keys
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 9: Controls (paths, options) and engine field names
+
+**Files:**
+- Create: `crates/content/src/known.rs`, `crates/content/src/controls.rs`
+- Modify: `crates/content/src/checks.rs`, `crates/content/src/lib.rs` (`pub mod known; pub mod controls;`)
+
+**Interfaces:**
+- Produces: `known::{input_keys, graph_keys, node_keys, edge_keys, workload_keys, workload_scalar_keys, surge_keys, fault_keys, calibration_keys, metric_keys, config_keys}`. Each is a `BTreeSet<String>` derived by serializing sim-core types; `config_keys` returns an `Option`. Also `controls::{ControlPath, parse_path, resolve, apply, check_controls}`. `check_controls(path, &Experiment) -> (Vec<ContentIssue>, Vec<Option<ControlPath>>)` returns one parsed path per control, `None` when it failed.
+- Codes covered: `content.control`, and `content.duplicate-id` for control ids.
+
+- [ ] **Step 1: Write the failing tests**
+
+At the bottom of `known.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn names_come_from_sim_core_types() {
+        assert!(input_keys().contains("durationMs") && input_keys().contains("calibration"));
+        assert!(workload_keys().contains("trafficEndMs") && workload_keys().contains("params"));
+        assert!(!workload_scalar_keys().contains("surge") && workload_scalar_keys().contains("baseRps"));
+        assert!(calibration_keys().contains("edgeDelayHttpMs"));
+        assert!(metric_keys().contains("duplicateIds"));
+        assert_eq!(fault_keys().len(), 3);
+        assert!(config_keys("web-server").unwrap().contains("rpsPerInstance"));
+        assert!(config_keys("redis").is_none());
+    }
+}
+```
+
+At the bottom of `controls.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::issue::codes;
+    use crate::test_util::*;
+    use crate::validate_tree;
+    use serde_json::json;
+
+    #[test]
+    fn grammar() {
+        use ControlPath::*;
+        assert_eq!(parse_path("workload.baseRps"), Some(Workload("baseRps".into())));
+        assert_eq!(parse_path("calibration.edgeDelayHttpMs"), Some(Calibration("edgeDelayHttpMs".into())));
+        assert_eq!(parse_path("durationMs"), Some(DurationMs));
+        assert_eq!(parse_path("graph.nodes[web].replicas"), Some(NodeReplicas("web".into())));
+        assert_eq!(parse_path("graph.nodes[web].config.cpu"), Some(NodeConfig("web".into(), "cpu".into())));
+        assert_eq!(parse_path("faults[0].atMs"), Some(FaultAt(0)));
+        for bad in ["workload", "workload.surge.factor", "graph.nodes[].replicas", "graph.nodes[web].label",
+                    "faults[x].atMs", "faults[99999999999999999999].atMs", "nodes.web.config.cpu", ""] {
+            assert_eq!(parse_path(bad), None, "{bad}");
+        }
+    }
+
+    #[test]
+    fn apply_creates_missing_objects() {
+        let mut v = json!({"graph": {"nodes": [{"id": "web", "kind": "web-server"}], "edges": []}, "workload": {"baseRps": 1}});
+        apply(&mut v, &parse_path("graph.nodes[web].config.cpu").unwrap(), &ConfigValue::Num(2.0));
+        apply(&mut v, &parse_path("calibration.edgeDelayHttpMs").unwrap(), &ConfigValue::Num(40.5));
+        apply(&mut v, &parse_path("seed").unwrap(), &ConfigValue::Num(7.0));
+        assert_eq!(v["graph"]["nodes"][0]["config"]["cpu"], json!(2));
+        assert_eq!(v["calibration"]["edgeDelayHttpMs"], json!(40.5));
+        assert_eq!(v["seed"], json!(7));
+        let mut not_object = json!([1, 2]);
+        apply(&mut not_object, &parse_path("seed").unwrap(), &ConfigValue::Num(1.0)); // no panic
+    }
+
+    fn control_issues(edit: impl FnOnce(&mut serde_json::Value)) -> Vec<crate::ContentIssue> {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| edit(&mut v["experiment"]["controls"]));
+        issues_of(&validate_tree(&t), "l0-fx-capacity")
+    }
+
+    #[test]
+    fn unresolvable_paths() {
+        for path in ["graph.nodes[ghost].config.cpu", "graph.nodes[web].config.turbo", "workload.surge",
+                     "workload.nope", "calibration.nope", "faults[0].atMs", "bogus"] {
+            let i = control_issues(|c| c[0]["path"] = path.into());
+            assert!(i.iter().any(|i| i.code == codes::CONTROL && i.id.as_deref() == Some("cpu")), "{path}");
+        }
+    }
+
+    #[test]
+    fn option_rules() {
+        let p = "graph.nodes[web].config.cpu";
+        let cases = vec![
+            ("default not an option", json!({"id": "cpu", "type": "stepper", "path": p, "options": [1, 2], "default": 4})),
+            ("one option", json!({"id": "cpu", "type": "select", "path": p, "options": [1], "default": 1})),
+            ("duplicate options", json!({"id": "cpu", "type": "select", "path": p, "options": [1, 1], "default": 1})),
+            ("stepper not ascending", json!({"id": "cpu", "type": "stepper", "path": p, "options": [2, 1], "default": 1})),
+            ("stepper not numeric", json!({"id": "cpu", "type": "stepper", "path": p, "options": ["a", "b"], "default": "a"})),
+            ("toggle with three", json!({"id": "cpu", "type": "toggle", "path": p, "options": [1, 2, 4], "default": 1})),
+        ];
+        for (name, c) in cases {
+            let i = control_issues(|cs| cs[0] = c);
+            assert!(i.iter().any(|i| i.code == codes::CONTROL), "{name}");
+        }
+    }
+
+    #[test]
+    fn duplicate_control_ids() {
+        let i = control_issues(|c| c[1]["id"] = "cpu".into());
+        assert!(i.iter().any(|i| i.code == codes::DUPLICATE_ID && i.id.as_deref() == Some("cpu")));
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content known controls`
+Expected: compile errors.
+
+- [ ] **Step 3: Implement `crates/content/src/known.rs`**
+
+```rust
+//! Field names the engine reads, taken from sim-core's own types by serializing a sample.
+//! sim-core serializes `None` as `null` (no `skip_serializing_if`), so every key appears.
+//! A field added to sim-core shows up here with no change.
+
+use serde::Serialize;
+use sim_core::*;
+use std::collections::{BTreeMap, BTreeSet};
+
+fn keys_of<T: Serialize>(v: &T) -> BTreeSet<String> {
+    serde_json::to_value(v)
+        .ok()
+        .and_then(|v| v.as_object().map(|o| o.keys().cloned().collect()))
+        .unwrap_or_default()
+}
+
+fn sample() -> SimInput {
+    SimInput {
+        graph: Graph {
+            nodes: vec![Node { id: "n".into(), kind: "client".into(), label: String::new(), replicas: 1, config: BTreeMap::new() }],
+            edges: vec![Edge { id: "e".into(), from: "n".into(), to: "n".into(), kind: EdgeKind::Http }],
+        },
+        workload: Workload {
+            profile: Profile::Mixed,
+            base_rps: 0.0,
+            write_ratio: 0.0,
+            clients: 1,
+            client_timeout_ms: 1.0,
+            surge: Some(Surge { factor: 1.0, at_ms: 0, duration_ms: 0 }),
+            params: BTreeMap::new(),
+            traffic_end_ms: None,
+            arrivals: None,
+        },
+        faults: vec![Fault { kind: FaultKind::InstanceDown, target: None, at_ms: 0 }],
+        duration_ms: 0,
+        seed: 0,
+        calibration: Some(CalibrationOverrides::default()),
+    }
+}
+
+pub fn input_keys() -> BTreeSet<String> { keys_of(&sample()) }
+pub fn graph_keys() -> BTreeSet<String> { keys_of(&sample().graph) }
+pub fn node_keys() -> BTreeSet<String> { keys_of(&sample().graph.nodes[0]) }
+pub fn edge_keys() -> BTreeSet<String> { keys_of(&sample().graph.edges[0]) }
+pub fn workload_keys() -> BTreeSet<String> { keys_of(&sample().workload) }
+pub fn surge_keys() -> BTreeSet<String> { keys_of(&sample().workload.surge) }
+pub fn fault_keys() -> BTreeSet<String> { keys_of(&sample().faults[0]) }
+pub fn calibration_keys() -> BTreeSet<String> { keys_of(&CalibrationOverrides::default()) }
+pub fn metric_keys() -> BTreeSet<String> { keys_of(&Metrics::default()) }
+
+/// Workload fields a control may address: all but the object-valued ones.
+pub fn workload_scalar_keys() -> BTreeSet<String> {
+    let mut k = workload_keys();
+    k.remove("surge");
+    k.remove("params");
+    k
+}
+
+/// Config keys a node of `kind` accepts, or `None` when the engine does not know the kind.
+pub fn config_keys(kind: &str) -> Option<BTreeSet<String>> {
+    let model = sim_core::components::get(kind)?;
+    let mut k: BTreeSet<String> = model.meta().fields.into_iter().map(|f| f.key).collect();
+    k.extend(sim_core::components::NODE_OVERRIDE_KEYS.iter().map(|s| s.to_string()));
+    Some(k)
+}
+```
+
+`keys_of(&sample().workload.surge)` serializes the inner `Surge`, because `Some(T)` serializes as `T`.
+
+- [ ] **Step 4: Implement `crates/content/src/controls.rs`**
+
+```rust
+//! Control paths (spec §3.1, ruling R12): parse, resolve against `base`, write a value.
+
+use crate::issue::{codes, ContentIssue};
+use crate::known;
+use crate::types::*;
+use serde_json::{Map, Value};
+use sim_core::ConfigValue;
+use std::collections::BTreeSet;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ControlPath {
+    Workload(String),
+    Calibration(String),
+    DurationMs,
+    Seed,
+    NodeReplicas(String),
+    NodeConfig(String, String),
+    FaultAt(usize),
+}
+
+fn field_name(f: &str) -> bool {
+    !f.is_empty() && f.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
+pub fn parse_path(s: &str) -> Option<ControlPath> {
+    use ControlPath::*;
+    match s {
+        "durationMs" => return Some(DurationMs),
+        "seed" => return Some(Seed),
+        _ => {}
+    }
+    if let Some(f) = s.strip_prefix("workload.") {
+        return field_name(f).then(|| Workload(f.into()));
+    }
+    if let Some(f) = s.strip_prefix("calibration.") {
+        return field_name(f).then(|| Calibration(f.into()));
+    }
+    if let Some(rest) = s.strip_prefix("graph.nodes[") {
+        let (id, tail) = rest.split_once(']')?;
+        if id.is_empty() {
+            return None;
+        }
+        if tail == ".replicas" {
+            return Some(NodeReplicas(id.into()));
+        }
+        let key = tail.strip_prefix(".config.")?;
+        return field_name(key).then(|| NodeConfig(id.into(), key.into()));
+    }
+    if let Some(rest) = s.strip_prefix("faults[") {
+        let (i, tail) = rest.split_once(']')?;
+        if tail != ".atMs" {
+            return None;
+        }
+        return i.parse().ok().map(FaultAt);
+    }
+    None
+}
+
+fn node<'a>(base: &'a Value, id: &str) -> Option<&'a Value> {
+    base.get("graph")?.get("nodes")?.as_array()?.iter().find(|n| n.get("id").and_then(Value::as_str) == Some(id))
+}
+
+/// Why `path` does not address a value in `base`, if it does not.
+pub fn resolve(path: &ControlPath, base: &Value) -> Result<(), String> {
+    use ControlPath::*;
+    match path {
+        Workload(f) if !known::workload_scalar_keys().contains(f) => Err(format!("workload has no scalar field {f}")),
+        Calibration(f) if !known::calibration_keys().contains(f) => Err(format!("calibration has no field {f}")),
+        NodeReplicas(id) => node(base, id).map(|_| ()).ok_or(format!("no node {id}")),
+        NodeConfig(id, key) => {
+            let n = node(base, id).ok_or(format!("no node {id}"))?;
+            let kind = n.get("kind").and_then(Value::as_str).unwrap_or_default();
+            match known::config_keys(kind) {
+                Some(keys) if !keys.contains(key) => Err(format!("{kind} has no config key {key}")),
+                _ => Ok(()), // a known key, or a planned kind that readiness blocks
+            }
+        }
+        FaultAt(i) => base.get("faults").and_then(Value::as_array).and_then(|f| f.get(*i))
+            .map(|_| ()).ok_or(format!("no fault {i}")),
+        _ => Ok(()),
+    }
+}
+
+fn to_json(v: &ConfigValue) -> Value {
+    match v {
+        ConfigValue::Bool(b) => Value::Bool(*b),
+        ConfigValue::Str(s) => Value::String(s.clone()),
+        // Whole numbers as integers, so u32 fields (replicas, seed, atMs) deserialize.
+        ConfigValue::Num(n) if n.fract() == 0.0 && n.abs() < 9.0e15 => Value::from(*n as i64),
+        ConfigValue::Num(n) => serde_json::Number::from_f64(*n).map(Value::Number).unwrap_or(Value::Null),
+    }
+}
+
+fn obj<'a>(v: &'a mut Value, key: &str) -> Option<&'a mut Map<String, Value>> {
+    v.as_object_mut()?.entry(key).or_insert_with(|| Value::Object(Map::new())).as_object_mut()
+}
+
+/// Write `value` at `path`. Paths are resolved before this is called; anything that does not
+/// fit (a non-object base) is skipped here and caught by the engine check.
+pub fn apply(input: &mut Value, path: &ControlPath, value: &ConfigValue) {
+    use ControlPath::*;
+    let v = to_json(value);
+    match path {
+        Workload(f) => { if let Some(w) = obj(input, "workload") { w.insert(f.clone(), v); } }
+        Calibration(f) => { if let Some(c) = obj(input, "calibration") { c.insert(f.clone(), v); } }
+        DurationMs => { if let Some(o) = input.as_object_mut() { o.insert("durationMs".into(), v); } }
+        Seed => { if let Some(o) = input.as_object_mut() { o.insert("seed".into(), v); } }
+        NodeReplicas(id) | NodeConfig(id, _) => {
+            let Some(nodes) = input.get_mut("graph").and_then(|g| g.get_mut("nodes")).and_then(Value::as_array_mut) else { return };
+            let Some(n) = nodes.iter_mut().find(|n| n.get("id").and_then(Value::as_str) == Some(id)) else { return };
+            match path {
+                NodeReplicas(_) => { if let Some(o) = n.as_object_mut() { o.insert("replicas".into(), v); } }
+                NodeConfig(_, key) => { if let Some(c) = obj(n, "config") { c.insert(key.clone(), v); } }
+                _ => {}
+            }
+        }
+        FaultAt(i) => {
+            if let Some(f) = input.get_mut("faults").and_then(Value::as_array_mut).and_then(|f| f.get_mut(*i)).and_then(Value::as_object_mut) {
+                f.insert("atMs".into(), v);
+            }
+        }
+    }
+}
+
+/// Structural control checks. Engine acceptance of each option comes in Task 11.
+pub(crate) fn check_controls(path: &str, exp: &Experiment) -> (Vec<ContentIssue>, Vec<Option<ControlPath>>) {
+    let mut out = vec![];
+    let mut parsed = vec![];
+    let mut seen = BTreeSet::new();
+    for c in &exp.controls {
+        let issue = |detail: String| ContentIssue::new(codes::CONTROL, path).id(c.id.clone()).detail(detail);
+        if !seen.insert(c.id.as_str()) {
+            out.push(ContentIssue::new(codes::DUPLICATE_ID, path).id(c.id.clone()).field("controls"));
+        }
+        match parse_path(&c.path) {
+            None => {
+                out.push(issue(format!("bad path {}", c.path)).field("path"));
+                parsed.push(None);
+            }
+            Some(p) => match resolve(&p, &exp.base) {
+                Err(e) => {
+                    out.push(issue(e).field("path"));
+                    parsed.push(None);
+                }
+                Ok(()) => parsed.push(Some(p)),
+            },
+        }
+        if c.options.len() < 2 {
+            out.push(issue("needs at least 2 options".into()).field("options"));
+        }
+        for (i, a) in c.options.iter().enumerate() {
+            if c.options[..i].contains(a) {
+                out.push(issue("duplicate option".into()).field("options"));
+            }
+        }
+        if !c.options.contains(&c.default) {
+            out.push(issue("default is not an option".into()).field("default"));
+        }
+        match c.kind {
+            ControlType::Stepper => {
+                let nums: Option<Vec<f64>> = c.options.iter().map(ConfigValue::as_f64).collect();
+                if !nums.is_some_and(|n| n.windows(2).all(|w| w[0] < w[1])) {
+                    out.push(issue("stepper options must be ascending numbers".into()).field("options"));
+                }
+            }
+            ControlType::Toggle if c.options.len() != 2 => {
+                out.push(issue("toggle needs exactly 2 options".into()).field("options"))
+            }
+            _ => {}
+        }
+    }
+    (out, parsed)
+}
+```
+
+In `checks.rs` `check_lesson`, after the prose checks:
+
+```rust
+    let path = item.file("lesson.json");
+    if let Some(e) = &l.experiment {
+        let (issues, _paths) = crate::controls::check_controls(&path, e);
+        out.issues.extend(issues);
+    }
+```
+
+- [ ] **Step 5: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass. `faults[0].atMs` does not resolve because the fixture base has no faults.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): control paths, options and engine field names
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 10: Goals, choices, expect shape and reading checks
+
+**Files:**
+- Create: `crates/content/src/choices.rs`
+- Modify: `crates/content/src/checks.rs`, `crates/content/src/lib.rs` (`pub(crate) mod choices;`)
+
+**Interfaces:**
+- Produces: `choices::{check_goals, check_choices, check_questions, effective}`. `check_goals(path, goals, reserved: Option<&str>)` is reused by challenges with `reserved = Some("budget")`. `effective(exp, choice)` gives the settings a choice runs with.
+- Codes covered: `content.choice`, `content.expect` (shape only: unknown metric or op), and `content.duplicate-id` for goals, choices, questions and options.
+
+- [ ] **Step 1: Write the failing tests** at the bottom of `choices.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::issue::codes;
+    use crate::test_util::*;
+    use crate::{validate_tree, ContentIssue};
+    use serde_json::{json, Value};
+
+    fn exp(edit: impl FnOnce(&mut Value)) -> Vec<ContentIssue> {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| edit(&mut v["experiment"]));
+        issues_of(&validate_tree(&t), "l0-fx-capacity")
+    }
+
+    fn check(edit: impl FnOnce(&mut Value)) -> Vec<ContentIssue> {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-reading", |v| edit(&mut v["check"]));
+        issues_of(&validate_tree(&t), "l0-fx-reading")
+    }
+
+    fn has_code(i: &[ContentIssue], code: &str) -> bool {
+        i.iter().any(|i| i.code == code)
+    }
+
+    #[test]
+    fn choice_rules() {
+        let cases: Vec<(&str, Box<dyn FnOnce(&mut Value)>)> = vec![
+            ("two correct", Box::new(|e| e["choices"][1]["correct"] = true.into())),
+            ("none correct", Box::new(|e| e["choices"][0]["correct"] = false.into())),
+            ("one choice", Box::new(|e| e["choices"].as_array_mut().unwrap().truncate(1))),
+            ("seven choices", Box::new(|e| {
+                let c = e["choices"][2].clone();
+                let a = e["choices"].as_array_mut().unwrap();
+                for (id, cpu) in [("D", 4), ("E", 4), ("F", 4), ("G", 4)] {
+                    let mut x = c.clone();
+                    x["id"] = id.into();
+                    x["set"] = json!({"cpu": cpu});
+                    a.push(x);
+                }
+            })),
+            ("bad id", Box::new(|e| e["choices"][2]["id"] = "c".into())),
+            ("wrong without misconception", Box::new(|e| { e["choices"][1].as_object_mut().unwrap().remove("misconception"); })),
+            ("wrong without failsGoals", Box::new(|e| e["choices"][1]["failsGoals"] = json!([]))),
+            ("unknown goal", Box::new(|e| e["choices"][1]["failsGoals"] = json!(["slow"]))),
+            ("correct with failsGoals", Box::new(|e| e["choices"][0]["failsGoals"] = json!(["fast"]))),
+            ("set unknown control", Box::new(|e| e["choices"][0]["set"] = json!({"ram": 2}))),
+            ("set non-option", Box::new(|e| e["choices"][0]["set"] = json!({"cpu": 3}))),
+            ("same settings", Box::new(|e| e["choices"][2]["set"] = json!({"cpu": 1, "timeout": 5000}))),
+        ];
+        for (name, edit) in cases {
+            assert!(has_code(&exp(edit), codes::CHOICE), "{name}");
+        }
+    }
+
+    #[test]
+    fn goal_and_expect_shape() {
+        assert!(has_code(&exp(|e| e["goals"][1]["id"] = "fast".into()), codes::DUPLICATE_ID));
+        assert!(has_code(&exp(|e| e["goals"][0]["metric"] = "p96".into()), codes::EXPECT));
+        assert!(has_code(&exp(|e| e["choices"][0]["expect"] = json!({"p95": {"<": 3}})), codes::EXPECT));
+        assert!(has_code(&exp(|e| e["choices"][0]["expect"] = json!({"latency": {"<=": 3}})), codes::EXPECT));
+        assert!(has_code(&exp(|e| e["goals"] = json!([])), codes::CHOICE));
+        assert!(has_code(&exp(|e| e["choices"][2]["id"] = "B".into()), codes::DUPLICATE_ID));
+    }
+
+    #[test]
+    fn reading_check_rules() {
+        assert!(has_code(&check(|c| c["passMark"] = 3.into()), codes::CHOICE));
+        assert!(has_code(&check(|c| c["passMark"] = 0.into()), codes::CHOICE));
+        assert!(has_code(&check(|c| c["questions"][0]["answer"] = "d".into()), codes::CHOICE));
+        assert!(has_code(&check(|c| c["questions"][0]["options"] = json!(["a"])), codes::CHOICE));
+        assert!(has_code(&check(|c| c["questions"][1]["answer"] = "x".into()), codes::CHOICE));
+        assert!(has_code(&check(|c| c["questions"][1]["tolerance"] = (-1).into()), codes::CHOICE));
+        assert!(has_code(&check(|c| c["questions"][1]["id"] = "q1".into()), codes::DUPLICATE_ID));
+        assert!(has_code(&check(|c| c["questions"][0]["options"] = json!(["a", "a"])), codes::DUPLICATE_ID));
+        assert!(has_code(&check(|c| c["questions"][1]["id"] = "Q2".into()), codes::CHOICE));
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content choices`
+Expected: compile errors, then assertion failures.
+
+- [ ] **Step 3: Implement** (top of `choices.rs`):
+
+```rust
+//! Goals, experiment choices, the shape of `expect`, and reading checks (rulings R7, R13).
+
+use crate::ids;
+use crate::issue::{codes, ContentIssue};
+use crate::known;
+use crate::types::*;
+use sim_core::fixture::parse_op;
+use sim_core::{ConfigValue, Goal};
+use std::collections::{BTreeMap, BTreeSet};
+
+pub(crate) fn check_goals(path: &str, goals: &[Goal], reserved: Option<&str>) -> Vec<ContentIssue> {
+    let mut out = vec![];
+    if goals.is_empty() {
+        out.push(ContentIssue::new(codes::CHOICE, path).field("goals").detail("needs at least one goal"));
+    }
+    let metrics = known::metric_keys();
+    let mut seen = BTreeSet::new();
+    for g in goals {
+        if !seen.insert(g.id.as_str()) || reserved == Some(g.id.as_str()) {
+            out.push(ContentIssue::new(codes::DUPLICATE_ID, path).id(g.id.clone()).field("goals"));
+        }
+        if !metrics.contains(&g.metric) {
+            out.push(ContentIssue::new(codes::EXPECT, path).id(g.id.clone()).field(g.metric.clone()).detail("unknown metric"));
+        }
+    }
+    out
+}
+
+fn check_expect(path: &str, c: &Choice) -> Vec<ContentIssue> {
+    let metrics = known::metric_keys();
+    let mut out = vec![];
+    for (metric, ops) in &c.expect {
+        if !metrics.contains(metric) {
+            out.push(ContentIssue::new(codes::EXPECT, path).id(c.id.clone()).field(metric.clone()).detail("unknown metric"));
+        }
+        for op in ops.keys() {
+            if parse_op(op).is_none() {
+                out.push(ContentIssue::new(codes::EXPECT, path).id(c.id.clone()).field(metric.clone()).detail(format!("unknown op {op}")));
+            }
+        }
+    }
+    out
+}
+
+/// Settings a choice runs with: every control, in control order.
+pub(crate) fn effective(exp: &Experiment, c: &Choice) -> Vec<(String, ConfigValue)> {
+    exp.controls.iter().map(|k| (k.id.clone(), c.set.get(&k.id).unwrap_or(&k.default).clone())).collect()
+}
+
+pub(crate) fn check_choices(path: &str, exp: &Experiment) -> Vec<ContentIssue> {
+    let mut out = check_goals(path, &exp.goals, None);
+    let choice = |id: &str| ContentIssue::new(codes::CHOICE, path).id(id.to_string());
+    if !(2..=6).contains(&exp.choices.len()) {
+        out.push(ContentIssue::new(codes::CHOICE, path).field("choices").detail("needs 2 to 6 choices"));
+    }
+    if exp.choices.iter().filter(|c| c.correct).count() != 1 {
+        out.push(ContentIssue::new(codes::CHOICE, path).field("correct").detail("needs exactly one correct choice"));
+    }
+    let goals: BTreeSet<&str> = exp.goals.iter().map(|g| g.id.as_str()).collect();
+    let controls: BTreeMap<&str, &Control> = exp.controls.iter().map(|c| (c.id.as_str(), c)).collect();
+    let mut seen = BTreeSet::new();
+    for c in &exp.choices {
+        if !seen.insert(c.id.as_str()) {
+            out.push(ContentIssue::new(codes::DUPLICATE_ID, path).id(c.id.clone()).field("choices"));
+        }
+        if !ids::is_choice_id(&c.id) {
+            out.push(choice(&c.id).field("id").detail("choice ids are A-F"));
+        }
+        if c.correct {
+            if c.misconception.is_some() || !c.fails_goals.is_empty() {
+                out.push(choice(&c.id).field("correct").detail("the correct choice has no misconception or failsGoals"));
+            }
+        } else {
+            if !c.misconception.as_deref().is_some_and(|m| ids::numbered(m, 'M')) {
+                out.push(choice(&c.id).field("misconception"));
+            }
+            if c.fails_goals.is_empty() {
+                out.push(choice(&c.id).field("failsGoals").detail("a wrong choice must fail at least one goal"));
+            }
+        }
+        for g in &c.fails_goals {
+            if !goals.contains(g.as_str()) {
+                out.push(choice(&c.id).field("failsGoals").detail(format!("unknown goal {g}")));
+            }
+        }
+        for (k, v) in &c.set {
+            match controls.get(k.as_str()) {
+                None => out.push(choice(&c.id).field("set").detail(format!("unknown control {k}"))),
+                Some(ctl) if !ctl.options.contains(v) => out.push(choice(&c.id).field("set").detail(format!("{k}: not an option"))),
+                Some(_) => {}
+            }
+        }
+        out.extend(check_expect(path, c));
+    }
+    for (j, b) in exp.choices.iter().enumerate() {
+        if let Some(a) = exp.choices[..j].iter().find(|a| effective(exp, a) == effective(exp, b)) {
+            out.push(choice(&b.id).field("set").detail(format!("same settings as {}", a.id)));
+        }
+    }
+    out
+}
+
+pub(crate) fn check_questions(path: &str, check: &Check) -> Vec<ContentIssue> {
+    let mut out = vec![];
+    let q_issue = |id: &str| ContentIssue::new(codes::CHOICE, path).id(id.to_string());
+    let n = check.questions.len() as u32;
+    if n == 0 {
+        out.push(ContentIssue::new(codes::CHOICE, path).field("questions").detail("needs at least one question"));
+    }
+    if check.pass_mark == 0 || check.pass_mark > n {
+        out.push(ContentIssue::new(codes::CHOICE, path).field("passMark").detail("must be 1..=questions"));
+    }
+    let mut seen = BTreeSet::new();
+    for q in &check.questions {
+        if !seen.insert(q.id.as_str()) {
+            out.push(ContentIssue::new(codes::DUPLICATE_ID, path).id(q.id.clone()).field("questions"));
+        }
+        if !ids::numbered(&q.id, 'q') {
+            out.push(q_issue(&q.id).field("id"));
+        }
+        if q.misconception.as_deref().is_some_and(|m| !ids::numbered(m, 'M')) {
+            out.push(q_issue(&q.id).field("misconception"));
+        }
+        match q.kind {
+            QuestionType::Single => {
+                if q.options.len() < 2 {
+                    out.push(q_issue(&q.id).field("options").detail("needs at least 2 options"));
+                }
+                let mut opts = BTreeSet::new();
+                for o in &q.options {
+                    if !opts.insert(o.as_str()) {
+                        out.push(ContentIssue::new(codes::DUPLICATE_ID, path).id(format!("{}.{o}", q.id)).field("options"));
+                    }
+                    if !ids::is_option_id(o) {
+                        out.push(q_issue(&q.id).field("options").detail(format!("bad option id {o}")));
+                    }
+                }
+                if !matches!(&q.answer, Answer::Text(a) if q.options.contains(a)) {
+                    out.push(q_issue(&q.id).field("answer").detail("answer must be one of the options"));
+                }
+            }
+            QuestionType::Numeric => {
+                if !matches!(q.answer, Answer::Number(_)) {
+                    out.push(q_issue(&q.id).field("answer").detail("numeric answer expected"));
+                }
+                if !q.options.is_empty() {
+                    out.push(q_issue(&q.id).field("options").detail("numeric questions have no options"));
+                }
+                if q.tolerance.is_some_and(|t| !t.is_finite() || t < 0.0) {
+                    out.push(q_issue(&q.id).field("tolerance"));
+                }
+            }
+        }
+    }
+    out
+}
+```
+
+In `checks.rs` `check_lesson`, extend the experiment block and add a reading block:
+
+```rust
+    if let Some(e) = &l.experiment {
+        let (issues, _paths) = crate::controls::check_controls(&path, e);
+        out.issues.extend(issues);
+        out.issues.extend(crate::choices::check_choices(&path, e));
+    }
+    if let Some(c) = &l.check {
+        out.issues.extend(crate::choices::check_questions(&path, c));
+    }
+```
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass, `good_tree_has_no_issues` included.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): goal, choice, expect-shape and reading-check rules
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
