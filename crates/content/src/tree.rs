@@ -43,6 +43,9 @@ pub struct ContentTree {
     pub research: BTreeSet<String>,
     pub lessons: Vec<RawItem>,
     pub challenges: Vec<RawItem>,
+    /// Entries under `lessons/` or `challenges/` that are not item folders, and entries with
+    /// non-UTF-8 names (shown lossily), relative to the content dir. Dot-entries are ignored.
+    pub stray: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -83,35 +86,64 @@ fn read_text(path: &Path) -> FileText {
     }
 }
 
-/// Visible sub-directory names, sorted. A missing parent is an empty list.
-fn folders(dir: &Path) -> Result<Vec<String>, LoadError> {
-    if !dir.exists() {
-        return Ok(vec![]);
-    }
-    let entries = std::fs::read_dir(dir).map_err(|e| LoadError::Io(dir.into(), e.to_string()))?;
-    let mut out: Vec<String> = entries
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().is_dir())
-        .filter_map(|e| e.file_name().into_string().ok())
-        .filter(|n| !n.starts_with('.'))
-        .collect();
-    out.sort();
-    Ok(out)
+fn io(path: &Path) -> impl Fn(std::io::Error) -> LoadError + '_ {
+    move |e| LoadError::Io(path.into(), e.to_string())
 }
 
-fn items(dir: &Path, json_name: &str) -> Result<Vec<RawItem>, LoadError> {
-    Ok(folders(dir)?
-        .into_iter()
-        .map(|folder| {
-            let d = dir.join(&folder);
-            RawItem {
-                json: read_text(&d.join(json_name)),
-                vi: read_text(&d.join("vi.md")),
-                en: read_text(&d.join("en.md")),
+/// A directory entry name (`Err` holds a lossy non-UTF-8 name) and its path.
+type Entry = (Result<String, String>, PathBuf);
+
+/// Visible (non-dot) entries of `dir` as (name, path), or `None` when `dir` does not exist.
+/// Any other failure is a load error, so an unreadable directory never looks empty.
+/// Names that are not UTF-8 are returned lossily in `Err` for the caller to report.
+fn entries(dir: &Path) -> Result<Option<Vec<Entry>>, LoadError> {
+    let read = match std::fs::read_dir(dir) {
+        Ok(r) => r,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(io(dir)(e)),
+    };
+    let mut out = vec![];
+    for e in read {
+        let e = e.map_err(io(dir))?;
+        let name = e.file_name();
+        if name.as_encoded_bytes().starts_with(b".") {
+            continue;
+        }
+        let name = name
+            .into_string()
+            .map_err(|n| n.to_string_lossy().into_owned());
+        out.push((name, e.path()));
+    }
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(Some(out))
+}
+
+fn is_dir(path: &Path) -> Result<bool, LoadError> {
+    std::fs::metadata(path)
+        .map(|m| m.is_dir())
+        .map_err(io(path))
+}
+
+/// Item folders under `<parent>/`; everything else there goes to `stray`.
+fn items(
+    root: &Path,
+    parent: &str,
+    json_name: &str,
+    stray: &mut Vec<String>,
+) -> Result<Vec<RawItem>, LoadError> {
+    let mut out = vec![];
+    for (name, path) in entries(&root.join(parent))?.unwrap_or_default() {
+        match name {
+            Ok(folder) if is_dir(&path)? => out.push(RawItem {
+                json: read_text(&path.join(json_name)),
+                vi: read_text(&path.join("vi.md")),
+                en: read_text(&path.join("en.md")),
                 folder,
-            }
-        })
-        .collect())
+            }),
+            Ok(n) | Err(n) => stray.push(format!("{parent}/{n}")),
+        }
+    }
+    Ok(out)
 }
 
 pub fn load_dir(dir: &Path) -> Result<ContentTree, LoadError> {
@@ -122,22 +154,29 @@ pub fn load_dir(dir: &Path) -> Result<ContentTree, LoadError> {
     if !levels_path.is_file() {
         return Err(LoadError::MissingLevels(dir.into()));
     }
+    let mut stray = vec![];
     let mut research = BTreeSet::new();
-    let research_dir = dir.join("research");
-    if research_dir.is_dir() {
-        let entries = std::fs::read_dir(&research_dir)
-            .map_err(|e| LoadError::Io(research_dir.clone(), e.to_string()))?;
-        for e in entries.filter_map(|e| e.ok()) {
-            if let Some(stem) = e.file_name().to_str().and_then(|n| n.strip_suffix(".md")) {
-                research.insert(stem.to_string());
+    for (name, path) in entries(&dir.join("research"))?.unwrap_or_default() {
+        let is_file = std::fs::metadata(&path).map_err(io(&path))?.is_file();
+        match name {
+            Ok(n) if is_file => {
+                if let Some(stem) = n.strip_suffix(".md") {
+                    research.insert(stem.to_string());
+                }
             }
+            Ok(_) => {}
+            Err(n) => stray.push(format!("research/{n}")),
         }
     }
+    let lessons = items(dir, "lessons", "lesson.json", &mut stray)?;
+    let challenges = items(dir, "challenges", "challenge.json", &mut stray)?;
+    stray.sort();
     Ok(ContentTree {
         levels: read_text(&levels_path),
         research,
-        lessons: items(&dir.join("lessons"), "lesson.json")?,
-        challenges: items(&dir.join("challenges"), "challenge.json")?,
+        lessons,
+        challenges,
+        stray,
     })
 }
 
@@ -189,5 +228,71 @@ mod tests {
         assert_eq!(t.lessons[0].en, FileText::Unreadable("not a file"));
         assert_eq!(t.lessons[0].en.text(), Err("not a file"));
         assert!(t.challenges.is_empty());
+    }
+
+    fn content_dir() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("levels.json"), "{}").unwrap();
+        tmp
+    }
+
+    #[test]
+    fn stray_entries_are_listed_not_dropped() {
+        let tmp = content_dir();
+        fs::create_dir_all(tmp.path().join("lessons/l0-x")).unwrap();
+        fs::write(tmp.path().join("lessons/notes.txt"), "").unwrap();
+        fs::create_dir_all(tmp.path().join("challenges")).unwrap();
+        fs::write(tmp.path().join("challenges/c.json"), "").unwrap();
+        let t = load_dir(tmp.path()).unwrap();
+        assert_eq!(t.stray, vec!["challenges/c.json", "lessons/notes.txt"]);
+        assert_eq!(t.lessons.len(), 1);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn non_utf8_names_are_stray() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+        let tmp = content_dir();
+        let bad = tmp
+            .path()
+            .join("lessons")
+            .join(OsStr::from_bytes(b"l0-\xff"));
+        fs::create_dir_all(&bad).unwrap();
+        let t = load_dir(tmp.path()).unwrap();
+        assert!(t.lessons.is_empty());
+        assert_eq!(t.stray, vec!["lessons/l0-\u{fffd}"]);
+    }
+
+    #[test]
+    fn research_notes_are_visible_md_files() {
+        let tmp = content_dir();
+        fs::create_dir_all(tmp.path().join("research/folder.md")).unwrap();
+        fs::write(tmp.path().join("research/.hidden.md"), "").unwrap();
+        fs::write(tmp.path().join("research/note.md"), "").unwrap();
+        fs::write(tmp.path().join("research/readme.txt"), "").unwrap();
+        let t = load_dir(tmp.path()).unwrap();
+        assert_eq!(t.research.iter().collect::<Vec<_>>(), vec!["note"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_lessons_dir_is_a_load_error_not_empty() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = content_dir();
+        let lessons = tmp.path().join("lessons");
+        fs::create_dir_all(lessons.join("l0-x")).unwrap();
+        fs::set_permissions(tmp.path(), fs::Permissions::from_mode(0o300)).unwrap();
+        // Root ignores permissions (the dev container runs as root); nothing to test then.
+        let enforced = fs::read_dir(tmp.path()).is_err();
+        let result = load_dir(tmp.path());
+        fs::set_permissions(tmp.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        if enforced {
+            assert!(result.is_err());
+        }
+        // A lessons path that is a file cannot be listed either.
+        fs::remove_dir_all(&lessons).unwrap();
+        fs::write(&lessons, "").unwrap();
+        assert!(matches!(load_dir(tmp.path()), Err(LoadError::Io(..))));
     }
 }

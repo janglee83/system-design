@@ -49,6 +49,7 @@ pub fn good_tree() -> ContentTree {
             fx!("challenges/c-l0-fx-shop/vi.md"),
             fx!("challenges/c-l0-fx-shop/en.md"),
         )],
+        stray: vec![],
     }
 }
 

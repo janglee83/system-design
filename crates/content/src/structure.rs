@@ -209,6 +209,9 @@ fn id_issues<T>(
 pub(crate) fn parse_tree(tree: &ContentTree) -> Parsed {
     let mut global = vec![];
     let levels = parse_doc::<Levels>(&tree.levels, LEVELS_PATH, &mut global);
+    for path in &tree.stray {
+        global.push(parse_issue(path).detail("not an item folder"));
+    }
     let mut lessons: Vec<Item<Lesson>> = tree
         .lessons
         .iter()
@@ -623,6 +626,17 @@ mod tests {
         assert_eq!(vi[0].path, "lessons/l0-fx-reading/vi.md");
         assert_eq!(vi[0].detail.as_deref(), Some("missing"));
         assert!(has(&r, "levels", codes::PARSE));
+    }
+
+    #[test]
+    fn stray_entries_are_parse_issues_on_levels() {
+        let mut t = good_tree();
+        t.stray = vec!["lessons/notes.txt".into()];
+        let r = validate_tree(&t);
+        let i: Vec<_> = issues_of(&r, "levels");
+        assert_eq!(i.len(), 1, "{i:#?}");
+        assert_eq!(i[0].code, codes::PARSE);
+        assert_eq!(i[0].path, "lessons/notes.txt");
     }
 
     #[test]
