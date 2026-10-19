@@ -7,9 +7,7 @@ use crate::types::*;
 use sim_core::Capabilities;
 
 pub(crate) struct Ctx {
-    #[allow(dead_code)] // read by later checks (plan Tasks 11-12); remove then
     pub planned: PlannedFeatures,
-    #[allow(dead_code)] // read by later checks (plan Tasks 11-12); remove then
     pub caps: Capabilities,
 }
 
@@ -28,14 +26,12 @@ pub(crate) struct Outcome {
     pub runs: Vec<RunSummary>,
     pub readiness: Option<Readiness>,
     /// What the item's engine inputs use (for curriculum.json).
-    #[allow(dead_code)] // read by later checks (plan Tasks 12, 22); remove then
     pub needs: EngineNeeds,
     /// Engine features a blocked item lacks.
-    #[allow(dead_code)] // read by later checks (plan Tasks 12, 22); remove then
     pub missing: Vec<String>,
 }
 
-pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
+pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
     let mut out = Outcome::default();
     let Some(l) = &item.doc else { return out };
     out.issues
@@ -51,7 +47,35 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
                 .any(|i| i.blocking);
         out.issues.extend(control_issues);
         out.issues.extend(choice_issues);
-        if structural_ok {
+
+        let mut scan = crate::readiness::Scan::default();
+        scan.input(&crate::engine_input::normalized(&e.base), ctx);
+        for p in paths.iter().flatten() {
+            match p {
+                crate::controls::ControlPath::Calibration(f) => {
+                    scan.calibration.insert(f.clone());
+                }
+                crate::controls::ControlPath::NodeConfig(_, k)
+                    if sim_core::components::NODE_OVERRIDE_KEYS.contains(&k.as_str()) =>
+                {
+                    scan.node_overrides.insert(k.clone());
+                }
+                _ => {}
+            }
+        }
+        for g in &e.goals {
+            scan.metric(&g.metric, ctx);
+        }
+        for m in e.choices.iter().flat_map(|c| c.expect.keys()) {
+            scan.metric(m, ctx);
+        }
+        out.issues.extend(scan.issues(&path));
+        out.needs = scan.needs();
+        out.missing = scan.missing.iter().cloned().collect();
+        if !scan.missing.is_empty() {
+            out.readiness = Some(Readiness::Blocked);
+        }
+        if structural_ok && !scan.stops_engine() {
             let paths: Vec<_> = paths.into_iter().flatten().collect();
             crate::experiment::check_engine(&path, e, &paths, &mut out);
         }
@@ -59,7 +83,8 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
     if let Some(c) = &l.check {
         out.issues.extend(crate::choices::check_questions(&path, c));
     }
-    out.readiness = Some(match l.kind {
+    // Blocked (set by the readiness scan) wins over the default for the kind.
+    out.readiness.get_or_insert(match l.kind {
         LessonKind::Reading => Readiness::NotNeeded,
         LessonKind::Experiment => Readiness::Ready,
     });

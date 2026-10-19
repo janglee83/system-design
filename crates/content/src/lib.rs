@@ -24,6 +24,7 @@ pub mod ids;
 pub mod known;
 pub mod prose;
 pub(crate) mod prose_check;
+pub(crate) mod readiness;
 pub mod report;
 pub(crate) mod structure;
 
