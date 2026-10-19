@@ -80,21 +80,26 @@ pub fn parse_prose(text: &str) -> Result<Prose, String> {
             return Err(format!("line {}: expected `key: value`", n + 1));
         };
         let value = unquote(value.trim());
-        match key.trim() {
-            "id" => id = Some(value),
-            "title" => title = Some(value),
+        let slot = match key.trim() {
+            "id" => &mut id,
+            "title" => &mut title,
             other => {
                 return Err(format!(
                     "line {}: unknown front matter key `{other}`",
                     n + 1
                 ))
             }
+        };
+        if slot.replace(value).is_some() {
+            return Err(format!("line {}: duplicate key", n + 1));
         }
     }
     if !closed {
         return Err("front matter is not closed with ---".into());
     }
-    let id = id.ok_or("front matter needs `id`")?;
+    let id = id
+        .filter(|i| !i.trim().is_empty())
+        .ok_or("front matter needs a non-empty `id`")?;
     let title = title
         .filter(|t| !t.trim().is_empty())
         .ok_or("front matter needs a non-empty `title`")?;
@@ -207,5 +212,19 @@ mod tests {
         assert_eq!(parse_prose(&doc).unwrap_err(), "unclosed code fence");
         // Four spaces is an indented code line, not a fence.
         assert_eq!(keys("    ```\n- **M1**: x\n"), vec!["M1"]);
+    }
+
+    #[test]
+    fn duplicate_front_matter_keys_and_an_empty_id_are_errors() {
+        assert_eq!(
+            parse_prose("---\nid: a\nid: b\ntitle: t\n---\n").unwrap_err(),
+            "line 3: duplicate key"
+        );
+        assert_eq!(
+            parse_prose("---\nid: a\ntitle: t\ntitle: u\n---\n").unwrap_err(),
+            "line 4: duplicate key"
+        );
+        assert!(parse_prose("---\nid:   \ntitle: t\n---\n").is_err());
+        assert!(parse_prose("---\nid: \"\"\ntitle: t\n---\n").is_err());
     }
 }
