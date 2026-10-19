@@ -208,7 +208,7 @@ mod tests {
         assert_eq!(web.cost_per_month(&n, &cal()), 135.0);
         let cap = web.capacity_per_instance(&n, &cal());
         assert_eq!(cap.rps, 18_000.0);
-        assert_eq!(cap.max_queue, 17_760.0, "4 GB x webQueuePerGb 4,440");
+        assert_eq!(cap.max_queue, 20_000.0, "4 GB x webQueuePerGb 5,000");
         assert_eq!(web.meta().accepts, vec![EdgeKind::Http]);
     }
 

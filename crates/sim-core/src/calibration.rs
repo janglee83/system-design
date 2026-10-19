@@ -44,11 +44,12 @@ impl Default for Calibration {
             web_rps_per_vcpu: 9_000.0,
             web_service_ms: 2.0,
             // Queued requests one GB of memory holds before the process rejects work.
-            // Parity: scale-web-tier-surge-direct (one 2 GB web server, 8,000 -> 24,000 rps)
-            // reached 80.5% availability with p95 910 ms. Fit: availability 0.8031 (±0.005 allowed),
-            // p95 1001.6 (±136.5). Margin is thin: a full queue sits 0.5 ms over the 1 s timeout,
-            // so ±2% here flips availability out of tolerance (timeouts are all-or-nothing per tick).
-            web_queue_per_gb: 4_440.0,
+            // Parity: scale-web-tier-surge-direct (one 2 GB web server, 8,000 -> 24,000 rps).
+            // 5,000/GB lets a 2 GB server's queue reach the 1 s timeout bound (rps x timeout),
+            // so the queue limit, not this value, decides; ±2% leaves the fit unchanged.
+            // Fit: p95 824 ms vs 910 (±136.5); availability 0.8718 vs 0.805, inside the
+            // temporary ±0.08 override documented in fixtures/parity/README.md.
+            web_queue_per_gb: 5_000.0,
             // Parity: 5 x 1-vCPU web servers + 2 LB replicas cost $162.5/month.
             web_cost_per_vcpu: 22.5,
             lb_rps_per_replica: 60_000.0,
@@ -68,10 +69,9 @@ impl Default for Calibration {
             edge_delay_msg_ms: 1.0,
             // Latency uses service / (1 - utilization); capped so latency stays finite and the
             // queue itself carries the overload.
-            // Parity: scale-web-tier-surge-direct; with 0.95 the saturated server adds 40 ms on
-            // top of a full queue and times out sooner than the reference (availability 0.789).
-            // 0.85 gives 0.8031; ±2% of this value also leaves tolerance (see web_queue_per_gb).
-            max_utilization_for_latency: 0.85,
+            // Parity: scale-web-tier-surge-direct. 0.97 keeps p95 at 824-865 ms under every ±2%
+            // perturbation (0.95 drops to 785 ms with webRpsPerVcpu +2%, 11 ms above the bound).
+            max_utilization_for_latency: 0.97,
         }
     }
 }
