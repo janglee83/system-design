@@ -1,35 +1,23 @@
-name: ci
+name: content
 
+# Runs only when curriculum content or its generator changes.
 on:
   pull_request:
+    paths:
+      - "content/**"
+      - ".github/workflows/content.yml"
   push:
     branches: [main]
+    paths:
+      - "content/**"
+      - ".github/workflows/content.yml"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: content-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: full test suite (dev container)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-
-      # The same container developers use locally; every command runs through ./dev.
-      - name: Build dev image
-        run: docker compose build dev
-
-      - name: Install JS dependencies
-        run: ./dev pnpm install --frozen-lockfile
-
-      # Rust tests, fmt, clippy (native + wasm), generated-type freshness,
-      # wasm build + TS tests, perf budget, offline parity.
-      - name: Run full test suite
-        run: ./dev pnpm test
-
-  content:
+  curriculum:
     name: curriculum generator check
     runs-on: ubuntu-latest
     timeout-minutes: 10
