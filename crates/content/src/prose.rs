@@ -46,6 +46,18 @@ fn list_key(line: &str) -> Option<String> {
     (valid && after.starts_with(':')).then(|| key.to_string())
 }
 
+/// A code fence run: up to 3 leading spaces, then 3 or more of one fence char (`` ` `` or `~`).
+/// Returns the char, the run length and the text after the run.
+fn fence_run(line: &str) -> Option<(char, usize, &str)> {
+    let body = line.trim_start_matches(' ');
+    if line.len() - body.len() > 3 {
+        return None;
+    }
+    let c = body.chars().next().filter(|c| *c == '`' || *c == '~')?;
+    let n = body.chars().take_while(|x| *x == c).count();
+    (n >= 3).then(|| (c, n, &body[n..]))
+}
+
 pub fn parse_prose(text: &str) -> Result<Prose, String> {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut lines = text.lines().map(|l| l.trim_end_matches('\r')).enumerate();
@@ -88,14 +100,22 @@ pub fn parse_prose(text: &str) -> Result<Prose, String> {
         .ok_or("front matter needs a non-empty `title`")?;
 
     let mut sections: Vec<Section> = Vec::new();
-    let mut in_fence = false;
+    let mut fence: Option<(char, usize)> = None;
     for (_, line) in lines {
-        if line.trim_start().starts_with("```") {
-            in_fence = !in_fence;
-            continue;
-        }
-        if in_fence {
-            continue;
+        let run = fence_run(line);
+        match (fence, run) {
+            (None, Some((c, n, _))) => {
+                fence = Some((c, n));
+                continue;
+            }
+            (Some((c, n)), Some((rc, rn, rest)))
+                if rc == c && rn >= n && rest.trim().is_empty() =>
+            {
+                fence = None;
+                continue;
+            }
+            (Some(_), _) => continue,
+            (None, None) => {}
         }
         if let Some(h) = line.strip_prefix("## ") {
             sections.push(Section {
@@ -107,6 +127,9 @@ pub fn parse_prose(text: &str) -> Result<Prose, String> {
                 s.keys.push(key);
             }
         }
+    }
+    if fence.is_some() {
+        return Err("unclosed code fence".into());
     }
     Ok(Prose {
         id,
@@ -154,5 +177,35 @@ mod tests {
         assert!(parse_prose("---\nid: a\ntitle: \"\"\n---\n").is_err()); // empty title
         assert!(parse_prose("---\nid: a\ntitle: t\nlevel: L0\n---\n").is_err()); // unknown key
         assert!(parse_prose("---\nid a\ntitle: t\n---\n").is_err()); // no colon
+    }
+
+    const HEAD: &str = "---\nid: a\ntitle: t\n---\n";
+
+    fn keys(body: &str) -> Vec<String> {
+        let p = parse_prose(&format!("{HEAD}## S\n{body}")).unwrap();
+        p.keys_in("S").iter().map(|k| k.to_string()).collect()
+    }
+
+    #[test]
+    fn a_longer_fence_is_closed_only_by_an_equal_or_longer_one() {
+        let body = "````md\n```\n- **M1**: inside\n```\n````\n- **M2**: after\n";
+        assert_eq!(keys(body), vec!["M2"]);
+    }
+
+    #[test]
+    fn tilde_fences_are_skipped_and_backticks_do_not_close_them() {
+        let body = "~~~\n```\n- **M1**: inside\n~~~\n- **M2**: after\n";
+        assert_eq!(keys(body), vec!["M2"]);
+        // Indented up to 3 spaces still opens; a closer with trailing text does not close.
+        let body = "   ```\n- **M1**: inside\n``` not a closer\n```\n- **M3**: after\n";
+        assert_eq!(keys(body), vec!["M3"]);
+    }
+
+    #[test]
+    fn an_unclosed_fence_is_an_error() {
+        let doc = format!("{HEAD}## S\n```\n- **M1**: x\n");
+        assert_eq!(parse_prose(&doc).unwrap_err(), "unclosed code fence");
+        // Four spaces is an indented code line, not a fence.
+        assert_eq!(keys("    ```\n- **M1**: x\n"), vec!["M1"]);
     }
 }
