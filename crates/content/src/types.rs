@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sim_core::{ConfigValue, Goal, GraphLimits};
+use sim_core::{ConfigValue, Goal, GoalOp, GraphLimits};
 use std::collections::BTreeMap;
 
 macro_rules! exported {
@@ -20,6 +20,33 @@ fn empty_array() -> Value {
 }
 fn empty_object() -> Value {
     Value::Object(Default::default())
+}
+
+/// sim-core's `Goal` ignores unknown fields, so a typo such as `valeu` would vanish. Goals in
+/// content are read through this mirror instead (ruling R5); a test keeps it equal to `Goal`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct StrictGoal {
+    id: String,
+    metric: String,
+    op: GoalOp,
+    value: f64,
+}
+
+impl From<StrictGoal> for Goal {
+    fn from(g: StrictGoal) -> Goal {
+        Goal {
+            id: g.id,
+            metric: g.metric,
+            op: g.op,
+            value: g.value,
+        }
+    }
+}
+
+fn strict_goals<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<Goal>, D::Error> {
+    let goals = Vec::<StrictGoal>::deserialize(d)?;
+    Ok(goals.into_iter().map(Goal::from).collect())
 }
 
 exported! {
@@ -79,6 +106,7 @@ pub struct Experiment {
     #[cfg_attr(feature = "ts", ts(as = "sim_core::SimInput"))]
     pub base: Value,
     pub controls: Vec<Control>,
+    #[serde(deserialize_with = "strict_goals")]
     pub goals: Vec<Goal>,
     pub choices: Vec<Choice>,
 }
@@ -181,6 +209,7 @@ pub struct Challenge {
     pub locked_nodes: Vec<String>,
     #[serde(default)]
     pub limits: Limits,
+    #[serde(deserialize_with = "strict_goals")]
     pub goals: Vec<Goal>,
     pub modes: Vec<Mode>,
     #[serde(default)]
@@ -367,6 +396,7 @@ pub struct RoadmapChallenge {
     #[serde(default)] pub prerequisites: Vec<String>,
     #[serde(default)] pub allowed_kinds: Vec<String>,
     pub workload: Value,
+    #[serde(deserialize_with = "strict_goals")]
     pub goals: Vec<Goal>,
     pub modes: Vec<RoadmapMode>,
     pub brief_vi: String,
@@ -438,5 +468,31 @@ mod tests {
             serde_json::from_str(&read("lessons/l0-fx-capacity/lesson.json")).unwrap();
         v["minuets"] = 3.into();
         assert!(serde_json::from_value::<Lesson>(v).is_err());
+    }
+
+    #[test]
+    fn goal_typos_are_rejected_everywhere_goals_appear() {
+        let mut v: serde_json::Value =
+            serde_json::from_str(&read("lessons/l0-fx-capacity/lesson.json")).unwrap();
+        v["experiment"]["goals"][0]["valeu"] = 1.into();
+        let e = serde_json::from_value::<Lesson>(v).unwrap_err().to_string();
+        assert!(e.contains("valeu"), "{e}");
+        let mut v: serde_json::Value =
+            serde_json::from_str(&read("challenges/c-l0-fx-shop/challenge.json")).unwrap();
+        v["goals"][1]["metrc"] = "p95".into();
+        assert!(serde_json::from_value::<Challenge>(v).is_err());
+    }
+
+    #[test]
+    fn the_strict_goal_mirror_has_exactly_the_engine_goal_fields() {
+        let g = Goal {
+            id: "a".into(),
+            metric: "p95".into(),
+            op: sim_core::GoalOp::Le,
+            value: 1.0,
+        };
+        let engine = serde_json::to_value(&g).unwrap();
+        let strict: StrictGoal = serde_json::from_value(engine.clone()).unwrap();
+        assert_eq!(Goal::from(strict), g);
     }
 }
