@@ -290,6 +290,8 @@ fn run_design(
         let code = match (name, g.passed) {
             ("reference", false) => codes::REFERENCE_FAILS,
             ("naive", true) if m.naive.fails_goals.contains(&g.id) => codes::NAIVE_PASSES,
+            // Same rule as a wrong lesson choice: an unlisted failure only warns.
+            ("naive", false) if !m.naive.fails_goals.contains(&g.id) => codes::WRONG_EXTRA_FAIL,
             _ => continue,
         };
         out.issues.push(
@@ -554,5 +556,20 @@ mod tests {
             (i.id.as_deref(), i.field.as_deref()),
             (Some("standard/naive"), Some("fast"))
         );
+    }
+
+    #[test]
+    fn naive_failing_an_unlisted_goal_only_warns() {
+        let it = shop_item(|c| c["modes"][0]["naive"]["failsGoals"] = json!(["fast"]));
+        let w = it
+            .issues
+            .iter()
+            .find(|i| i.code == codes::WRONG_EXTRA_FAIL)
+            .expect("warning");
+        assert_eq!(
+            (w.id.as_deref(), w.field.as_deref(), w.blocking),
+            (Some("standard/naive"), Some("up"), false)
+        );
+        assert!(it.passed);
     }
 }
