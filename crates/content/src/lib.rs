@@ -16,6 +16,7 @@ pub mod tree;
 pub use tree::{load_dir, ContentTree, FileText, LoadError, RawItem};
 
 pub(crate) mod checks;
+pub(crate) mod choices;
 pub mod controls;
 pub mod ids;
 pub mod known;
