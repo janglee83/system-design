@@ -41,6 +41,8 @@ pub fn input(graph: Graph, base_rps: f64) -> SimInput {
             client_timeout_ms: 1000.0,
             surge: None,
             params: Default::default(),
+            traffic_end_ms: None,
+            arrivals: None,
         },
         faults: vec![],
         duration_ms: 10_000,

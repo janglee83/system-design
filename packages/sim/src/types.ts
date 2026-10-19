@@ -6,6 +6,7 @@ export type { Node } from "./generated/Node";
 export type { Edge } from "./generated/Edge";
 export type { EdgeKind } from "./generated/EdgeKind";
 export type { Workload } from "./generated/Workload";
+export type { Arrivals } from "./generated/Arrivals";
 export type { Fault } from "./generated/Fault";
 export type { FaultKind } from "./generated/FaultKind";
 export type { Goal } from "./generated/Goal";

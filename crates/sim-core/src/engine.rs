@@ -223,6 +223,9 @@ impl<'a> Engine<'a> {
 
     fn rate_at(&self, t_ms: f64) -> f64 {
         let w = &self.input.workload;
+        if w.traffic_end_ms.is_some_and(|end| t_ms >= f64::from(end)) {
+            return 0.0;
+        }
         let mut rate = w.base_rps.max(0.0);
         if let Some(s) = &w.surge {
             let start = f64::from(s.at_ms);
@@ -250,7 +253,10 @@ impl<'a> Engine<'a> {
         self.apply_due_faults();
         let timeout_s = self.timeout_ms() / 1000.0;
         let lambda = self.rate_at(self.now_ms) * TICK_MS / 1000.0;
-        let generated = self.traffic_rng.poisson(lambda);
+        let generated = match self.input.workload.arrivals.unwrap_or_default() {
+            Arrivals::Poisson => self.traffic_rng.poisson(lambda),
+            Arrivals::Uniform => if lambda.is_finite() { lambda.max(0.0) } else { 0.0 },
+        };
         let write_ratio = self.write_ratio();
 
         for n in &mut self.nodes {

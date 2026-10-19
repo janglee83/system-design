@@ -82,6 +82,18 @@ exported! {
 pub struct Surge { pub factor: f64, pub at_ms: u32, pub duration_ms: u32 }
 }
 
+exported! {
+/// How many requests a client sends per tick: `poisson` draws from the seeded RNG around the
+/// rate; `uniform` sends exactly rate x tick (no noise), as the parity reference runs do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Arrivals {
+    #[default]
+    Poisson,
+    Uniform,
+}
+}
+
 fn default_profile() -> Profile { Profile::Mixed }
 fn default_write_ratio() -> f64 { 0.2 }
 fn default_clients() -> u32 { 1000 }
@@ -104,6 +116,15 @@ pub struct Workload {
     pub surge: Option<Surge>,
     #[serde(default)]
     pub params: BTreeMap<String, f64>,
+    /// No new requests at or after this time; the rest of the run drains. Absent: traffic
+    /// runs for the whole duration.
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub traffic_end_ms: Option<u32>,
+    /// Absent means `poisson`.
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub arrivals: Option<Arrivals>,
 }
 }
 

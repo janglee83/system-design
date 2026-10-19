@@ -37,6 +37,38 @@ mod tests {
     }
 
     #[test]
+    fn uniform_arrivals_send_exactly_rate_times_time_until_traffic_ends() {
+        let mut i = input(web_tier(2, 5), 8_000.0);
+        i.duration_ms = 11_000;
+        i.workload.traffic_end_ms = Some(10_000);
+        i.workload.arrivals = Some(Arrivals::Uniform);
+        i.workload.surge = Some(Surge { factor: 3.0, at_ms: 4_000, duration_ms: 2_000 });
+        let m = simulate(&i).unwrap().metrics;
+        // 8,000 rps for 10 s plus 16,000 extra for 2 s; nothing after 10 s.
+        assert!((m.requests_total - 112_000.0).abs() < 1e-6, "{}", m.requests_total);
+        assert!(conserved(&m));
+        assert_eq!(simulate(&i).unwrap(), simulate(&i).unwrap(), "deterministic");
+    }
+
+    #[test]
+    fn traffic_end_also_stops_poisson_arrivals() {
+        let mut i = input(web_tier(2, 2), 2_000.0);
+        i.workload.traffic_end_ms = Some(5_000);
+        let m = simulate(&i).unwrap().metrics;
+        assert!((m.requests_total - 10_000.0).abs() < 400.0, "{}", m.requests_total);
+    }
+
+    #[test]
+    fn missing_arrivals_means_poisson() {
+        let mut i = input(web_tier(2, 2), 2_000.0);
+        let poisson = simulate(&i).unwrap();
+        i.workload.arrivals = Some(Arrivals::Poisson);
+        assert_eq!(simulate(&i).unwrap(), poisson);
+        let w: Workload = serde_json::from_str(r#"{"baseRps": 1, "arrivals": "uniform", "trafficEndMs": 10}"#).unwrap();
+        assert_eq!((w.arrivals, w.traffic_end_ms), (Some(Arrivals::Uniform), Some(10)));
+    }
+
+    #[test]
     fn light_load_is_fast_and_available() {
         let r = simulate(&input(web_tier(2, 2), 2_000.0)).unwrap();
         let m = &r.metrics;
