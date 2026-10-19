@@ -3696,8 +3696,9 @@ mod tests {
     #[test]
     fn non_integer_replicas_option_is_unreadable_not_a_panic() {
         let mut t = good_tree();
-        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["controls"][1] = json!({"id": "timeout",
-            "type": "select", "path": "graph.nodes[web].replicas", "options": [1, 1.5], "default": 1}));
+        // A third control, so no choice references it and the structure stays sound.
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["controls"].as_array_mut().unwrap().push(json!({
+            "id": "reps", "type": "select", "path": "graph.nodes[web].replicas", "options": [1, 1.5], "default": 1})));
         let i = issues_of(&validate_tree(&t), "l0-fx-capacity");
         assert!(i.iter().any(|i| i.code == codes::CONTROL && i.detail.as_deref().is_some_and(|d| d.contains("1.5"))));
     }
