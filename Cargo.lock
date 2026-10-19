@@ -812,6 +812,7 @@ version = "0.1.0"
 dependencies = [
  "assert_cmd",
  "clap",
+ "content",
  "rayon",
  "serde",
  "serde_json",

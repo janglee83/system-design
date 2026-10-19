@@ -8,6 +8,7 @@ publish.workspace = true
 
 [dependencies]
 sim-core = { path = "../sim-core" }
+content = { path = "../content" }
 clap = { version = "4", features = ["derive"] }
 rayon = "1"
 serde = { version = "1", features = ["derive"] }

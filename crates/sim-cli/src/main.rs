@@ -19,6 +19,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Validate lessons and challenges, or regenerate the curriculum.
+    Content {
+        #[command(subcommand)]
+        cmd: ContentCmd,
+    },
     /// Run inputs or fixtures and print metrics and events.
     Run { files: Vec<PathBuf> },
     /// Print the full result of one input or fixture as compact JSON.
@@ -74,8 +79,47 @@ fn expand(paths: &[PathBuf]) -> Vec<PathBuf> {
     out
 }
 
+#[derive(Subcommand)]
+enum ContentCmd {
+    /// Validate every lesson and challenge in a content directory on the engine.
+    Validate {
+        dir: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+fn print_report(r: &content::Report, json: bool) {
+    if json {
+        println!("{}", serde_json::to_string_pretty(r).expect("serializable"));
+    } else {
+        print!("{}", r.to_text());
+    }
+}
+
+/// Exit codes: 0 no blocking issue, 1 any blocking issue, 2 unusable directory.
+fn content_cmd(cmd: ContentCmd) -> ExitCode {
+    match cmd {
+        ContentCmd::Validate { dir, json } => match content::validate_dir(&dir) {
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(2)
+            }
+            Ok(r) => {
+                print_report(&r, json);
+                if r.has_blocking() {
+                    ExitCode::from(1)
+                } else {
+                    ExitCode::SUCCESS
+                }
+            }
+        },
+    }
+}
+
 fn main() -> ExitCode {
     match Cli::parse().command {
+        Cmd::Content { cmd } => content_cmd(cmd),
         Cmd::Run { files } => {
             let mut rows = Vec::new();
             for f in &files {
