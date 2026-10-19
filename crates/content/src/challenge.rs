@@ -194,6 +194,20 @@ pub(crate) fn check_engine(
         if !(m.faults.is_array() && m.workload_override.is_object()) {
             continue; // reported structurally
         }
+        let has_override = m
+            .workload_override
+            .as_object()
+            .is_some_and(|o| !o.is_empty());
+        if has_override && !start.get("workload").is_some_and(Value::is_object) {
+            // The override has nothing to merge into; say so instead of dropping it.
+            out.issues.push(
+                ContentIssue::new(codes::ENGINE_INVALID, path)
+                    .id(m.id.clone())
+                    .field("workloadOverride")
+                    .detail("start.workload is not an object"),
+            );
+            continue;
+        }
         for (name, graph) in [("reference", &m.reference.graph), ("naive", &m.naive.graph)] {
             let v = mode_input(&start, m, graph);
             scan.input(&v, ctx);
@@ -585,5 +599,21 @@ mod tests {
         });
         assert!(it.issues.is_empty(), "{:#?}", it.issues);
         assert_eq!(it.readiness, Some(crate::Readiness::Ready));
+    }
+
+    #[test]
+    fn an_override_without_a_start_workload_object_is_engine_invalid() {
+        let it = shop_item(|c| {
+            c["start"]["workload"] = json!(12000);
+            c["modes"][0]["workloadOverride"] = json!({"baseRps": 1});
+        });
+        assert!(
+            it.issues.iter().any(|i| i.code == codes::ENGINE_INVALID
+                && i.id.as_deref() == Some("standard")
+                && i.field.as_deref() == Some("workloadOverride")
+                && i.detail.as_deref() == Some("start.workload is not an object")),
+            "{:#?}",
+            it.issues
+        );
     }
 }
