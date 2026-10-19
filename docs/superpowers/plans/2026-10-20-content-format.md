@@ -3610,3 +3610,780 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
+## Phase 3: Experiment validation on sim-core
+
+### Task 11: Engine inputs, base and option acceptance
+
+**Files:**
+- Create: `crates/content/src/engine_input.rs`, `crates/content/src/experiment.rs`
+- Modify: `crates/content/src/checks.rs`, `crates/content/src/report.rs`, `crates/content/src/lib.rs` (`pub(crate) mod engine_input; pub(crate) mod experiment;`)
+
+**Interfaces:**
+- Produces: `engine_input::{normalized, lesson_input, engine_check, EngineCheck}`. `EngineCheck::issue(code, path) -> Option<ContentIssue>` attaches engine codes, or a serde message when the input does not even parse. `experiment::check_engine(path, &Experiment, &[ControlPath], &mut Outcome)` handles the engine stage of one experiment; this task covers base and options, Tasks 13–14 add the runs. `RunSummary::of(label, &SimResult)`.
+- Codes covered: `content.engine-invalid` (base), and `content.control` for an option the engine rejects.
+
+- [ ] **Step 1: Write the failing tests**
+
+At the bottom of `engine_input.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn seed_defaults_to_one() {
+        assert_eq!(normalized(&json!({"graph": {}}))["seed"], json!(1));
+        assert_eq!(normalized(&json!({"seed": 5}))["seed"], json!(5));
+        assert_eq!(normalized(&json!([1])), json!([1])); // not an object: left alone
+    }
+
+    #[test]
+    fn engine_check_three_ways() {
+        let ok = json!({"graph": {"nodes": [{"id": "u", "kind": "client"}, {"id": "w", "kind": "web-server"}],
+                                  "edges": [{"id": "e", "from": "u", "to": "w", "kind": "http"}]},
+                        "workload": {"baseRps": 10}});
+        assert!(matches!(engine_check(&ok), EngineCheck::Accepted(_)));
+        let mut bad = ok.clone();
+        bad["graph"]["edges"][0]["kind"] = "db".into();
+        match engine_check(&bad) {
+            EngineCheck::Rejected(e) => assert_eq!(e[0].code, "edge.not-accepted"),
+            _ => panic!("expected Rejected"),
+        }
+        let mut unreadable = ok;
+        unreadable["graph"]["nodes"][1]["replicas"] = json!(1.5);
+        assert!(matches!(engine_check(&unreadable), EngineCheck::Unreadable(_)));
+    }
+}
+```
+
+At the bottom of `experiment.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::issue::codes;
+    use crate::test_util::*;
+    use crate::validate_tree;
+    use serde_json::json;
+
+    #[test]
+    fn base_rejected_by_the_engine() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["base"]["graph"]["edges"][0]["kind"] = "db".into());
+        let i = issues_of(&validate_tree(&t), "l0-fx-capacity");
+        let e = i.iter().find(|i| i.code == codes::ENGINE_INVALID).expect("engine-invalid");
+        assert_eq!(e.field.as_deref(), Some("base"));
+        assert_eq!(e.engine[0].code, "edge.not-accepted");
+    }
+
+    #[test]
+    fn options_rejected_by_the_engine() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| {
+            v["experiment"]["controls"][0]["options"] = json!([0, 1, 2, 4]); // cpu 0 is out of range
+            v["experiment"]["controls"][1] = json!({"id": "timeout", "type": "select",
+                "path": "workload.clientTimeoutMs", "options": [-5, 1000, 5000], "default": 1000});
+        });
+        let i = issues_of(&validate_tree(&t), "l0-fx-capacity");
+        let cpu = i.iter().find(|i| i.code == codes::CONTROL && i.id.as_deref() == Some("cpu")).unwrap();
+        assert_eq!(cpu.engine[0].code, "config.invalid");
+        assert!(i.iter().any(|i| i.code == codes::CONTROL && i.id.as_deref() == Some("timeout")
+            && i.engine.iter().any(|e| e.code == "workload.invalid")));
+    }
+
+    #[test]
+    fn non_integer_replicas_option_is_unreadable_not_a_panic() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["controls"][1] = json!({"id": "timeout",
+            "type": "select", "path": "graph.nodes[web].replicas", "options": [1, 1.5], "default": 1}));
+        let i = issues_of(&validate_tree(&t), "l0-fx-capacity");
+        assert!(i.iter().any(|i| i.code == codes::CONTROL && i.detail.as_deref().is_some_and(|d| d.contains("1.5"))));
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content engine_input experiment`
+Expected: compile errors.
+
+- [ ] **Step 3: Implement `crates/content/src/engine_input.rs`**
+
+```rust
+//! Building engine inputs from content and asking the engine whether it accepts them.
+
+use crate::controls::{apply, ControlPath};
+use crate::issue::ContentIssue;
+use crate::types::*;
+use serde_json::Value;
+use sim_core::{check_input, ConfigValue, SimInput, ValidationIssue};
+use std::collections::BTreeMap;
+
+/// Ruling R2: seed 1 unless the item sets one.
+pub(crate) fn normalized(v: &Value) -> Value {
+    let mut v = v.clone();
+    if let Some(o) = v.as_object_mut() {
+        o.entry("seed").or_insert(Value::from(1));
+    }
+    v
+}
+
+/// `base` with every control set: `set[id]` when given, else the control's default.
+pub(crate) fn lesson_input(base: &Value, controls: &[(&ControlPath, &Control)], set: &BTreeMap<String, ConfigValue>) -> Value {
+    let mut v = normalized(base);
+    for (path, c) in controls {
+        apply(&mut v, path, set.get(&c.id).unwrap_or(&c.default));
+    }
+    v
+}
+
+pub(crate) enum EngineCheck {
+    Accepted(SimInput),
+    Rejected(Vec<ValidationIssue>),
+    Unreadable(String),
+}
+
+/// Typed conversion, then the same checks `simulate` runs. Warnings do not reject.
+pub(crate) fn engine_check(v: &Value) -> EngineCheck {
+    let input: SimInput = match serde_json::from_value(v.clone()) {
+        Ok(i) => i,
+        Err(e) => return EngineCheck::Unreadable(e.to_string()),
+    };
+    let blocking: Vec<ValidationIssue> = check_input(&input).into_iter().filter(|i| i.blocking).collect();
+    if blocking.is_empty() {
+        EngineCheck::Accepted(input)
+    } else {
+        EngineCheck::Rejected(blocking)
+    }
+}
+
+impl EngineCheck {
+    /// The issue for a failed check, or `None` when the engine accepts the input.
+    pub fn issue(&self, code: &str, path: &str) -> Option<ContentIssue> {
+        match self {
+            EngineCheck::Accepted(_) => None,
+            EngineCheck::Rejected(e) => Some(ContentIssue::new(code, path).engine(e.clone())),
+            EngineCheck::Unreadable(m) => Some(ContentIssue::new(code, path).detail(m.clone())),
+        }
+    }
+}
+```
+
+- [ ] **Step 4: Add `RunSummary::of`** to `report.rs`:
+
+```rust
+impl RunSummary {
+    pub fn of(label: impl Into<String>, r: &sim_core::SimResult) -> RunSummary {
+        let events: std::collections::BTreeSet<String> = r.events.iter().map(|e| e.code.clone()).collect();
+        RunSummary { label: label.into(), metrics: r.metrics.clone(), events: events.into_iter().collect() }
+    }
+}
+```
+
+- [ ] **Step 5: Implement `crates/content/src/experiment.rs`** (above the tests):
+
+```rust
+//! Engine stage of an experiment: base and options (this task), runs and grading (Task 13),
+//! numeric expectations (Task 14).
+
+use crate::checks::Outcome;
+use crate::controls::ControlPath;
+use crate::engine_input::{engine_check, lesson_input};
+use crate::issue::codes;
+use crate::types::*;
+use std::collections::BTreeMap;
+
+/// Runs only when the structure is sound and readiness allows it; `paths[i]` belongs to
+/// `exp.controls[i]`.
+pub(crate) fn check_engine(path: &str, exp: &Experiment, paths: &[ControlPath], out: &mut Outcome) {
+    let controls: Vec<(&ControlPath, &Control)> = paths.iter().zip(&exp.controls).collect();
+    let defaults = lesson_input(&exp.base, &controls, &BTreeMap::new());
+    if let Some(issue) = engine_check(&defaults).issue(codes::ENGINE_INVALID, path) {
+        out.issues.push(issue.field("base"));
+        return;
+    }
+    for (_, c) in &controls {
+        for o in &c.options {
+            let set = BTreeMap::from([(c.id.clone(), o.clone())]);
+            let shown = serde_json::to_string(o).unwrap_or_default();
+            let check = engine_check(&lesson_input(&exp.base, &controls, &set));
+            if let Some(issue) = check.issue(codes::CONTROL, path) {
+                let detail = match issue.detail.clone() {
+                    Some(serde) => format!("option {shown}: {serde}"),
+                    None => format!("option {shown}"),
+                };
+                out.issues.push(issue.id(c.id.clone()).field("options").detail(detail));
+            }
+        }
+    }
+    run_choices(path, exp, &controls, out);
+}
+
+/// Task 13.
+fn run_choices(_path: &str, _exp: &Experiment, _controls: &[(&ControlPath, &Control)], _out: &mut Outcome) {}
+```
+
+- [ ] **Step 6: Gate the engine stage** in `checks.rs` `check_lesson`. Replace the experiment block with:
+
+```rust
+    if let Some(e) = &l.experiment {
+        let (control_issues, paths) = crate::controls::check_controls(&path, e);
+        let choice_issues = crate::choices::check_choices(&path, e);
+        let structural_ok = e.base.is_object()
+            && !control_issues.iter().chain(&choice_issues).any(|i| i.blocking);
+        out.issues.extend(control_issues);
+        out.issues.extend(choice_issues);
+        if structural_ok {
+            let paths: Vec<_> = paths.into_iter().flatten().collect();
+            crate::experiment::check_engine(&path, e, &paths, &mut out);
+        }
+    }
+```
+
+(`structural_ok` implies every path parsed, because an unparsed path produces a blocking `content.control`.)
+
+- [ ] **Step 7: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass. `good_tree_has_no_issues` still passes: base and every option are accepted.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): build engine inputs and check base and options
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 12: Readiness scan (`blocked`, unknown fields, engine needs)
+
+**Files:**
+- Create: `crates/content/src/readiness.rs`
+- Modify: `crates/content/src/checks.rs`, `crates/content/src/lib.rs` (`pub(crate) mod readiness;`)
+
+**Interfaces:**
+- Produces: `readiness::Scan` with `input(&Value, &Ctx)`, `graph(&Value, &Ctx)`, `fault(i, &Value, &Ctx)`, `metric(&str, &Ctx)`, `issues(path) -> Vec<ContentIssue>`, `stops_engine() -> bool` and `needs() -> EngineNeeds`. Challenges reuse it in Task 16.
+- Codes covered: `content.blocked` (warning), and `content.engine-invalid` for unknown fields (ruling R4).
+
+- [ ] **Step 1: Write the failing tests** at the bottom of `readiness.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::issue::codes;
+    use crate::report::Readiness;
+    use crate::test_util::*;
+    use crate::validate_tree;
+    use serde_json::{json, Value};
+
+    fn lesson(edit: impl FnOnce(&mut Value)) -> crate::ItemReport {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| edit(&mut v["experiment"]));
+        validate_tree(&t).items.into_iter().find(|i| i.id == "l0-fx-capacity").unwrap()
+    }
+
+    fn blocked_with(item: &crate::ItemReport) -> Vec<String> {
+        item.issues.iter().find(|i| i.code == codes::BLOCKED).map(|i| i.missing.clone()).unwrap_or_default()
+    }
+
+    #[test]
+    fn planned_component_blocks_without_running() {
+        let it = lesson(|e| {
+            e["base"]["graph"]["nodes"].as_array_mut().unwrap().push(json!({"id": "cache", "kind": "redis"}));
+            e["base"]["graph"]["edges"].as_array_mut().unwrap().push(json!({"id": "e2", "from": "web", "to": "cache", "kind": "cache"}));
+        });
+        assert_eq!(blocked_with(&it), vec!["component:redis"]);
+        assert_eq!(it.readiness, Some(Readiness::Blocked));
+        assert!(it.runs.is_empty());
+        assert!(it.passed, "blocked is a warning");
+    }
+
+    #[test]
+    fn unsupported_fault_and_unmeasured_metric_block() {
+        let it = lesson(|e| {
+            e["base"]["faults"] = json!([{"kind": "instance-slow", "target": "web", "atMs": 3000}]);
+            e["goals"][1]["metric"] = "duplicateIds".into();
+        });
+        assert_eq!(blocked_with(&it), vec!["fault:instance-slow", "metric:duplicateIds"]);
+    }
+
+    #[test]
+    fn planned_field_blocks_and_unplanned_field_fails() {
+        let it = lesson(|e| e["base"]["workload"]["params"] = json!({"hotKeyShare": 0.5}));
+        assert_eq!(blocked_with(&it), vec!["field:workload.params.hotKeyShare"]);
+        // Review focus 1: a field the engine would silently ignore never passes as ready.
+        for (name, edit) in [
+            ("workload.params.other", Box::new(|e: &mut Value| e["base"]["workload"]["params"] = json!({"other": 1})) as Box<dyn FnOnce(&mut Value)>),
+            ("config.web-server.autoscale", Box::new(|e: &mut Value| e["base"]["graph"]["nodes"][1]["config"]["autoscale"] = true.into())),
+            ("speed", Box::new(|e: &mut Value| e["base"]["speed"] = 1.into())),
+            ("faults[0].severity", Box::new(|e: &mut Value| e["base"]["faults"] = json!([{"kind": "instance-down", "atMs": 1, "severity": 2}]))),
+        ] {
+            let it = lesson(edit);
+            assert!(it.issues.iter().any(|i| i.code == codes::ENGINE_INVALID && i.field.as_deref() == Some(name)), "{name}");
+            assert!(!it.passed && it.runs.is_empty(), "{name}");
+        }
+    }
+
+    #[test]
+    fn unknown_kinds_are_engine_invalid_not_blocked() {
+        let it = lesson(|e| e["base"]["graph"]["nodes"][1]["kind"] = "mainframe".into());
+        assert!(it.issues.iter().any(|i| i.code == codes::ENGINE_INVALID && i.engine.iter().any(|e| e.code == "node.unknown-kind")));
+        let it = lesson(|e| e["base"]["faults"] = json!([{"kind": "meteor", "atMs": 1}]));
+        assert!(it.issues.iter().any(|i| i.code == codes::ENGINE_INVALID && i.detail.is_some()));
+    }
+
+    #[test]
+    fn blocked_items_still_get_structural_checks() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["base"]["faults"] = json!([{"kind": "instance-slow", "atMs": 1}]));
+        edit_prose(&mut t, "l0-fx-capacity", "vi", |s| s.replace("- **B**:", "- **X**:"));
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::BLOCKED));
+        assert!(has(&r, "l0-fx-capacity", codes::PROSE_KEY));
+    }
+
+    #[test]
+    fn needs_are_collected() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["base"]["graph"]["nodes"][1]["config"]["costPerMonth"] = 30.into());
+        let p = crate::structure::parse_tree(&t);
+        let ctx = crate::checks::Ctx::new(p.levels.as_ref());
+        let o = crate::checks::check_lesson(&p.lessons[0], &ctx);
+        assert_eq!(o.needs.components, vec!["client", "web-server"]);
+        assert_eq!(o.needs.node_overrides, vec!["costPerMonth"]);
+        assert_eq!(o.needs.metrics, vec!["p95", "requestsRejected"]);
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content readiness`
+Expected: compile errors, then failures.
+
+- [ ] **Step 3: Implement `crates/content/src/readiness.rs`**
+
+```rust
+//! What an item needs from the engine (ruling R4). A planned name -> `missing` (blocked, a
+//! warning). An input field the engine would silently ignore -> `unknown` (engine-invalid,
+//! blocking). Unknown component or fault kinds are left to the engine, which rejects them.
+
+use crate::checks::Ctx;
+use crate::issue::{codes, ContentIssue};
+use crate::known;
+use crate::types::EngineNeeds;
+use serde_json::{Map, Value};
+use sim_core::FaultKind;
+use std::collections::BTreeSet;
+
+#[derive(Debug, Default)]
+pub(crate) struct Scan {
+    pub missing: BTreeSet<String>,
+    pub unknown: BTreeSet<String>,
+    pub components: BTreeSet<String>,
+    pub faults: BTreeSet<String>,
+    pub calibration: BTreeSet<String>,
+    pub node_overrides: BTreeSet<String>,
+    pub metrics: BTreeSet<String>,
+}
+
+impl Scan {
+    fn field(&mut self, ctx: &Ctx, name: String) {
+        if ctx.planned.fields.contains(&name) {
+            self.missing.insert(format!("field:{name}"));
+        } else {
+            self.unknown.insert(name);
+        }
+    }
+
+    fn extra_keys(&mut self, obj: &Map<String, Value>, known: &BTreeSet<String>, prefix: &str) {
+        for k in obj.keys().filter(|k| !known.contains(*k)) {
+            self.unknown.insert(format!("{prefix}{k}"));
+        }
+    }
+
+    pub fn input(&mut self, v: &Value, ctx: &Ctx) {
+        let Some(o) = v.as_object() else { return };
+        self.extra_keys(o, &known::input_keys(), "");
+        if let Some(g) = o.get("graph") {
+            self.graph(g, ctx);
+        }
+        if let Some(w) = o.get("workload").and_then(Value::as_object) {
+            let keys = known::workload_keys();
+            for k in w.keys().filter(|k| !keys.contains(*k)) {
+                self.field(ctx, format!("workload.{k}"));
+            }
+            for k in w.get("params").and_then(Value::as_object).into_iter().flat_map(|p| p.keys()) {
+                if !ctx.caps.workload_params.contains(k) {
+                    self.field(ctx, format!("workload.params.{k}"));
+                }
+            }
+            if let Some(s) = w.get("surge").and_then(Value::as_object) {
+                self.extra_keys(s, &known::surge_keys(), "workload.surge.");
+            }
+        }
+        if let Some(c) = o.get("calibration").and_then(Value::as_object) {
+            let keys = known::calibration_keys();
+            for k in c.keys() {
+                if keys.contains(k) {
+                    self.calibration.insert(k.clone());
+                } else {
+                    self.field(ctx, format!("calibration.{k}"));
+                }
+            }
+        }
+        for (i, f) in o.get("faults").and_then(Value::as_array).into_iter().flatten().enumerate() {
+            self.fault(i, f, ctx);
+        }
+    }
+
+    pub fn graph(&mut self, g: &Value, ctx: &Ctx) {
+        let Some(go) = g.as_object() else { return };
+        self.extra_keys(go, &known::graph_keys(), "graph.");
+        for n in go.get("nodes").and_then(Value::as_array).into_iter().flatten() {
+            let Some(no) = n.as_object() else { continue };
+            let id = no.get("id").and_then(Value::as_str).unwrap_or("?");
+            self.extra_keys(no, &known::node_keys(), &format!("graph.nodes[{id}]."));
+            let kind = no.get("kind").and_then(Value::as_str).unwrap_or_default();
+            self.components.insert(kind.to_string());
+            match known::config_keys(kind) {
+                None if ctx.planned.components.iter().any(|c| c == kind) => {
+                    self.missing.insert(format!("component:{kind}"));
+                }
+                None => {} // unknown kind: the engine rejects it (node.unknown-kind)
+                Some(keys) => {
+                    for k in no.get("config").and_then(Value::as_object).into_iter().flat_map(|c| c.keys()) {
+                        if !keys.contains(k) {
+                            self.field(ctx, format!("config.{kind}.{k}"));
+                        } else if sim_core::components::NODE_OVERRIDE_KEYS.contains(&k.as_str()) {
+                            self.node_overrides.insert(k.clone());
+                        }
+                    }
+                }
+            }
+        }
+        for e in go.get("edges").and_then(Value::as_array).into_iter().flatten() {
+            if let Some(eo) = e.as_object() {
+                let id = eo.get("id").and_then(Value::as_str).unwrap_or("?");
+                self.extra_keys(eo, &known::edge_keys(), &format!("graph.edges[{id}]."));
+            }
+        }
+    }
+
+    pub fn fault(&mut self, i: usize, f: &Value, ctx: &Ctx) {
+        let Some(fo) = f.as_object() else { return };
+        self.extra_keys(fo, &known::fault_keys(), &format!("faults[{i}]."));
+        let Some(name) = fo.get("kind").and_then(Value::as_str) else { return };
+        self.faults.insert(name.to_string());
+        match serde_json::from_value::<FaultKind>(Value::from(name)) {
+            Ok(k) if ctx.caps.faults.contains(&k) => {}
+            Ok(_) => {
+                self.missing.insert(format!("fault:{name}"));
+            }
+            Err(_) if ctx.planned.faults.iter().any(|p| p == name) => {
+                self.missing.insert(format!("fault:{name}"));
+            }
+            Err(_) => {} // not a fault kind at all: typed parsing rejects it
+        }
+    }
+
+    /// Unknown metric names are reported by `choices` as content.expect.
+    pub fn metric(&mut self, name: &str, ctx: &Ctx) {
+        if !known::metric_keys().contains(name) {
+            return;
+        }
+        self.metrics.insert(name.to_string());
+        if !ctx.caps.metrics.iter().any(|m| m == name) {
+            self.missing.insert(format!("metric:{name}"));
+        }
+    }
+
+    pub fn stops_engine(&self) -> bool {
+        !self.unknown.is_empty() || !self.missing.is_empty()
+    }
+
+    pub fn issues(&self, path: &str) -> Vec<ContentIssue> {
+        let mut out: Vec<ContentIssue> = self.unknown.iter()
+            .map(|f| ContentIssue::new(codes::ENGINE_INVALID, path).field(f.clone()).detail("unknown field"))
+            .collect();
+        if !self.missing.is_empty() {
+            out.push(ContentIssue::new(codes::BLOCKED, path).missing(self.missing.iter().cloned().collect()));
+        }
+        out
+    }
+
+    pub fn needs(&self) -> EngineNeeds {
+        let v = |s: &BTreeSet<String>| s.iter().filter(|x| !x.is_empty()).cloned().collect();
+        EngineNeeds {
+            components: v(&self.components),
+            faults: v(&self.faults),
+            dynamic: vec![],
+            behaviors: vec![],
+            calibration: v(&self.calibration),
+            node_overrides: v(&self.node_overrides),
+            metrics: v(&self.metrics),
+        }
+    }
+}
+```
+
+- [ ] **Step 4: Put the scan in front of the engine stage.** Replace the experiment block in `checks.rs` `check_lesson`, and change `_ctx` to `ctx`:
+
+```rust
+    if let Some(e) = &l.experiment {
+        let (control_issues, paths) = crate::controls::check_controls(&path, e);
+        let choice_issues = crate::choices::check_choices(&path, e);
+        let structural_ok = e.base.is_object()
+            && !control_issues.iter().chain(&choice_issues).any(|i| i.blocking);
+        out.issues.extend(control_issues);
+        out.issues.extend(choice_issues);
+
+        let mut scan = crate::readiness::Scan::default();
+        scan.input(&crate::engine_input::normalized(&e.base), ctx);
+        for p in paths.iter().flatten() {
+            match p {
+                crate::controls::ControlPath::Calibration(f) => { scan.calibration.insert(f.clone()); }
+                crate::controls::ControlPath::NodeConfig(_, k)
+                    if sim_core::components::NODE_OVERRIDE_KEYS.contains(&k.as_str()) => { scan.node_overrides.insert(k.clone()); }
+                _ => {}
+            }
+        }
+        for g in &e.goals {
+            scan.metric(&g.metric, ctx);
+        }
+        for m in e.choices.iter().flat_map(|c| c.expect.keys()) {
+            scan.metric(m, ctx);
+        }
+        out.issues.extend(scan.issues(&path));
+        out.needs = scan.needs();
+        out.missing = scan.missing.iter().cloned().collect();
+        if !scan.missing.is_empty() {
+            out.readiness = Some(Readiness::Blocked);
+        }
+        if structural_ok && !scan.stops_engine() {
+            let paths: Vec<_> = paths.into_iter().flatten().collect();
+            crate::experiment::check_engine(&path, e, &paths, &mut out);
+        }
+    }
+```
+
+- [ ] **Step 5: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass. In `planned_component_blocks_without_running`, the edge from `web` to `cache` raises no engine issue because the engine never runs.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): readiness scan, blocked items and unknown fields
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 13: Run choices and grade them
+
+**Files:**
+- Modify: `crates/content/src/experiment.rs` (replace the `run_choices` stub)
+
+**Interfaces:**
+- Produces: one `RunSummary` per choice, labelled `choice:<id>`.
+- Codes covered: `content.correct-fails`, `content.wrong-passes`, `content.wrong-extra-fail` (warning).
+
+- [ ] **Step 1: Write the failing tests** (add them to the `experiment.rs` tests):
+
+```rust
+    fn item(edit: impl FnOnce(&mut serde_json::Value)) -> crate::ItemReport {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| edit(&mut v["experiment"]));
+        validate_tree(&t).items.into_iter().find(|i| i.id == "l0-fx-capacity").unwrap()
+    }
+
+    #[test]
+    fn good_lesson_runs_every_choice() {
+        let it = item(|_| {});
+        let labels: Vec<&str> = it.runs.iter().map(|r| r.label.as_str()).collect();
+        assert_eq!(labels, vec!["choice:A", "choice:B", "choice:C"]);
+        // Measured while writing the plan: 2 vCPU -> p95 4.68; 1 vCPU -> 953.86 and 21,391 rejected.
+        assert!(it.runs[0].metrics.p95 < 10.0);
+        assert!(it.runs[1].metrics.requests_rejected > 1_000.0);
+        assert_eq!(it.runs[1].events, vec!["node.overloaded"]);
+    }
+
+    #[test]
+    fn correct_choice_missing_a_goal() {
+        let it = item(|e| e["goals"][0]["value"] = 1.into());
+        let i = it.issues.iter().find(|i| i.code == codes::CORRECT_FAILS).unwrap();
+        assert_eq!((i.id.as_deref(), i.field.as_deref()), (Some("A"), Some("fast")));
+        assert!(i.measured.unwrap() > 1.0);
+    }
+
+    #[test]
+    fn wrong_choice_passing_a_listed_goal() {
+        let it = item(|e| e["choices"][2] = json!({"id": "C", "misconception": "M2", "set": {"cpu": 4},
+                                                   "failsGoals": ["fast", "no-drops"]}));
+        let goals: Vec<_> = it.issues.iter().filter(|i| i.code == codes::WRONG_PASSES)
+            .filter_map(|i| i.field.clone()).collect();
+        assert_eq!(goals, vec!["fast", "no-drops"]);
+        assert!(!it.passed);
+    }
+
+    #[test]
+    fn wrong_choice_failing_an_unlisted_goal_only_warns() {
+        let it = item(|e| e["choices"][2]["failsGoals"] = json!(["fast"]));
+        let w = it.issues.iter().find(|i| i.code == codes::WRONG_EXTRA_FAIL).unwrap();
+        assert_eq!((w.id.as_deref(), w.field.as_deref(), w.blocking), (Some("C"), Some("no-drops"), false));
+        assert!(it.passed);
+    }
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content experiment`
+Expected: the 4 new tests fail (no runs yet).
+
+- [ ] **Step 3: Implement**: replace `run_choices` in `experiment.rs`, and add the imports `use crate::report::RunSummary; use sim_core::{grade, simulate};`:
+
+```rust
+fn run_choices(path: &str, exp: &Experiment, controls: &[(&ControlPath, &Control)], out: &mut Outcome) {
+    for c in &exp.choices {
+        let check = engine_check(&lesson_input(&exp.base, controls, &c.set));
+        let input = match check {
+            crate::engine_input::EngineCheck::Accepted(i) => i,
+            failed => {
+                if let Some(issue) = failed.issue(codes::ENGINE_INVALID, path) {
+                    out.issues.push(issue.id(c.id.clone()));
+                }
+                continue;
+            }
+        };
+        let result = match simulate(&input) {
+            Ok(r) => r,
+            Err(e) => {
+                out.issues.push(crate::issue::ContentIssue::new(codes::ENGINE_INVALID, path).id(c.id.clone()).engine(e));
+                continue;
+            }
+        };
+        out.runs.push(RunSummary::of(format!("choice:{}", c.id), &result));
+        for g in grade(&result, &exp.goals).goals {
+            let listed = c.fails_goals.contains(&g.id);
+            let code = match (c.correct, listed, g.passed) {
+                (true, _, false) => codes::CORRECT_FAILS,
+                (false, true, true) => codes::WRONG_PASSES,
+                (false, false, false) => codes::WRONG_EXTRA_FAIL,
+                _ => continue,
+            };
+            out.issues.push(crate::issue::ContentIssue::new(code, path).id(c.id.clone()).field(g.id.clone()).measured(g.measured));
+        }
+        out.issues.extend(expect_issues(path, c, &result)); // Task 14
+    }
+}
+
+/// Task 14.
+fn expect_issues(_path: &str, _c: &Choice, _r: &sim_core::SimResult) -> Vec<crate::issue::ContentIssue> {
+    vec![]
+}
+```
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass, `good_tree_has_no_issues` included: A passes both goals, and B and C fail both.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): run choices and grade correct and wrong choices
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 14: Numeric expectations and expected events
+
+**Files:**
+- Modify: `crates/content/src/experiment.rs` (replace the `expect_issues` stub)
+
+**Interfaces:**
+- Codes covered: `content.expect` (measured value attached). This uses the same comparison as golden fixtures: `sim_core::grade::compare` and `sim_core::fixture::parse_op`.
+
+- [ ] **Step 1: Write the failing tests** (add them to the `experiment.rs` tests):
+
+```rust
+    #[test]
+    fn failed_numeric_expectation_reports_the_measured_value() {
+        let it = item(|e| e["choices"][0]["expect"] = json!({"p95": {"<=": 1, ">=": 0}}));
+        let x: Vec<_> = it.issues.iter().filter(|i| i.code == codes::EXPECT).collect();
+        assert_eq!(x.len(), 1, "only <= 1 fails");
+        assert_eq!((x[0].id.as_deref(), x[0].field.as_deref(), x[0].detail.as_deref()), (Some("A"), Some("p95"), Some("<= 1")));
+        assert!((x[0].measured.unwrap() - 4.68).abs() < 0.1);
+    }
+
+    #[test]
+    fn missing_event() {
+        let it = item(|e| e["choices"][1]["expectEvents"] = json!(["node.overloaded", "db.promoted"]));
+        let x: Vec<_> = it.issues.iter().filter(|i| i.code == codes::EXPECT).collect();
+        assert_eq!(x.len(), 1);
+        assert_eq!(x[0].field.as_deref(), Some("event:db.promoted"));
+    }
+
+    #[test]
+    fn unknown_ops_are_reported_once() {
+        let it = item(|e| e["choices"][0]["expect"] = json!({"p95": {"<": 3}}));
+        assert_eq!(it.issues.iter().filter(|i| i.code == codes::EXPECT).count(), 1);
+    }
+```
+
+The last test passes only because `structural_ok` is false (an unknown op is a blocking structural `content.expect`), so the engine stage never runs for it. Keep it as a guard against double reporting.
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content experiment`
+Expected: the first two fail.
+
+- [ ] **Step 3: Implement**: replace the `expect_issues` stub, and add the imports `use sim_core::fixture::parse_op; use sim_core::grade::compare; use sim_core::metric_value;`:
+
+```rust
+fn expect_issues(path: &str, c: &Choice, r: &sim_core::SimResult) -> Vec<crate::issue::ContentIssue> {
+    let mut out = vec![];
+    for (metric, ops) in &c.expect {
+        let measured = metric_value(&r.metrics, metric);
+        for (op, expected) in ops {
+            let Some(parsed) = parse_op(op) else { continue }; // reported structurally
+            if !measured.is_some_and(|v| compare(v, parsed, *expected)) {
+                out.push(crate::issue::ContentIssue::new(codes::EXPECT, path).id(c.id.clone())
+                    .field(metric.clone()).measured(measured).detail(format!("{op} {expected}")));
+            }
+        }
+    }
+    for code in &c.expect_events {
+        if !r.events.iter().any(|e| &e.code == code) {
+            out.push(crate::issue::ContentIssue::new(codes::EXPECT, path).id(c.id.clone())
+                .field(format!("event:{code}")).detail("event did not occur"));
+        }
+    }
+    out
+}
+```
+
+`format!("{op} {expected}")` prints `<= 1` for `1.0`, because Rust's `Display` for `f64` drops the trailing `.0`.
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): numeric expectations and expected events
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
