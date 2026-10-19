@@ -102,3 +102,4 @@ mod faults;
 mod traces;
 
 pub mod fixture;
+pub mod parity;
