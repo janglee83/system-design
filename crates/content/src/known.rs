@@ -42,8 +42,8 @@ fn sample() -> SimInput {
                 duration_ms: 0,
             }),
             params: BTreeMap::new(),
-            traffic_end_ms: None,
-            arrivals: None,
+            traffic_end_ms: Some(1),
+            arrivals: Some(Arrivals::Uniform),
         },
         faults: vec![Fault {
             kind: FaultKind::InstanceDown,
@@ -84,12 +84,16 @@ pub fn metric_keys() -> BTreeSet<String> {
     keys_of(&Metrics::default())
 }
 
-/// Workload fields a control may address: all but the object-valued ones.
+/// Workload fields a control may address: those whose value in a fully populated sample is a
+/// scalar (number, string or bool), so a new object-valued field is excluded automatically.
 pub fn workload_scalar_keys() -> BTreeSet<String> {
-    let mut k = workload_keys();
-    k.remove("surge");
-    k.remove("params");
-    k
+    let v = serde_json::to_value(sample().workload).unwrap_or_default();
+    v.as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(_, x)| !(x.is_object() || x.is_array() || x.is_null()))
+        .map(|(k, _)| k.clone())
+        .collect()
 }
 
 /// Config keys a node of `kind` accepts (its declared keys plus the per-node overrides), or
@@ -119,5 +123,16 @@ mod tests {
             .unwrap()
             .contains("rpsPerInstance"));
         assert!(config_keys("redis").is_none());
+    }
+
+    #[test]
+    fn workload_scalars_are_derived_from_value_types() {
+        let k = workload_scalar_keys();
+        // Object-valued fields cannot be a control target; string enums and numbers can.
+        assert!(!k.contains("surge") && !k.contains("params"));
+        for scalar in ["arrivals", "profile", "trafficEndMs", "baseRps", "clients"] {
+            assert!(k.contains(scalar), "{scalar}");
+        }
+        assert_eq!(k.len(), workload_keys().len() - 2);
     }
 }

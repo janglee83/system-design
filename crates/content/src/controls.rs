@@ -380,4 +380,15 @@ mod tests {
             .iter()
             .any(|i| i.code == codes::DUPLICATE_ID && i.id.as_deref() == Some("cpu")));
     }
+
+    #[test]
+    fn a_string_enum_workload_field_is_a_valid_control() {
+        let i = control_issues(|c| {
+            c.as_array_mut().unwrap().push(json!({"id": "arr", "type": "toggle",
+                "path": "workload.arrivals", "options": ["poisson", "uniform"], "default": "poisson"}))
+        });
+        assert!(i.is_empty(), "{i:#?}");
+        let i = control_issues(|c| c[0]["path"] = "workload.params".into());
+        assert!(i.iter().any(|i| i.code == codes::CONTROL));
+    }
 }
