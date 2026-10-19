@@ -140,6 +140,10 @@ fn main() -> ExitCode {
         }
         Cmd::Parity { paths, json } => {
             let files = expand(&paths);
+            if files.is_empty() {
+                eprintln!("no parity fixtures found");
+                return ExitCode::from(1);
+            }
             let mut reports: Vec<ParityReport> = files
                 .par_iter()
                 .map(|f| {
@@ -174,8 +178,12 @@ fn main() -> ExitCode {
                     for m in &r.metric_mismatches {
                         println!("FAIL {} metric {} reference={} measured={:?} allowed=±{}", r.id, m.metric, m.reference, m.measured, m.allowed);
                     }
-                    if !r.validation.is_empty() || (r.goal_mismatches.is_empty() && r.metric_mismatches.is_empty()) {
-                        println!("FAIL {} unreadable or invalid", r.id);
+                    for v in &r.validation {
+                        let at = v.field.as_deref().or(v.node_id.as_deref()).or(v.edge_id.as_deref());
+                        println!("FAIL {} issue {}{}", r.id, v.code, at.map(|a| format!(" {a}")).unwrap_or_default());
+                    }
+                    if r.validation.is_empty() && r.goal_mismatches.is_empty() && r.metric_mismatches.is_empty() {
+                        println!("FAIL {} unreadable", r.id);
                     }
                 }
                 println!("{} passed, {} failed", reports.len() - failed, failed);

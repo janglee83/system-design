@@ -73,3 +73,26 @@ fn parity_reports_every_reference_fixture() {
     // Goal pass/fail must already agree; numeric calibration is Step 5.
     assert!(!stdout.contains(" goal "), "goal verdicts must match the reference:\n{stdout}");
 }
+
+#[test]
+fn parity_fails_when_no_fixture_files_are_found() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = Command::cargo_bin("sim-cli").unwrap().arg("parity").arg(dir.path()).assert().code(1);
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("no parity fixtures found"), "{stderr}");
+}
+
+#[test]
+fn parity_prints_validation_issue_codes() {
+    let dir = tempfile::tempdir().unwrap();
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/parity/scale-web-tier-surge-pass.json");
+    let mut fx: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(src).unwrap()).unwrap();
+    fx["input"]["graph"]["edges"][0]["to"] = "nowhere".into();
+    fx["tolerance"] = serde_json::json!({"p95": {"rel": -1.0}});
+    std::fs::write(dir.path().join("bad.json"), fx.to_string()).unwrap();
+    let out = Command::cargo_bin("sim-cli").unwrap().arg("parity").arg(dir.path()).assert().code(1);
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(stdout.contains("FAIL scale-web-tier-surge-pass issue parity.invalid-tolerance p95"), "{stdout}");
+    assert!(stdout.contains("issue edge."), "graph validation codes are printed too:\n{stdout}");
+    assert!(stdout.contains("0 passed, 1 failed"));
+}
