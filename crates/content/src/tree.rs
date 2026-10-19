@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 pub enum FileText {
     Text(String),
     Missing,
-    /// `"not UTF-8"`, `"not a file"` or `"io error"`.
+    /// `"not UTF-8"`, `"not a file"`, `"too large"` or `"io error"`.
     Unreadable(&'static str),
 }
 
@@ -71,18 +71,32 @@ impl fmt::Display for LoadError {
 
 impl std::error::Error for LoadError {}
 
+/// Larger files are `Unreadable("too large")`; content files are a few KB.
+pub const MAX_FILE_BYTES: u64 = 4 * 1024 * 1024;
+
 fn read_text(path: &Path) -> FileText {
+    use std::io::Read;
     match std::fs::metadata(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return FileText::Missing,
         Err(_) => return FileText::Unreadable("io error"),
         Ok(m) if !m.is_file() => return FileText::Unreadable("not a file"),
         Ok(_) => {}
     }
-    match std::fs::read(path) {
-        Ok(bytes) => {
-            String::from_utf8(bytes).map_or(FileText::Unreadable("not UTF-8"), FileText::Text)
-        }
-        Err(_) => FileText::Unreadable("io error"),
+    let mut bytes = vec![];
+    let read =
+        std::fs::File::open(path).and_then(|f| f.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes));
+    if read.is_err() {
+        return FileText::Unreadable("io error");
+    }
+    if bytes.len() as u64 > MAX_FILE_BYTES {
+        return FileText::Unreadable("too large");
+    }
+    match String::from_utf8(bytes) {
+        Ok(text) => match text.strip_prefix('\u{feff}') {
+            Some(rest) => FileText::Text(rest.to_string()),
+            None => FileText::Text(text),
+        },
+        Err(_) => FileText::Unreadable("not UTF-8"),
     }
 }
 
@@ -294,5 +308,17 @@ mod tests {
         fs::remove_dir_all(&lessons).unwrap();
         fs::write(&lessons, "").unwrap();
         assert!(matches!(load_dir(tmp.path()), Err(LoadError::Io(..))));
+    }
+
+    #[test]
+    fn a_bom_is_stripped_and_oversized_files_are_unreadable() {
+        let tmp = content_dir();
+        fs::create_dir_all(tmp.path().join("lessons/l0-x")).unwrap();
+        fs::write(tmp.path().join("lessons/l0-x/lesson.json"), "\u{feff}{}").unwrap();
+        let big = vec![b' '; MAX_FILE_BYTES as usize + 1];
+        fs::write(tmp.path().join("lessons/l0-x/vi.md"), big).unwrap();
+        let t = load_dir(tmp.path()).unwrap();
+        assert_eq!(t.lessons[0].json, FileText::Text("{}".into()));
+        assert_eq!(t.lessons[0].vi, FileText::Unreadable("too large"));
     }
 }
