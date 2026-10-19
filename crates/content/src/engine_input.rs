@@ -30,7 +30,7 @@ pub(crate) fn lesson_input(
 }
 
 pub(crate) enum EngineCheck {
-    Accepted(#[allow(dead_code)] /* read by runs (plan Task 13); remove then */ SimInput),
+    Accepted(SimInput),
     Rejected(Vec<ValidationIssue>),
     Unreadable(String),
 }

@@ -5,7 +5,9 @@ use crate::checks::Outcome;
 use crate::controls::ControlPath;
 use crate::engine_input::{engine_check, lesson_input};
 use crate::issue::codes;
+use crate::report::RunSummary;
 use crate::types::*;
+use sim_core::{grade, simulate};
 use std::collections::BTreeMap;
 
 /// Runs only when the structure is sound and readiness allows it; `paths[i]` belongs to
@@ -35,13 +37,62 @@ pub(crate) fn check_engine(path: &str, exp: &Experiment, paths: &[ControlPath], 
     run_choices(path, exp, &controls, out);
 }
 
-/// Task 13.
 fn run_choices(
-    _path: &str,
-    _exp: &Experiment,
-    _controls: &[(&ControlPath, &Control)],
-    _out: &mut Outcome,
+    path: &str,
+    exp: &Experiment,
+    controls: &[(&ControlPath, &Control)],
+    out: &mut Outcome,
 ) {
+    for c in &exp.choices {
+        let check = engine_check(&lesson_input(&exp.base, controls, &c.set));
+        let input = match check {
+            crate::engine_input::EngineCheck::Accepted(i) => i,
+            failed => {
+                if let Some(issue) = failed.issue(codes::ENGINE_INVALID, path) {
+                    out.issues.push(issue.id(c.id.clone()));
+                }
+                continue;
+            }
+        };
+        let result = match simulate(&input) {
+            Ok(r) => r,
+            Err(e) => {
+                out.issues.push(
+                    crate::issue::ContentIssue::new(codes::ENGINE_INVALID, path)
+                        .id(c.id.clone())
+                        .engine(e),
+                );
+                continue;
+            }
+        };
+        out.runs
+            .push(RunSummary::of(format!("choice:{}", c.id), &result));
+        for g in grade(&result, &exp.goals).goals {
+            let listed = c.fails_goals.contains(&g.id);
+            let code = match (c.correct, listed, g.passed) {
+                (true, _, false) => codes::CORRECT_FAILS,
+                (false, true, true) => codes::WRONG_PASSES,
+                (false, false, false) => codes::WRONG_EXTRA_FAIL,
+                _ => continue,
+            };
+            out.issues.push(
+                crate::issue::ContentIssue::new(code, path)
+                    .id(c.id.clone())
+                    .field(g.id.clone())
+                    .measured(g.measured),
+            );
+        }
+        out.issues.extend(expect_issues(path, c, &result)); // Task 14
+    }
+}
+
+/// Task 14.
+fn expect_issues(
+    _path: &str,
+    _c: &Choice,
+    _r: &sim_core::SimResult,
+) -> Vec<crate::issue::ContentIssue> {
+    vec![]
 }
 
 #[cfg(test)]
@@ -98,5 +149,72 @@ mod tests {
             .iter()
             .any(|i| i.code == codes::CONTROL
                 && i.detail.as_deref().is_some_and(|d| d.contains("1.5"))));
+    }
+
+    fn item(edit: impl FnOnce(&mut serde_json::Value)) -> crate::ItemReport {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| edit(&mut v["experiment"]));
+        validate_tree(&t)
+            .items
+            .into_iter()
+            .find(|i| i.id == "l0-fx-capacity")
+            .unwrap()
+    }
+
+    #[test]
+    fn good_lesson_runs_every_choice() {
+        let it = item(|_| {});
+        let labels: Vec<&str> = it.runs.iter().map(|r| r.label.as_str()).collect();
+        assert_eq!(labels, vec!["choice:A", "choice:B", "choice:C"]);
+        // Measured while writing the plan: 2 vCPU -> p95 4.68; 1 vCPU -> 953.86 and 21,391 rejected.
+        assert!(it.runs[0].metrics.p95 < 10.0);
+        assert!(it.runs[1].metrics.requests_rejected > 1_000.0);
+        assert_eq!(it.runs[1].events, vec!["node.overloaded"]);
+    }
+
+    #[test]
+    fn correct_choice_missing_a_goal() {
+        let it = item(|e| e["goals"][0]["value"] = 1.into());
+        let i = it
+            .issues
+            .iter()
+            .find(|i| i.code == codes::CORRECT_FAILS)
+            .unwrap();
+        assert_eq!(
+            (i.id.as_deref(), i.field.as_deref()),
+            (Some("A"), Some("fast"))
+        );
+        assert!(i.measured.unwrap() > 1.0);
+    }
+
+    #[test]
+    fn wrong_choice_passing_a_listed_goal() {
+        let it = item(|e| {
+            e["choices"][2] = json!({"id": "C", "misconception": "M2", "set": {"cpu": 4},
+                                                   "failsGoals": ["fast", "no-drops"]})
+        });
+        let goals: Vec<_> = it
+            .issues
+            .iter()
+            .filter(|i| i.code == codes::WRONG_PASSES)
+            .filter_map(|i| i.field.clone())
+            .collect();
+        assert_eq!(goals, vec!["fast", "no-drops"]);
+        assert!(!it.passed);
+    }
+
+    #[test]
+    fn wrong_choice_failing_an_unlisted_goal_only_warns() {
+        let it = item(|e| e["choices"][2]["failsGoals"] = json!(["fast"]));
+        let w = it
+            .issues
+            .iter()
+            .find(|i| i.code == codes::WRONG_EXTRA_FAIL)
+            .unwrap();
+        assert_eq!(
+            (w.id.as_deref(), w.field.as_deref(), w.blocking),
+            (Some("C"), Some("no-drops"), false)
+        );
+        assert!(it.passed);
     }
 }
