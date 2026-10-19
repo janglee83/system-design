@@ -113,4 +113,35 @@ mod tests {
         assert_eq!(first_duplicate_key("{"), None);
         assert_eq!(first_duplicate_key("[1, null, true, \"x\", -1.5]"), None);
     }
+
+    #[test]
+    fn escaped_keys_are_compared_after_unescaping() {
+        assert_eq!(
+            first_duplicate_key(r#"{"ab": 1, "\u0061b": 2}"#),
+            Some("ab".into())
+        );
+        assert_eq!(
+            first_duplicate_key(r#"{"a\"b": 1, "a\u0022b": 2}"#),
+            Some("a\"b".into())
+        );
+    }
+
+    #[test]
+    fn deep_nesting_does_not_panic() {
+        // serde_json stops at its recursion limit (128) with an error; nothing is found, no panic.
+        let deep = format!("{}{}", "[".repeat(200), "]".repeat(200));
+        assert_eq!(first_duplicate_key(&deep), None);
+        let deep_obj = format!("{}1{}", r#"{"a":"#.repeat(200), "}".repeat(200));
+        assert_eq!(first_duplicate_key(&deep_obj), None);
+        // Within the limit, a repeat deep down is still found with its full path.
+        let nested = format!(
+            "{}{{\"k\": 1, \"k\": 2}}{}",
+            "[".repeat(100),
+            "]".repeat(100)
+        );
+        assert_eq!(
+            first_duplicate_key(&nested),
+            Some(format!("{}.k", "[0]".repeat(100)))
+        );
+    }
 }
