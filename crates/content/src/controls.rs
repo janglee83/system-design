@@ -196,6 +196,9 @@ pub(crate) fn check_controls<'a>(
     let mut out = vec![];
     let mut resolved: Option<Resolved<'a>> = Some(vec![]);
     let mut seen = BTreeSet::new();
+    // Resolved paths so far, with the control that owns each; two controls on one path would
+    // overwrite each other's value.
+    let mut paths: Vec<(ControlPath, &str)> = vec![];
     for c in &exp.controls {
         let issue = |detail: String| {
             ContentIssue::new(codes::CONTROL, path)
@@ -220,9 +223,13 @@ pub(crate) fn check_controls<'a>(
                     resolved = None;
                 }
                 Ok(()) => {
-                    if let Some(r) = resolved.as_mut() {
-                        r.push((c, p));
+                    if let Some((_, first)) = paths.iter().find(|(q, _)| *q == p) {
+                        out.push(issue(format!("same path as {first}")).field("path"));
+                        resolved = None;
+                    } else if let Some(r) = resolved.as_mut() {
+                        r.push((c, p.clone()));
                     }
+                    paths.push((p, c.id.as_str()));
                 }
             },
         }
@@ -439,5 +446,19 @@ mod tests {
         let (issues, resolved) = check_controls("x", &e);
         assert!(resolved.is_none());
         assert!(issues.iter().any(|i| i.id.as_deref() == Some("cpu")));
+    }
+
+    #[test]
+    fn two_controls_on_the_same_path() {
+        let i = control_issues(|c| {
+            c[1] = json!({"id": "cpu2", "type": "select", "path": "graph.nodes[web].config.cpu",
+                          "options": [1, 2], "default": 1});
+        });
+        assert!(
+            i.iter().any(|i| i.code == codes::CONTROL
+                && i.id.as_deref() == Some("cpu2")
+                && i.detail.as_deref() == Some("same path as cpu")),
+            "{i:#?}"
+        );
     }
 }
