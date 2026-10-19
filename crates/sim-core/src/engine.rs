@@ -226,22 +226,13 @@ impl<'a> Engine<'a> {
         &self.clients
     }
 
+    // Workload values are checked by `validate_workload` before a run; none are substituted.
     pub fn timeout_ms(&self) -> f64 {
-        let t = self.input.workload.client_timeout_ms;
-        if t.is_finite() && t > 0.0 {
-            t
-        } else {
-            1000.0
-        }
+        self.input.workload.client_timeout_ms
     }
 
     fn write_ratio(&self) -> f64 {
-        let w = self.input.workload.write_ratio;
-        if w.is_finite() {
-            w.clamp(0.0, 1.0)
-        } else {
-            0.2
-        }
+        self.input.workload.write_ratio
     }
 
     fn rate_at(&self, t_ms: f64) -> f64 {
@@ -249,11 +240,11 @@ impl<'a> Engine<'a> {
         if w.traffic_end_ms.is_some_and(|end| t_ms >= f64::from(end)) {
             return 0.0;
         }
-        let mut rate = w.base_rps.max(0.0);
+        let mut rate = w.base_rps;
         if let Some(s) = &w.surge {
             let start = f64::from(s.at_ms);
             if t_ms >= start && t_ms < start + f64::from(s.duration_ms) {
-                rate *= s.factor.max(0.0);
+                rate *= s.factor;
             }
         }
         rate * self.rate_multiplier

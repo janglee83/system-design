@@ -3,10 +3,11 @@
 use crate::calibration::invalid_overrides;
 use crate::engine::Engine;
 use crate::types::{SimInput, SimResult, ValidationIssue};
-use crate::validate::{codes, field_issue, has_blocking, validate_graph};
+use crate::validate::{codes, field_issue, has_blocking, validate_graph, validate_workload};
 
 pub fn simulate(input: &SimInput) -> Result<SimResult, Vec<ValidationIssue>> {
     let mut issues = validate_graph(&input.graph, None);
+    issues.extend(validate_workload(input));
     if let Some(o) = &input.calibration {
         for field in invalid_overrides(o) {
             issues.push(field_issue(codes::CALIBRATION_INVALID, None, field));
@@ -25,6 +26,7 @@ mod tests {
     use super::simulate;
     use crate::test_util::{edge, graph, input, node, web_tier};
     use crate::types::*;
+    use crate::validate::MAX_DURATION_MS;
 
     fn surge(mut i: SimInput) -> SimInput {
         i.workload.surge = Some(Surge {
@@ -347,6 +349,85 @@ mod tests {
         assert!(err
             .iter()
             .all(|e| e.code == "calibration.invalid" && e.blocking));
+    }
+
+    fn invalid_fields(i: &SimInput) -> Vec<String> {
+        let err = simulate(i).unwrap_err();
+        assert!(err.iter().all(|e| e.blocking && e.node_id.is_none()));
+        err.iter()
+            .filter(|e| e.code == "workload.invalid")
+            .map(|e| e.field.clone().unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn invalid_workload_is_rejected_with_field_names() {
+        let mut i = surge(input(web_tier(1, 1), f64::NAN));
+        i.workload.write_ratio = 1.5;
+        i.workload.client_timeout_ms = 0.0;
+        i.workload.surge.as_mut().unwrap().factor = -1.0;
+        i.duration_ms = MAX_DURATION_MS + 1;
+        assert_eq!(
+            invalid_fields(&i),
+            vec![
+                "baseRps",
+                "writeRatio",
+                "clientTimeoutMs",
+                "surge.factor",
+                "durationMs"
+            ]
+        );
+
+        let mut i = input(web_tier(1, 1), -1.0);
+        i.workload.write_ratio = f64::INFINITY;
+        i.workload.client_timeout_ms = f64::NAN;
+        i.workload.surge = Some(Surge {
+            factor: f64::INFINITY,
+            at_ms: 0,
+            duration_ms: 1,
+        });
+        assert_eq!(
+            invalid_fields(&i),
+            vec!["baseRps", "writeRatio", "clientTimeoutMs", "surge.factor"]
+        );
+    }
+
+    #[test]
+    fn workload_bounds_are_inclusive_and_traffic_end_may_pass_duration() {
+        let mut i = input(web_tier(1, 1), 0.0);
+        i.workload.write_ratio = 1.0;
+        i.duration_ms = MAX_DURATION_MS;
+        i.workload.surge = Some(Surge {
+            factor: 0.0,
+            at_ms: 0,
+            duration_ms: 1,
+        });
+        assert!(simulate(&i).is_ok());
+        // trafficEndMs past the end of the run simply never takes effect.
+        let mut a = input(web_tier(1, 1), 1_000.0);
+        a.duration_ms = 3_000;
+        let mut b = a.clone();
+        b.workload.traffic_end_ms = Some(5_000);
+        assert_eq!(simulate(&a).unwrap(), simulate(&b).unwrap());
+    }
+
+    #[test]
+    fn huge_read_replicas_are_rejected_not_wrapped() {
+        let mut g = web_tier(1, 1);
+        g.nodes.push(node(
+            "pg",
+            "postgres",
+            1,
+            &[("readReplicas", 4_294_967_295.0)],
+        ));
+        g.edges.push(edge("web", "pg", EdgeKind::Db));
+        let err = simulate(&input(g, 100.0)).unwrap_err();
+        assert_eq!(err.len(), 1);
+        assert_eq!(err[0].code, "config.invalid");
+        assert_eq!(
+            (err[0].node_id.as_deref(), err[0].field.as_deref()),
+            (Some("pg"), Some("readReplicas"))
+        );
     }
 
     // Review focus 3: very large numbers.

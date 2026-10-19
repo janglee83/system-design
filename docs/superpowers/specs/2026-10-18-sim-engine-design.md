@@ -132,7 +132,7 @@ createSimWorker(): SimWorker                            // same API, off the mai
 | `graph` | `Graph` | Nodes and edges; identical to what the canvas saves |
 | `workload` | `Workload` | Traffic shape and scenario parameters |
 | `faults` | `Fault[]` | Injected failures, each with a start time |
-| `durationMs` | `u32` | Default `10_000` |
+| `durationMs` | `u32` | Default `10_000`, at most `600_000` (10 minutes of simulated time) |
 | `seed` | `u32` | Drives the PRNG; same input → identical output |
 | `calibration` | `CalibrationOverrides?` | Optional overrides of world parameters (section 6.7) |
 
@@ -155,6 +155,11 @@ createSimWorker(): SimWorker                            // same API, off the mai
   drain queues after traffic stops. Missing means traffic continues until `durationMs`.
 - `params?: Record<string, number>` for scenario values (group size, friends per user,
   connection-drop rate, drop length, …)
+- Validation (blocking `workload.invalid`, `field` names the key; nothing is silently
+  replaced): `baseRps` finite and ≥ 0; `writeRatio` finite and in `[0, 1]`;
+  `clientTimeoutMs` finite and > 0; `surge.factor` finite and ≥ 0; `durationMs` ≤ `600_000`
+  (reported with `field: "durationMs"`). A `trafficEndMs` at or past `durationMs` is valid
+  and has no effect: traffic runs for the whole duration.
 
 `Fault`: `{ kind: FaultKind, target?: nodeId, atMs }`. The fault kinds for v1:
 

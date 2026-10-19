@@ -1,7 +1,7 @@
 //! Structural checks run before every simulation. Issues carry codes, never prose.
 
 use crate::components::{self, NODE_OVERRIDE_KEYS};
-use crate::types::{Graph, GraphLimits, Node, ValidationIssue};
+use crate::types::{Graph, GraphLimits, Node, SimInput, ValidationIssue};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub mod codes {
@@ -15,6 +15,7 @@ pub mod codes {
     pub const UNREACHABLE: &str = "node.unreachable";
     pub const CONFIG_INVALID: &str = "config.invalid";
     pub const CALIBRATION_INVALID: &str = "calibration.invalid";
+    pub const WORKLOAD_INVALID: &str = "workload.invalid";
     pub const TOO_MANY_NODES: &str = "limits.too-many-nodes";
     pub const TOO_MANY_INSTANCES: &str = "limits.too-many-instances";
     pub const KIND_NOT_ALLOWED: &str = "limits.kind-not-allowed";
@@ -23,6 +24,9 @@ pub mod codes {
 /// Upper bound on `node.replicas` (inclusive; the lower bound is 1). Large enough for any
 /// lesson design, small enough that instance counts and costs stay far from overflow.
 pub const MAX_REPLICAS: u32 = 1000;
+
+/// Longest run `simulate` accepts (10 minutes of simulated time, 60,000 ticks).
+pub const MAX_DURATION_MS: u32 = 600_000;
 
 fn issue(code: &str, node: Option<&str>, edge: Option<&str>, blocking: bool) -> ValidationIssue {
     ValidationIssue {
@@ -161,6 +165,37 @@ pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<Valida
         check_limits(graph, l, &mut issues);
     }
     issues
+}
+
+/// Workload and run length must be usable as given; nothing is silently substituted.
+/// `field` names the offending key (`surge.factor` for the surge). A `trafficEndMs` at or past
+/// `durationMs` is allowed: traffic then simply runs for the whole duration.
+pub fn validate_workload(input: &SimInput) -> Vec<ValidationIssue> {
+    let w = &input.workload;
+    let finite_non_negative = |v: f64| v.is_finite() && v >= 0.0;
+    let checks = [
+        ("baseRps", finite_non_negative(w.base_rps)),
+        (
+            "writeRatio",
+            w.write_ratio.is_finite() && (0.0..=1.0).contains(&w.write_ratio),
+        ),
+        (
+            "clientTimeoutMs",
+            w.client_timeout_ms.is_finite() && w.client_timeout_ms > 0.0,
+        ),
+        (
+            "surge.factor",
+            w.surge
+                .as_ref()
+                .is_none_or(|s| finite_non_negative(s.factor)),
+        ),
+        ("durationMs", input.duration_ms <= MAX_DURATION_MS),
+    ];
+    checks
+        .into_iter()
+        .filter(|(_, ok)| !ok)
+        .map(|(field, _)| field_issue(codes::WORKLOAD_INVALID, None, field))
+        .collect()
 }
 
 /// Iterative DFS with colors; returns a node on a cycle, if any.

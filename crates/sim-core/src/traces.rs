@@ -15,7 +15,7 @@ impl Engine<'_> {
             return;
         }
         let start = self.now_ms;
-        let write_ratio = self.input.workload.write_ratio.clamp(0.0, 1.0);
+        let write_ratio = self.input.workload.write_ratio;
         let class = if self.trace_rng.next_f64() < write_ratio {
             RequestClass::Write
         } else {
