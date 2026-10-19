@@ -8,8 +8,8 @@
 
 1. **Partial failure is the defining problem**: some parts work while others fail, and a caller often
    cannot tell whether a request was lost, delayed, or processed with the reply lost. [1][7][8]
-2. **The eight fallacies of distributed computing** (attributed to Peter Deutsch and colleagues at
-   Sun): the network is reliable; latency is zero; bandwidth is infinite; the network is secure;
+2. **The eight fallacies of distributed computing** (seven drafted by Peter Deutsch at Sun in 1994,
+   the eighth added by James Gosling in 1997): the network is reliable; latency is zero; bandwidth is infinite; the network is secure;
    topology doesn't change; there is one administrator; transport cost is zero; the network is
    homogeneous. [2]
 3. **Real networks partition.** Bailis and Kingsbury collected evidence of partitions in data centres
@@ -40,7 +40,7 @@ Primary:
 1. *Challenges with distributed systems* — Jacob Gabrielson, Amazon Builders' Library —
    https://aws.amazon.com/builders-library/challenges-with-distributed-systems/ — 2019.
 2. *Fallacies of Distributed Computing Explained* — Arnon Rotem-Gal-Oz —
-   https://pages.cs.wisc.edu/~zuyu/files/fallacies.pdf — 2006.
+   https://lasr.cs.ucla.edu/classes/188_winter15/readings/fallacies.pdf — 2006.
 3. *The Network is Reliable* — Peter Bailis, Kyle Kingsbury, ACM Queue 12(7) —
    https://queue.acm.org/detail.cfm?id=2655736 — 2014.
 4. *Impossibility of Distributed Consensus with One Faulty Process* — M. Fischer, N. Lynch,
