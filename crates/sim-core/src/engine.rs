@@ -43,9 +43,9 @@ pub(crate) struct NodeRt {
     pub okd_r: f64,
     pub okd_w: f64,
     pub path_lat_ms: f64,
-    /// Queue wait accumulated along the path (weighted like `path_lat_ms`). Requests completing
-    /// in a tick sat at different queue positions, so their latency spreads over this window.
-    pub path_wait_ms: f64,
+    /// Clients only: path latency of the previous tick. Latency moves between the previous and
+    /// the current value during a tick, so requests booked this tick spread over that window.
+    pub prev_path_lat_ms: Option<f64>,
     overload_reported: bool,
 }
 
@@ -84,23 +84,33 @@ impl NodeRt {
             okd_r: 0.0,
             okd_w: 0.0,
             path_lat_ms: 0.0,
-            path_wait_ms: 0.0,
+            prev_path_lat_ms: None,
             overload_reported: false,
         }
     }
 }
 
-/// Sub-points used to spread completed requests over their queue-wait window in the histogram.
-const OK_SPREAD_POINTS: u32 = 4;
+/// Sub-points used to spread a tick's requests over their latency window in the histogram.
+const SPREAD_POINTS: u32 = 4;
 
-/// Share of the requests completing in a tick that exceed the client timeout `t`.
-/// Their latencies are taken as uniform on [L - W, L] (L = path latency, W = path queue wait,
-/// i.e. FIFO position), so the share is (L - T) / W clamped to [0, 1]. Without a queue every
-/// request has latency L: all or nothing.
-pub(crate) fn timed_out_fraction(l: f64, w: f64, t: f64) -> f64 {
-    if w > 0.0 {
-        ((l - t) / w).clamp(0.0, 1.0)
-    } else if l > t {
+fn spread(hist: &mut Histogram, lo: f64, hi: f64, weight: f64) {
+    if weight <= 0.0 {
+        return;
+    }
+    let hi = hi.max(lo);
+    for k in 0..SPREAD_POINTS {
+        let at = lo + (hi - lo) * (f64::from(k) + 0.5) / f64::from(SPREAD_POINTS);
+        hist.record(at, weight / f64::from(SPREAD_POINTS));
+    }
+}
+
+/// Share of the requests booked in a tick that exceed the client timeout `t`. Their latencies
+/// are taken as uniform on [lo, hi] (the path latency at the previous and the current tick), so
+/// the share is (hi - T) / (hi - lo) clamped to [0, 1]. A steady latency is all or nothing.
+pub(crate) fn timed_out_fraction(lo: f64, hi: f64, t: f64) -> f64 {
+    if hi > lo {
+        ((hi - t) / (hi - lo)).clamp(0.0, 1.0)
+    } else if hi > t {
         1.0
     } else {
         0.0
@@ -251,7 +261,6 @@ impl<'a> Engine<'a> {
 
     fn tick(&mut self) {
         self.apply_due_faults();
-        let timeout_s = self.timeout_ms() / 1000.0;
         let lambda = self.rate_at(self.now_ms) * TICK_MS / 1000.0;
         let generated = match self.input.workload.arrivals.unwrap_or_default() {
             Arrivals::Poisson => self.traffic_rng.poisson(lambda),
@@ -271,7 +280,7 @@ impl<'a> Engine<'a> {
 
         for k in 0..self.order.len() {
             let i = self.order[k];
-            self.serve(i, timeout_s);
+            self.serve(i);
             self.forward(i);
         }
         self.track_peaks();
@@ -298,9 +307,8 @@ impl<'a> Engine<'a> {
         }
     }
 
-    fn serve(&mut self, i: usize, timeout_s: f64) {
+    fn serve(&mut self, i: usize) {
         let now = self.now_ms;
-        let max_util = self.cal.max_utilization_for_latency;
         let n = &mut self.nodes[i];
         n.served_read = 0.0;
         n.served_write = 0.0;
@@ -335,7 +343,8 @@ impl<'a> Engine<'a> {
         let instances = f64::from(n.instances_up);
         let cap_rps = n.cap.rps * instances;
         let per_tick = cap_rps * TICK_MS / 1000.0;
-        let queue_limit = (n.cap.max_queue * instances).min(cap_rps * timeout_s);
+        // Requests may wait longer than the client timeout; the client books them as timed out.
+        let queue_limit = n.cap.max_queue * instances;
 
         let total = n.queue + arriving;
         let served = total.min(per_tick);
@@ -345,9 +354,9 @@ impl<'a> Engine<'a> {
         n.rejected = rejected;
         n.busy = if per_tick > 0.0 { served / per_tick } else { 0.0 };
 
-        let rho = if per_tick > 0.0 { (arriving / per_tick).min(max_util) } else { max_util };
+        // Fixed service time plus FIFO queue wait (parity: every fixture in fixtures/parity).
         n.wait_ms = if cap_rps > 0.0 { n.queue / cap_rps * 1000.0 } else { 0.0 };
-        n.lat_ms = n.cap.service_ms / (1.0 - rho) + n.wait_ms;
+        n.lat_ms = n.cap.service_ms + n.wait_ms;
 
         // Overflow rejects newly arriving requests (queued ones were already admitted), so the
         // fraction is taken over arrivals, not queue + arrivals. Capped at 1 in case the queue
@@ -403,16 +412,16 @@ impl<'a> Engine<'a> {
     fn resolve(&mut self, i: usize) {
         let targets = self.targets(i);
         let role = self.nodes[i].role;
-        let (cr, cw, cdr, cdw, clat, cwait) = if targets.is_empty() {
+        let (cr, cw, cdr, cdw, clat) = if targets.is_empty() {
             match role {
                 // Nowhere to send the request: it cannot complete.
-                Role::Client | Role::Balancer => (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                Role::Client | Role::Balancer => (0.0, 0.0, 0.0, 0.0, 0.0),
                 // Services without downstream and databases answer by themselves.
-                Role::Service | Role::Database => (1.0, 1.0, 1.0, 1.0, 0.0, 0.0),
+                Role::Service | Role::Database => (1.0, 1.0, 1.0, 1.0, 0.0),
             }
         } else {
             let w = 1.0 / targets.len() as f64;
-            let mut acc = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            let mut acc = (0.0, 0.0, 0.0, 0.0, 0.0);
             for (c, kind) in targets {
                 let ch = &self.nodes[c];
                 acc.0 += w * ch.ok_r;
@@ -420,7 +429,6 @@ impl<'a> Engine<'a> {
                 acc.2 += w * ch.okd_r;
                 acc.3 += w * ch.okd_w;
                 acc.4 += w * (self.cal.edge_delay_ms(kind) + ch.path_lat_ms);
-                acc.5 += w * ch.path_wait_ms;
             }
             acc
         };
@@ -430,12 +438,14 @@ impl<'a> Engine<'a> {
         n.okd_r = (1.0 - n.fail_down_r) * cdr;
         n.okd_w = (1.0 - n.fail_down_w) * cdw;
         n.path_lat_ms = n.lat_ms + clat;
-        n.path_wait_ms = n.wait_ms + cwait;
     }
 
     fn book_clients(&mut self) {
         let timeout = self.timeout_ms();
-        for &c in &self.clients {
+        for k in 0..self.clients.len() {
+            let c = self.clients[k];
+            let lat = self.nodes[c].path_lat_ms;
+            let prev = self.nodes[c].prev_path_lat_ms.replace(lat).unwrap_or(lat);
             let n = &self.nodes[c];
             let (gr, gw) = (n.in_read, n.in_write);
             let generated = gr + gw;
@@ -449,19 +459,15 @@ impl<'a> Engine<'a> {
             self.totals.total += generated;
             self.totals.unreachable += unreachable;
             self.totals.rejected += rejected;
-            let (lat, wait) = (n.path_lat_ms, n.path_wait_ms);
-            let timed_out = good * timed_out_fraction(lat, wait, timeout);
+            let (lo, hi) = (prev.min(lat), prev.max(lat));
+            let timed_out = good * timed_out_fraction(lo, hi, timeout);
             let ok = good - timed_out;
             self.totals.timed_out += timed_out;
             self.totals.ok += ok;
-            self.hist.record(timeout, timed_out);
-            // Spread the completed requests over their FIFO window [L - W, min(L, T)].
-            let lo = (lat - wait).max(0.0).min(timeout);
-            let hi = lat.min(timeout);
-            for k in 0..OK_SPREAD_POINTS {
-                let at = lo + (hi - lo) * (k as f64 + 0.5) / OK_SPREAD_POINTS as f64;
-                self.hist.record(at, ok / OK_SPREAD_POINTS as f64);
-            }
+            // Record actual latencies: answered requests over [lo, min(hi, T)], timed-out ones
+            // over [max(lo, T), hi] (they still waited that long; p95 can exceed the timeout).
+            spread(&mut self.hist, lo, hi.min(timeout), ok);
+            spread(&mut self.hist, lo.max(timeout), hi, timed_out);
         }
     }
 
@@ -543,28 +549,25 @@ mod timeout_tests {
     use super::timed_out_fraction;
 
     #[test]
-    fn without_queue_wait_it_is_all_or_nothing() {
-        assert_eq!(timed_out_fraction(900.0, 0.0, 1000.0), 0.0);
-        assert_eq!(timed_out_fraction(1000.0, 0.0, 1000.0), 0.0, "exactly at the timeout is ok");
-        assert_eq!(timed_out_fraction(1000.5, 0.0, 1000.0), 1.0);
+    fn a_steady_latency_is_all_or_nothing() {
+        assert_eq!(timed_out_fraction(900.0, 900.0, 1000.0), 0.0);
+        assert_eq!(timed_out_fraction(1000.0, 1000.0, 1000.0), 0.0, "exactly at the timeout is ok");
+        assert_eq!(timed_out_fraction(1000.5, 1000.5, 1000.0), 1.0);
     }
 
     #[test]
-    fn whole_window_below_the_timeout_is_ok() {
-        assert_eq!(timed_out_fraction(800.0, 500.0, 1000.0), 0.0);
+    fn a_window_below_the_timeout_is_ok() {
+        assert_eq!(timed_out_fraction(300.0, 800.0, 1000.0), 0.0);
     }
 
     #[test]
-    fn whole_window_above_the_timeout_times_out() {
-        // L - W = 1100 > T.
-        assert_eq!(timed_out_fraction(1600.0, 500.0, 1000.0), 1.0);
+    fn a_window_above_the_timeout_times_out() {
+        assert_eq!(timed_out_fraction(1100.0, 1600.0, 1000.0), 1.0);
     }
 
     #[test]
     fn partial_overlap_times_out_the_share_above_the_timeout() {
         // Window [600, 1100]; 100 of its 500 ms lie above T = 1000.
-        assert!((timed_out_fraction(1100.0, 500.0, 1000.0) - 0.2).abs() < 1e-12);
-        // A full queue just over the timeout no longer flips the whole tick.
-        assert!(timed_out_fraction(1000.5, 986.7, 1000.0) < 0.001);
+        assert!((timed_out_fraction(600.0, 1100.0, 1000.0) - 0.2).abs() < 1e-12);
     }
 }

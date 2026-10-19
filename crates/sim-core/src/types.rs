@@ -171,6 +171,7 @@ pub struct CalibrationOverrides {
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_service_ms: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_queue_per_gb: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_cost_per_vcpu: Option<f64>,
+    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub web_cost_per_extra_vcpu: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_rps_per_replica: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_service_ms: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub lb_queue_seconds: Option<f64>,
@@ -184,7 +185,6 @@ pub struct CalibrationOverrides {
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_db_ms: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_cache_ms: Option<f64>,
     #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub edge_delay_msg_ms: Option<f64>,
-    #[serde(default)] #[cfg_attr(feature = "ts", ts(optional))] pub max_utilization_for_latency: Option<f64>,
 }
 }
 

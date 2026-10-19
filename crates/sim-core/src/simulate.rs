@@ -204,12 +204,12 @@ mod tests {
         let mut i = input(web_tier(1, 1), 100.0);
         i.calibration = Some(CalibrationOverrides {
             web_rps_per_vcpu: Some(-5.0),
-            max_utilization_for_latency: Some(2.0),
+            web_cost_per_extra_vcpu: Some(-2.0),
             ..Default::default()
         });
         let err = simulate(&i).unwrap_err();
         let fields: Vec<&str> = err.iter().map(|e| e.field.as_deref().unwrap()).collect();
-        assert_eq!(fields, vec!["webRpsPerVcpu", "maxUtilizationForLatency"]);
+        assert_eq!(fields, vec!["webRpsPerVcpu", "webCostPerExtraVcpu"]);
         assert!(err.iter().all(|e| e.code == "calibration.invalid" && e.blocking));
     }
 

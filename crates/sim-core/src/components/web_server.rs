@@ -27,13 +27,13 @@ impl ComponentModel for WebServer {
     fn capacity_per_instance(&self, node: &Node, cal: &Calibration) -> Capacity {
         let cpu = num(node, "cpu", DEFAULT_CPU);
         let mem = num(node, "memoryGb", DEFAULT_MEMORY_GB);
-        Capacity {
-            rps: cal.web_rps_per_vcpu * cpu,
-            service_ms: cal.web_service_ms,
-            max_queue: cal.web_queue_per_gb * mem,
-        }
+        let rps = cal.web_rps_per_vcpu * cpu;
+        // Memory bounds everything in the server; requests being served occupy workers.
+        let workers = rps * cal.web_service_ms / 1000.0;
+        Capacity { rps, service_ms: cal.web_service_ms, max_queue: (cal.web_queue_per_gb * mem - workers).max(0.0) }
     }
     fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {
-        cal.web_cost_per_vcpu * num(node, "cpu", DEFAULT_CPU) * f64::from(self.instances(node))
+        let extra = (num(node, "cpu", DEFAULT_CPU) - 1.0).max(0.0);
+        (cal.web_cost_per_vcpu + cal.web_cost_per_extra_vcpu * extra) * f64::from(self.instances(node))
     }
 }

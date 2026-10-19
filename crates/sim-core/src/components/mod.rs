@@ -205,10 +205,10 @@ mod tests {
         let web = get("web-server").unwrap();
         let n = node("web-server", 3, &[("cpu", 2.0), ("memoryGb", 4.0)]);
         assert_eq!(web.instances(&n), 3);
-        assert_eq!(web.cost_per_month(&n, &cal()), 135.0);
+        assert_eq!(web.cost_per_month(&n, &cal()), 150.0, "3 x (22.5 + 27.5 for the second vCPU)");
         let cap = web.capacity_per_instance(&n, &cal());
         assert_eq!(cap.rps, 18_000.0);
-        assert_eq!(cap.max_queue, 20_000.0, "4 GB x webQueuePerGb 5,000");
+        assert_eq!(cap.max_queue, 16_312.0, "4 GB x 4,096 minus 72 workers (18,000 rps x 4 ms)");
         assert_eq!(web.meta().accepts, vec![EdgeKind::Http]);
     }
 

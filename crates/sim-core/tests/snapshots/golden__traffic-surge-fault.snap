@@ -3,9 +3,9 @@ source: crates/sim-core/tests/golden.rs
 expression: result.metrics
 ---
 {
-  "p50": 3.489119856672034,
-  "p95": 3.489119856672034,
-  "p99": 3.489119856672034,
+  "p50": 7.253629591379247,
+  "p95": 7.253629591379247,
+  "p99": 7.253629591379247,
   "availability": 1.0,
   "throughputRps": 2443.7,
   "costPerMonth": 162.5,

@@ -21,6 +21,7 @@ pub struct Calibration {
     pub web_service_ms: f64,
     pub web_queue_per_gb: f64,
     pub web_cost_per_vcpu: f64,
+    pub web_cost_per_extra_vcpu: f64,
     pub lb_rps_per_replica: f64,
     pub lb_service_ms: f64,
     pub lb_queue_seconds: f64,
@@ -34,26 +35,34 @@ pub struct Calibration {
     pub edge_delay_db_ms: f64,
     pub edge_delay_cache_ms: f64,
     pub edge_delay_msg_ms: f64,
-    pub max_utilization_for_latency: f64,
 }
 
 impl Default for Calibration {
     fn default() -> Self {
         Calibration {
-            // Parity: run 807734e1 showed 53.33% CPU at 4,800 rps per 1-vCPU instance.
+            // Parity (all fixtures in fixtures/parity): 9,000 rps per vCPU = 36 workers x 4 ms.
+            // Run 807734e1 (scale-web-tier-surge-pass) showed 53.33% CPU at 4,800 rps per
+            // instance; scale-web-tier-surge-direct-2cpu-2gb rejects exactly the surge excess
+            // over 18,000 rps.
             web_rps_per_vcpu: 9_000.0,
-            web_service_ms: 2.0,
-            // Queued requests one GB of memory holds before the process rejects work.
-            // Parity: scale-web-tier-surge-direct (one 2 GB web server, 8,000 -> 24,000 rps).
-            // 5,000/GB lets a 2 GB server's queue reach the 1 s timeout bound (rps x timeout),
-            // so the queue limit, not this value, decides; ±2% leaves the fit unchanged.
-            // Fit: p95 824 ms vs 910 (±136.5); availability 0.8718 vs 0.805, inside the
-            // temporary ±0.08 override documented in fixtures/parity/README.md.
-            web_queue_per_gb: 5_000.0,
-            // Parity: 5 x 1-vCPU web servers + 2 LB replicas cost $162.5/month.
+            // Parity: every fixture; latency = 4 ms of service + queue wait.
+            web_service_ms: 4.0,
+            // Requests one GB of memory holds in the server, waiting or in service. Waiting room
+            // = this x GB - workers (rps x service). Parity: 1 vCPU/2 GB waits up to 906 ms and
+            // rejects 21,844 (scale-web-tier-surge-direct), 1 vCPU/4 GB waits up to 1,816 ms
+            // (scale-web-tier-surge-direct-1cpu-4gb), 2 vCPU/2 GB rejects 3,880.
+            web_queue_per_gb: 4_096.0,
+            // Parity: one 1-vCPU instance costs $22.5/month (scale-web-tier-surge-pass:
+            // 5 x 22.5 + 2 LB x 25 = 162.5).
             web_cost_per_vcpu: 22.5,
+            // Parity: a 2-vCPU instance costs $50/month (scale-web-tier-surge-direct-2cpu-2gb),
+            // so each vCPU after the first adds 27.5.
+            web_cost_per_extra_vcpu: 27.5,
             lb_rps_per_replica: 60_000.0,
-            lb_service_ms: 0.2,
+            // Parity: a balancer hop adds 3 ms in total (scale-web-tier-surge-lb5-1cpu-2gb 913.25
+            // vs scale-web-tier-surge-direct-1cpu-2gb-noretry 910.25; scale-web-tier-surge-pass
+            // p95 7 = 4 ms service + 3): 2 ms here plus one more 0.5 ms HTTP edge.
+            lb_service_ms: 2.0,
             lb_queue_seconds: 0.05,
             lb_cost_per_replica: 25.0,
             pg_qps_per_instance: 5_000.0,
@@ -67,11 +76,6 @@ impl Default for Calibration {
             edge_delay_db_ms: 0.8,
             edge_delay_cache_ms: 0.3,
             edge_delay_msg_ms: 1.0,
-            // Latency uses service / (1 - utilization); capped so latency stays finite and the
-            // queue itself carries the overload.
-            // Parity: scale-web-tier-surge-direct. 0.97 keeps p95 at 824-865 ms under every ±2%
-            // perturbation (0.95 drops to 785 ms with webRpsPerVcpu +2%, 11 ms above the bound).
-            max_utilization_for_latency: 0.97,
         }
     }
 }
@@ -90,10 +94,11 @@ impl Calibration {
             apply_overrides!(
                 c, o,
                 web_rps_per_vcpu, web_service_ms, web_queue_per_gb, web_cost_per_vcpu,
+                web_cost_per_extra_vcpu,
                 lb_rps_per_replica, lb_service_ms, lb_queue_seconds, lb_cost_per_replica,
                 pg_qps_per_instance, pg_service_ms, pg_queue_seconds, pg_cost_per_instance,
                 pg_failover_ms, edge_delay_http_ms, edge_delay_db_ms, edge_delay_cache_ms,
-                edge_delay_msg_ms, max_utilization_for_latency,
+                edge_delay_msg_ms,
             );
         }
         c
@@ -110,8 +115,8 @@ impl Calibration {
 }
 
 /// camelCase names of overrides that cannot be used: non-finite values, capacities that are
-/// not positive, times/costs/queues that are negative, a utilization cap outside (0, 1).
-/// Order: positive-only fields, then non-negative fields in declaration order, then the cap.
+/// not positive, times/costs/queues that are negative.
+/// Order: positive-only fields, then non-negative fields in declaration order.
 pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
     let positive = [
         ("webRpsPerVcpu", o.web_rps_per_vcpu),
@@ -122,6 +127,7 @@ pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
         ("webServiceMs", o.web_service_ms),
         ("webQueuePerGb", o.web_queue_per_gb),
         ("webCostPerVcpu", o.web_cost_per_vcpu),
+        ("webCostPerExtraVcpu", o.web_cost_per_extra_vcpu),
         ("lbServiceMs", o.lb_service_ms),
         ("lbQueueSeconds", o.lb_queue_seconds),
         ("lbCostPerReplica", o.lb_cost_per_replica),
@@ -147,11 +153,6 @@ pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
             if !(v.is_finite() && v >= 0.0) {
                 bad.push(name);
             }
-        }
-    }
-    if let Some(v) = o.max_utilization_for_latency {
-        if !(v.is_finite() && v > 0.0 && v < 1.0) {
-            bad.push("maxUtilizationForLatency");
         }
     }
     bad
@@ -186,13 +187,13 @@ mod tests {
             web_rps_per_vcpu: Some(0.0),
             pg_cost_per_instance: Some(-1.0),
             lb_service_ms: Some(f64::NAN),
-            max_utilization_for_latency: Some(1.0),
+            web_cost_per_extra_vcpu: Some(f64::INFINITY),
             edge_delay_db_ms: Some(0.0), // zero delay is allowed
             ..Default::default()
         };
         assert_eq!(
             invalid_overrides(&o),
-            vec!["webRpsPerVcpu", "lbServiceMs", "pgCostPerInstance", "maxUtilizationForLatency"]
+            vec!["webRpsPerVcpu", "webCostPerExtraVcpu", "lbServiceMs", "pgCostPerInstance"]
         );
         assert!(invalid_overrides(&CalibrationOverrides::default()).is_empty());
     }
