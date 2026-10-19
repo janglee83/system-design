@@ -394,9 +394,16 @@ pub(crate) fn check_cross(p: &mut Parsed) {
             item.issues.push(issue);
         }
     }
-    // Every listed id exists; every roadmap stub is listed.
+    // Every listed id exists; every roadmap stub is listed. A folder whose JSON did not parse
+    // still exists (its parse issue says what is wrong), so folder names count too.
+    let folders: BTreeSet<&str> = p
+        .lessons
+        .iter()
+        .map(|i| i.id.as_str())
+        .chain(p.challenges.iter().map(|i| i.id.as_str()))
+        .collect();
     for id in listing.listed.keys() {
-        if !authored.contains(id) && !roadmap.contains(id) {
+        if !authored.contains(id) && !roadmap.contains(id) && !folders.contains(id.as_str()) {
             p.global.push(
                 ContentIssue::new(codes::ID, LEVELS_PATH)
                     .id(id.clone())
@@ -447,6 +454,19 @@ fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
             .iter()
             .filter_map(|i| i.doc.as_ref().map(|d| d.id.clone())),
     );
+    // Folders whose JSON did not parse still exist; their parse issue is the only report.
+    lesson_ids.extend(
+        p.lessons
+            .iter()
+            .filter(|i| i.doc.is_none())
+            .map(|i| i.id.clone()),
+    );
+    let unparsed_challenges: BTreeSet<&str> = p
+        .challenges
+        .iter()
+        .filter(|i| i.doc.is_none())
+        .map(|i| i.id.as_str())
+        .collect();
     // Challenge id -> its mode ids (authored or roadmap).
     let mut modes: BTreeMap<String, Vec<String>> = levels
         .roadmap
@@ -562,6 +582,8 @@ fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
         let ec = &lv.exit_check;
         let field = format!("levels[{:?}].exitCheck", lv.id);
         match modes.get(&ec.challenge) {
+            _ if unparsed_challenges.contains(ec.challenge.as_str())
+                && lv.challenges.contains(&ec.challenge) => {}
             Some(ms) if lv.challenges.contains(&ec.challenge) => {
                 if !ms.contains(&ec.mode) {
                     global.push(
@@ -580,7 +602,10 @@ fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
     }
     for (gap, g) in &levels.engine_gaps {
         for n in &g.needed_by {
-            if !lesson_ids.contains(n) && !modes.contains_key(n) {
+            if !lesson_ids.contains(n)
+                && !modes.contains_key(n)
+                && !unparsed_challenges.contains(n.as_str())
+            {
                 global.push(
                     ContentIssue::new(codes::PREREQUISITE_MISSING, LEVELS_PATH)
                         .id(n.clone())
@@ -695,6 +720,21 @@ mod tests {
                 "{field}: {i:#?}"
             );
         }
+    }
+
+    #[test]
+    fn an_unparseable_item_is_not_also_reported_as_missing_its_folder() {
+        let mut t = good_tree();
+        t.lessons[0].json = FileText::Text("{".into());
+        t.challenges[0].json = FileText::Text("{".into());
+        let r = validate_tree(&t);
+        assert!(has(&r, "l0-fx-capacity", codes::PARSE));
+        assert!(has(&r, "c-l0-fx-shop", codes::PARSE));
+        assert!(
+            codes_of(&r, "levels").is_empty(),
+            "{:#?}",
+            issues_of(&r, "levels")
+        );
     }
 
     #[test]
