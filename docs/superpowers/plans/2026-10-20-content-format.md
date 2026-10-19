@@ -6572,6 +6572,13 @@ This task is **content work, not code**. The owner hands it to the `content-rese
 > the reference product or books; never edit `crates/`; never weaken a check; a lesson whose
 > point the engine cannot show is reported, not forced.
 
+**Open item (recorded after the Phase 5 review):** the readiness scan derives an authored
+item's engine needs from its JSON, which cannot express `dynamic` or `behaviors` (roadmap
+stubs keep the ones they declare). An authored item that needs a dynamic feature or a
+behavior would lose that declaration, so a later plan (1b) must add an explicit way to state
+it. No format change now: L0 does not need it (`l0-single-point-of-failure` declares
+`dynamic: db-failover`, which the engine already supports).
+
 **Owner actions** (not done by any agent without approval):
 - Update `.claude/agents/content-researcher.md` so it describes the new format (folders, `levels.json`, `sim-cli content …`) instead of `content/drafts/` and `gen_curriculum.py`. It is agent configuration, so the owner reviews the change.
 - Decide on `l0-database-basics` if no single-value control design shows the database bottleneck clearly.
