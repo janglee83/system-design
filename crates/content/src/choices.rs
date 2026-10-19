@@ -51,6 +51,14 @@ fn check_expect(path: &str, c: &Choice) -> Vec<ContentIssue> {
                     .detail("unknown metric"),
             );
         }
+        if ops.is_empty() {
+            out.push(
+                ContentIssue::new(codes::EXPECT, path)
+                    .id(c.id.clone())
+                    .field(metric.clone())
+                    .detail("no comparison"),
+            );
+        }
         for op in ops.keys() {
             if parse_op(op).is_none() {
                 out.push(
@@ -436,6 +444,17 @@ mod tests {
         assert_eq!(
             (i[0].code.as_str(), i[0].id.as_deref()),
             (codes::DUPLICATE_ID, Some("budget"))
+        );
+    }
+
+    #[test]
+    fn an_empty_op_map_in_expect_is_an_expect_issue() {
+        let i = exp(|e| e["choices"][0]["expect"] = json!({"p95": {}}));
+        assert!(
+            i.iter().any(|i| i.code == codes::EXPECT
+                && i.field.as_deref() == Some("p95")
+                && i.detail.as_deref() == Some("no comparison")),
+            "{i:#?}"
         );
     }
 }
