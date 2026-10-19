@@ -20,13 +20,19 @@ fn fixtures() -> Vec<ParityFixture> {
             serde_json::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
         })
         .collect();
-    assert!(all.len() >= 2, "expected the reference fixtures, found {}", all.len());
+    // Six reference captures are committed (see fixtures/parity/README.md); fewer means a
+    // fixture went missing and the robustness check would silently cover less.
+    assert!(all.len() >= 6, "expected at least 6 reference fixtures, found {}", all.len());
     all
 }
 
 type Setter = fn(&mut CalibrationOverrides, f64);
 
 /// Defaults fitted to the parity fixtures (cost is exact by construction and excluded).
+/// Not listed, because no fixture constrains them: pgMaxUtilizationForLatency (no fixture has a
+/// database) and lbMaxUtilizationForLatency (balancer utilization stays at or below 0.2 in every
+/// fixture, far under the 0.95 cap, so moving the cap by ±2% changes nothing). Add them here if
+/// a capture ever loads a database or pushes a balancer near saturation.
 fn fitted() -> Vec<(&'static str, f64, Setter)> {
     let d = Calibration::default();
     vec![
