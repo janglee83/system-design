@@ -38,7 +38,7 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
         .extend(crate::prose_check::check_lesson_prose(item));
     let path = item.file("lesson.json");
     if let Some(e) = &l.experiment {
-        let (control_issues, paths) = crate::controls::check_controls(&path, e);
+        let (control_issues, resolved) = crate::controls::check_controls(&path, e);
         let choice_issues = crate::choices::check_choices(&path, e);
         let structural_ok = e.base.is_object()
             && !control_issues
@@ -50,7 +50,7 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
 
         let mut scan = crate::readiness::Scan::default();
         scan.input(&crate::engine_input::normalized(&e.base), ctx);
-        for p in paths.iter().flatten() {
+        for (_, p) in resolved.iter().flatten() {
             match p {
                 crate::controls::ControlPath::Calibration(f) => {
                     scan.calibration.insert(f.clone());
@@ -75,9 +75,8 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
         if !scan.missing.is_empty() {
             out.readiness = Some(Readiness::Blocked);
         }
-        if structural_ok && !scan.stops_engine() {
-            let paths: Vec<_> = paths.into_iter().flatten().collect();
-            crate::experiment::check_engine(&path, e, &paths, &mut out);
+        if let Some(controls) = resolved.filter(|_| structural_ok && !scan.stops_engine()) {
+            crate::experiment::check_engine(&path, e, &controls, &mut out);
         }
     }
     if let Some(c) = &l.check {

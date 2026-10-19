@@ -1,6 +1,6 @@
 //! Building engine inputs from content and asking the engine whether it accepts them.
 
-use crate::controls::{apply, ControlPath};
+use crate::controls::{apply, Resolved};
 use crate::issue::ContentIssue;
 use crate::types::*;
 use serde_json::Value;
@@ -19,11 +19,11 @@ pub(crate) fn normalized(v: &Value) -> Value {
 /// `base` with every control set: `set[id]` when given, else the control's default.
 pub(crate) fn lesson_input(
     base: &Value,
-    controls: &[(&ControlPath, &Control)],
+    controls: &Resolved<'_>,
     set: &BTreeMap<String, ConfigValue>,
 ) -> Value {
     let mut v = normalized(base);
-    for (path, c) in controls {
+    for (c, path) in controls {
         apply(&mut v, path, set.get(&c.id).unwrap_or(&c.default));
     }
     v

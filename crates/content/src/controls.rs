@@ -179,13 +179,18 @@ pub fn apply(input: &mut Value, path: &ControlPath, value: &ConfigValue) {
     }
 }
 
-/// Structural control checks. Engine acceptance of each option comes in Task 11.
-pub(crate) fn check_controls(
+/// Every control paired with its resolved path, in control order.
+pub(crate) type Resolved<'a> = Vec<(&'a Control, ControlPath)>;
+
+/// Structural control checks. The resolved list is all-or-nothing: `None` as soon as one
+/// path does not parse or resolve, so callers can never pair a control with another's path.
+/// Engine acceptance of each option is checked in `experiment`.
+pub(crate) fn check_controls<'a>(
     path: &str,
-    exp: &Experiment,
-) -> (Vec<ContentIssue>, Vec<Option<ControlPath>>) {
+    exp: &'a Experiment,
+) -> (Vec<ContentIssue>, Option<Resolved<'a>>) {
     let mut out = vec![];
-    let mut parsed = vec![];
+    let mut resolved: Option<Resolved<'a>> = Some(vec![]);
     let mut seen = BTreeSet::new();
     for c in &exp.controls {
         let issue = |detail: String| {
@@ -203,14 +208,18 @@ pub(crate) fn check_controls(
         match parse_path(&c.path) {
             None => {
                 out.push(issue(format!("bad path {}", c.path)).field("path"));
-                parsed.push(None);
+                resolved = None;
             }
             Some(p) => match resolve(&p, &exp.base) {
                 Err(e) => {
                     out.push(issue(e).field("path"));
-                    parsed.push(None);
+                    resolved = None;
                 }
-                Ok(()) => parsed.push(Some(p)),
+                Ok(()) => {
+                    if let Some(r) = resolved.as_mut() {
+                        r.push((c, p));
+                    }
+                }
             },
         }
         if c.options.len() < 2 {
@@ -239,7 +248,7 @@ pub(crate) fn check_controls(
             _ => {}
         }
     }
-    (out, parsed)
+    (out, resolved)
 }
 
 #[cfg(test)]
@@ -390,5 +399,35 @@ mod tests {
         assert!(i.is_empty(), "{i:#?}");
         let i = control_issues(|c| c[0]["path"] = "workload.params".into());
         assert!(i.iter().any(|i| i.code == codes::CONTROL));
+    }
+
+    fn capacity_experiment(edit: impl FnOnce(&mut serde_json::Value)) -> Experiment {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| edit(&mut v["experiment"]));
+        let l: crate::Lesson = serde_json::from_str(t.lessons[0].json.text().unwrap()).unwrap();
+        l.experiment.unwrap()
+    }
+
+    #[test]
+    fn resolution_is_all_or_nothing_and_keeps_each_control_with_its_path() {
+        let e = capacity_experiment(|_| {});
+        let (issues, resolved) = check_controls("x", &e);
+        assert!(issues.is_empty());
+        let pairs: Vec<(&str, ControlPath)> = resolved
+            .unwrap()
+            .into_iter()
+            .map(|(c, p)| (c.id.as_str(), p))
+            .collect();
+        assert_eq!(
+            pairs,
+            vec![
+                ("cpu", ControlPath::NodeConfig("web".into(), "cpu".into())),
+                ("timeout", ControlPath::Workload("clientTimeoutMs".into())),
+            ]
+        );
+        let e = capacity_experiment(|e| e["controls"][0]["path"] = "bogus".into());
+        let (issues, resolved) = check_controls("x", &e);
+        assert!(resolved.is_none());
+        assert!(issues.iter().any(|i| i.id.as_deref() == Some("cpu")));
     }
 }

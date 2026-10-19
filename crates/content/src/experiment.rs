@@ -2,7 +2,7 @@
 //! numeric expectations (Task 14).
 
 use crate::checks::Outcome;
-use crate::controls::ControlPath;
+use crate::controls::Resolved;
 use crate::engine_input::{engine_check, lesson_input};
 use crate::issue::codes;
 use crate::report::RunSummary;
@@ -14,18 +14,22 @@ use std::collections::BTreeMap;
 
 /// Runs only when the structure is sound and readiness allows it; `paths[i]` belongs to
 /// `exp.controls[i]`.
-pub(crate) fn check_engine(path: &str, exp: &Experiment, paths: &[ControlPath], out: &mut Outcome) {
-    let controls: Vec<(&ControlPath, &Control)> = paths.iter().zip(&exp.controls).collect();
-    let defaults = lesson_input(&exp.base, &controls, &BTreeMap::new());
+pub(crate) fn check_engine(
+    path: &str,
+    exp: &Experiment,
+    controls: &Resolved<'_>,
+    out: &mut Outcome,
+) {
+    let defaults = lesson_input(&exp.base, controls, &BTreeMap::new());
     if let Some(issue) = engine_check(&defaults).issue(codes::ENGINE_INVALID, path) {
         out.issues.push(issue.field("base"));
         return;
     }
-    for (_, c) in &controls {
+    for (c, _) in controls {
         for o in &c.options {
             let set = BTreeMap::from([(c.id.clone(), o.clone())]);
             let shown = serde_json::to_string(o).unwrap_or_default();
-            let check = engine_check(&lesson_input(&exp.base, &controls, &set));
+            let check = engine_check(&lesson_input(&exp.base, controls, &set));
             if let Some(issue) = check.issue(codes::CONTROL, path) {
                 let detail = match issue.detail.clone() {
                     Some(serde) => format!("option {shown}: {serde}"),
@@ -36,15 +40,10 @@ pub(crate) fn check_engine(path: &str, exp: &Experiment, paths: &[ControlPath], 
             }
         }
     }
-    run_choices(path, exp, &controls, out);
+    run_choices(path, exp, controls, out);
 }
 
-fn run_choices(
-    path: &str,
-    exp: &Experiment,
-    controls: &[(&ControlPath, &Control)],
-    out: &mut Outcome,
-) {
+fn run_choices(path: &str, exp: &Experiment, controls: &Resolved<'_>, out: &mut Outcome) {
     for c in &exp.choices {
         let check = engine_check(&lesson_input(&exp.base, controls, &c.set));
         let input = match check {
