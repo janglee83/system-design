@@ -40,6 +40,11 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
     let Some(l) = &item.doc else { return out };
     out.issues
         .extend(crate::prose_check::check_lesson_prose(item));
+    let path = item.file("lesson.json");
+    if let Some(e) = &l.experiment {
+        let (issues, _paths) = crate::controls::check_controls(&path, e);
+        out.issues.extend(issues);
+    }
     out.readiness = Some(match l.kind {
         LessonKind::Reading => Readiness::NotNeeded,
         LessonKind::Experiment => Readiness::Ready,
