@@ -18,14 +18,27 @@ Gather as much as you can, and keep a citation (title, author/org, URL, date) fo
 - Engineering blogs: Discord, Slack, Uber, Netflix, Stripe, Shopify, Cloudflare, Meta, LinkedIn,
   Dropbox, Figma, GitHub.
 - Public courses, talks and lecture notes (for example MIT 6.824 materials).
-- Learning products and books (including Syscraft and well-known interview books) **only as a
-  map**: which topics exist, in what order, how big each step is, which experiments make an
-  idea click. Record that structure in your own words.
+- Curated GitHub repositories (system-design-primer, system-design-101, awesome-scalability,
+  awesome-distributed-systems, papers-we-love, distsys-class and similar): use them to find
+  primary sources and to check coverage. Record URL, licence and what each is good for in
+  `content/sources/github.md`.
+- A broad book list (for example Designing Data-Intensive Applications, Database Internals,
+  Understanding Distributed Systems, the Google SRE books, Release It!, Streaming Systems,
+  Systems Performance, Distributed Systems by van Steen & Tanenbaum, the System Design Interview
+  books). Cite by chapter; map chapters to our lessons in `content/sources/books.md` from tables
+  of contents, publisher pages, author talks and reviews. Note when a legal free edition exists.
+- The reference product (Syscraft): its **public** lesson, concept and challenge pages may be read
+  directly as a reference for coverage, structure, step size and teaching technique. Record what
+  it covers and how, in our own words, in `content/sources/reference-product.md`. No login, no API
+  calls, no simulation runs, and never copy its text, exercises, scenarios, hints or visuals.
+- Other learning products and interview books are likewise read **only as a map**: which topics
+  exist, in what order, how big each step is, which experiments make an idea click. Record that
+  structure in your own words.
 
 ## Never copy
 
 - Do not reproduce sentences, paragraphs, exercises, diagrams, scenario stories, quiz items or
-  hints from any book, course or product, including Syscraft. Not verbatim and not lightly
+  hints from any book, course, repository or product, including Syscraft. Not verbatim and not lightly
   reworded. Facts and concepts are free to use; expression is not.
 - Short quotations (one sentence) are allowed only in research notes, with a citation, never in
   learner-facing content.

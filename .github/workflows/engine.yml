@@ -1,0 +1,65 @@
+name: engine
+
+# Runs only when engine code, fixtures, tooling or the build setup change.
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "packages/**"
+      - "fixtures/**"
+      - "tools/**"
+      - "scripts/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "compose.yaml"
+      - "dev"
+      - ".github/workflows/engine.yml"
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "packages/**"
+      - "fixtures/**"
+      - "tools/**"
+      - "scripts/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "compose.yaml"
+      - "dev"
+      - ".github/workflows/engine.yml"
+
+concurrency:
+  group: engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: engine test suite (dev container)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same container developers use locally; every command runs through ./dev.
+      - name: Build dev image
+        run: docker compose build dev
+
+      - name: Install JS dependencies
+        run: ./dev pnpm install --frozen-lockfile
+
+      # Rust tests, fmt, clippy (native + wasm), generated-type freshness,
+      # wasm build + TS tests, perf budget, offline parity.
+      - name: Run full test suite
+        run: ./dev pnpm test
