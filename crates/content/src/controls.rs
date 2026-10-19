@@ -339,6 +339,7 @@ mod tests {
     #[test]
     fn unresolvable_paths() {
         for path in [
+            "graph.nodes[ghost].replicas",
             "graph.nodes[ghost].config.cpu",
             "graph.nodes[web].config.turbo",
             "workload.surge",

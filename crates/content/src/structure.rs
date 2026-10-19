@@ -873,4 +873,95 @@ mod tests {
         assert!(has(&r, "l0-fx-reading", codes::RESEARCH_MISSING));
         assert!(has(&r, "levels", codes::RESEARCH_MISSING));
     }
+
+    fn levels_issues(edit: impl FnOnce(&mut serde_json::Value)) -> Vec<crate::ContentIssue> {
+        let mut t = good_tree();
+        edit_levels(&mut t, edit);
+        issues_of(&validate_tree(&t), "levels")
+    }
+
+    fn level(id: &str, challenge: &str) -> serde_json::Value {
+        json!({"id": id, "titleVi": "t", "titleEn": "t", "score": [0, 1],
+               "entryAssumptionsVi": [], "entryAssumptionsEn": [], "outcomesVi": [], "outcomesEn": [],
+               "exitCheck": {"challenge": challenge, "mode": "standard", "reviewMinScore": 0.5,
+                             "descriptionVi": "d", "descriptionEn": "d"},
+               "lessons": [], "challenges": []})
+    }
+
+    #[test]
+    fn listed_under_another_kind() {
+        let mut t = good_tree();
+        edit_levels(&mut t, |v| {
+            v["levels"][0]["lessons"] = json!(["l0-fx-capacity", "l0-fx-planned"]);
+            v["levels"][0]["challenges"] = json!(["c-l0-fx-shop", "l0-fx-reading"]);
+        });
+        let i = issues_of(&validate_tree(&t), "l0-fx-reading");
+        assert!(
+            i.iter()
+                .any(|i| i.code == codes::ID && i.field.as_deref() == Some("level")),
+            "{i:#?}"
+        );
+    }
+
+    #[test]
+    fn listed_without_folder_and_roadmap_not_listed() {
+        let i = levels_issues(|v| {
+            v["levels"][0]["lessons"] = json!(["l0-fx-capacity", "l0-fx-reading", "l0-ghost"])
+        });
+        assert!(i
+            .iter()
+            .any(|i| i.code == codes::ID && i.id.as_deref() == Some("l0-ghost")));
+        let i = levels_issues(|v| {
+            v["levels"][0]["lessons"] = json!(["l0-fx-capacity", "l0-fx-reading"])
+        });
+        assert!(i.iter().any(|i| i.code == codes::ID
+            && i.id.as_deref() == Some("l0-fx-planned")
+            && i.detail.as_deref() == Some("roadmap entry is not listed in any level")));
+    }
+
+    #[test]
+    fn duplicate_level_ids() {
+        let i = levels_issues(|v| {
+            v["levels"]
+                .as_array_mut()
+                .unwrap()
+                .push(level("L0", "c-l0-fx-shop"))
+        });
+        assert!(i.iter().any(|i| i.code == codes::DUPLICATE_ID
+            && i.id.as_deref() == Some("L0")
+            && i.field.as_deref() == Some("levels")));
+    }
+
+    #[test]
+    fn exit_check_challenge_outside_its_level() {
+        let i = levels_issues(|v| {
+            v["levels"]
+                .as_array_mut()
+                .unwrap()
+                .push(level("L1", "c-l0-fx-shop"))
+        });
+        assert!(
+            i.iter().any(|i| i.code == codes::PREREQUISITE_MISSING
+                && i.field.as_deref() == Some("levels[L1].exitCheck.challenge")),
+            "{i:#?}"
+        );
+    }
+
+    #[test]
+    fn roadmap_challenge_prerequisites() {
+        let i = levels_issues(|v| {
+            v["roadmap"]["challenges"] = json!([{"id": "c-l0-fx-later", "titleVi": "t", "titleEn": "t",
+                "prerequisites": ["l0-nope"], "workload": {"baseRps": 1},
+                "goals": [{"id": "fast", "metric": "p95", "op": "<=", "value": 1}],
+                "modes": [{"id": "standard", "budgetPerMonth": 10}], "briefVi": "b", "briefEn": "b"}]);
+            v["levels"][0]["challenges"] = json!(["c-l0-fx-shop", "c-l0-fx-later"]);
+        });
+        assert!(
+            i.iter().any(|i| i.code == codes::PREREQUISITE_MISSING
+                && i.id.as_deref() == Some("l0-nope")
+                && i.field.as_deref() == Some("roadmap.challenges[c-l0-fx-later]")),
+            "{i:#?}"
+        );
+        assert_eq!(i.len(), 1, "{i:#?}");
+    }
 }
