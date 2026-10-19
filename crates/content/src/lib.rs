@@ -18,6 +18,8 @@ pub use tree::{load_dir, ContentTree, FileText, LoadError, RawItem};
 pub(crate) mod checks;
 pub(crate) mod choices;
 pub mod controls;
+pub(crate) mod engine_input;
+pub(crate) mod experiment;
 pub mod ids;
 pub mod known;
 pub mod prose;

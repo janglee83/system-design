@@ -87,3 +87,15 @@ impl Report {
         self.failed > 0
     }
 }
+
+impl RunSummary {
+    pub fn of(label: impl Into<String>, r: &sim_core::SimResult) -> RunSummary {
+        let events: std::collections::BTreeSet<String> =
+            r.events.iter().map(|e| e.code.clone()).collect();
+        RunSummary {
+            label: label.into(),
+            metrics: r.metrics.clone(),
+            events: events.into_iter().collect(),
+        }
+    }
+}

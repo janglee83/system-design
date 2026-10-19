@@ -42,9 +42,19 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
         .extend(crate::prose_check::check_lesson_prose(item));
     let path = item.file("lesson.json");
     if let Some(e) = &l.experiment {
-        let (issues, _paths) = crate::controls::check_controls(&path, e);
-        out.issues.extend(issues);
-        out.issues.extend(crate::choices::check_choices(&path, e));
+        let (control_issues, paths) = crate::controls::check_controls(&path, e);
+        let choice_issues = crate::choices::check_choices(&path, e);
+        let structural_ok = e.base.is_object()
+            && !control_issues
+                .iter()
+                .chain(&choice_issues)
+                .any(|i| i.blocking);
+        out.issues.extend(control_issues);
+        out.issues.extend(choice_issues);
+        if structural_ok {
+            let paths: Vec<_> = paths.into_iter().flatten().collect();
+            crate::experiment::check_engine(&path, e, &paths, &mut out);
+        }
     }
     if let Some(c) = &l.check {
         out.issues.extend(crate::choices::check_questions(&path, c));
