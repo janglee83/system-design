@@ -7,7 +7,7 @@ pub use issue::{codes, ContentIssue};
 pub mod types;
 pub use types::{
     Answer, Challenge, Check, Choice, Control, ControlType, Design, EngineCatalog, EngineGap,
-    EngineNeeds, ExitCheck, Experiment, Lesson, LessonKind, Level, LevelId, Levels, Mode,
+    EngineNeeds, ExitCheck, Experiment, Lesson, LessonKind, Level, LevelId, Levels, Limits, Mode,
     NaiveDesign, PlannedFeatures, Question, QuestionType, Roadmap, RoadmapChallenge, RoadmapLesson,
     RoadmapMode, Status, FORMAT_VERSION,
 };
@@ -15,6 +15,7 @@ pub use types::{
 pub mod tree;
 pub use tree::{load_dir, ContentTree, FileText, LoadError, RawItem};
 
+pub(crate) mod challenge;
 pub(crate) mod checks;
 pub(crate) mod choices;
 pub mod controls;

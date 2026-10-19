@@ -91,12 +91,16 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
     out
 }
 
-pub(crate) fn check_challenge(item: &Item<Challenge>, _ctx: &Ctx) -> Outcome {
+pub(crate) fn check_challenge(item: &Item<Challenge>, ctx: &Ctx) -> Outcome {
     let mut out = Outcome::default();
+    let Some(c) = &item.doc else { return out };
+    out.readiness = Some(Readiness::Ready);
     out.issues
         .extend(crate::prose_check::check_challenge_prose(item));
-    if item.doc.is_some() {
-        out.readiness = Some(Readiness::Ready);
-    }
+    let path = item.file("challenge.json");
+    let structure = crate::challenge::check_structure(&path, c);
+    let structural_ok = c.start.is_object() && !structure.iter().any(|i| i.blocking);
+    out.issues.extend(structure);
+    let _ = (ctx, structural_ok); // used from Task 16
     out
 }

@@ -63,6 +63,29 @@ impl EngineCheck {
     }
 }
 
+/// Ruling R15: `start` (already normalized) with `workloadOverride` shallow-merged into
+/// `workload` (`null` removes a key), `faults` replaced and `graph` replaced by the design's.
+#[allow(dead_code)] // read by design checks (plan Task 16); remove then
+pub(crate) fn mode_input(start: &Value, mode: &Mode, graph: &Value) -> Value {
+    let mut v = start.clone();
+    let Some(o) = v.as_object_mut() else { return v };
+    if let (Some(w), Some(over)) = (
+        o.get_mut("workload").and_then(Value::as_object_mut),
+        mode.workload_override.as_object(),
+    ) {
+        for (k, val) in over {
+            if val.is_null() {
+                w.remove(k);
+            } else {
+                w.insert(k.clone(), val.clone());
+            }
+        }
+    }
+    o.insert("faults".into(), mode.faults.clone());
+    o.insert("graph".into(), graph.clone());
+    v
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,5 +116,30 @@ mod tests {
             engine_check(&unreadable),
             EngineCheck::Unreadable(_)
         ));
+    }
+
+    #[test]
+    fn mode_input_merges_workload_and_replaces_faults_and_graph() {
+        use crate::types::{Design, Mode, NaiveDesign};
+        let start = normalized(
+            &json!({"graph": {"nodes": []}, "workload": {"baseRps": 10, "writeRatio": 0.5,
+            "surge": {"factor": 2, "atMs": 0, "durationMs": 1}}, "faults": [{"kind": "instance-down", "atMs": 1}]}),
+        );
+        let mode = Mode {
+            id: "m".into(),
+            budget_per_month: 1.0,
+            faults: json!([]),
+            workload_override: json!({"baseRps": 20, "surge": null}),
+            reference: Design { graph: json!({}) },
+            naive: NaiveDesign {
+                graph: json!({}),
+                fails_goals: vec![],
+            },
+        };
+        let v = mode_input(&start, &mode, &json!({"nodes": [{"id": "x"}]}));
+        assert_eq!(v["workload"], json!({"baseRps": 20, "writeRatio": 0.5}));
+        assert_eq!(v["faults"], json!([]));
+        assert_eq!(v["graph"]["nodes"][0]["id"], "x");
+        assert_eq!(v["seed"], json!(1));
     }
 }

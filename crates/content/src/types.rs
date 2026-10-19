@@ -180,7 +180,7 @@ pub struct Challenge {
     #[serde(default)]
     pub locked_nodes: Vec<String>,
     #[serde(default)]
-    pub limits: GraphLimits,
+    pub limits: Limits,
     pub goals: Vec<Goal>,
     pub modes: Vec<Mode>,
     #[serde(default)]
@@ -222,6 +222,33 @@ pub struct NaiveDesign {
     #[serde(default)]
     pub fails_goals: Vec<String>,
 }
+}
+
+exported! {
+/// Same fields as sim-core's `GraphLimits`, but a typo is an error here.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Limits {
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub max_nodes: Option<u32>,
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub max_instances: Option<u32>,
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub allowed_kinds: Option<Vec<String>>,
+}
+}
+
+impl Limits {
+    pub fn graph_limits(&self) -> GraphLimits {
+        GraphLimits {
+            max_nodes: self.max_nodes,
+            max_instances: self.max_instances,
+            allowed_kinds: self.allowed_kinds.clone(),
+        }
+    }
 }
 
 // ---------- levels.json ----------
