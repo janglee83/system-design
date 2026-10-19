@@ -7,6 +7,7 @@ use crate::types::{EdgeKind, Node};
 pub struct Postgres;
 
 impl Postgres {
+    /// Validation limits this to 0..=5; the float-to-int cast saturates for anything larger.
     pub fn read_replicas(node: &Node) -> u32 {
         num_or_zero(node, "readReplicas", 0.0) as u32
     }
@@ -23,11 +24,11 @@ impl ComponentModel for Postgres {
             Role::Database,
             &[EdgeKind::Db],
             false,
-            vec![ConfigField::number("readReplicas", 0.0, 0.0, 5.0)],
+            vec![ConfigField::integer("readReplicas", 0.0, 0.0, 5.0)],
         )
     }
     fn instances(&self, node: &Node) -> u32 {
-        1 + Self::read_replicas(node)
+        1u32.saturating_add(Self::read_replicas(node))
     }
     fn capacity_per_instance(&self, _node: &Node, cal: &Calibration) -> Capacity {
         Capacity {

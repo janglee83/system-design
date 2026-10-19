@@ -341,6 +341,12 @@ slower networks.
 - **Validation:** non-finite, negative, or zero-where-positive values, and utilization caps
   outside the open interval (0, 1), are blocking issues (`calibration.invalid` with the
   field name, `config.invalid` with node and field).
+  Component config is checked against the component's `ConfigField` schema: number fields
+  must be finite and within `min..=max`, fields flagged `integer` (`cpu`, `readReplicas`)
+  must be whole numbers, and choice fields must be one of `options`. `replicas` must be in
+  `1..=1000`. Any violation is a blocking `config.invalid` with node and field. The
+  `limits.too-many-instances` total is summed in 64 bits, so huge replica counts cannot wrap
+  around the limit.
 - **API:** `defaultCalibration()` returns the defaults so the UI can show and edit them.
   Named presets ("default cloud", "on-prem", "cross-region network") are content/UI data,
   not engine code.

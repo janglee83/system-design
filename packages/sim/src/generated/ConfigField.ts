@@ -2,4 +2,8 @@
 import type { ConfigValue } from "./ConfigValue";
 import type { FieldKind } from "./FieldKind";
 
-export type ConfigField = { key: string, kind: FieldKind, default: ConfigValue, min: number | null, max: number | null, options: Array<string>, };
+export type ConfigField = { key: string, kind: FieldKind, default: ConfigValue, min: number | null, max: number | null, 
+/**
+ * Number fields only: the value must be a whole number (counts such as vCPUs or replicas).
+ */
+integer: boolean, options: Array<string>, };

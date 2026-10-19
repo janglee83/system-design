@@ -38,10 +38,13 @@ pub struct ConfigField {
     pub default: ConfigValue,
     pub min: Option<f64>,
     pub max: Option<f64>,
+    /// Number fields only: the value must be a whole number (counts such as vCPUs or replicas).
+    pub integer: bool,
     pub options: Vec<String>,
 }
 
 impl ConfigField {
+    /// A number in `min..=max`. Validation rejects anything else with `config.invalid`.
     pub fn number(key: &str, default: f64, min: f64, max: f64) -> Self {
         ConfigField {
             key: key.into(),
@@ -49,7 +52,29 @@ impl ConfigField {
             default: ConfigValue::Num(default),
             min: Some(min),
             max: Some(max),
+            integer: false,
             options: vec![],
+        }
+    }
+    /// A whole number in `min..=max`.
+    pub fn integer(key: &str, default: f64, min: f64, max: f64) -> Self {
+        ConfigField {
+            integer: true,
+            ..Self::number(key, default, min, max)
+        }
+    }
+    /// True when `value` satisfies this field's kind, range, integrality and options.
+    pub fn accepts(&self, value: &ConfigValue) -> bool {
+        match self.kind {
+            FieldKind::Number => value.as_f64().is_some_and(|v| {
+                v.is_finite()
+                    && self.min.is_none_or(|m| v >= m)
+                    && self.max.is_none_or(|m| v <= m)
+                    && (!self.integer || libm::trunc(v) == v)
+            }),
+            FieldKind::Choice => value
+                .as_str()
+                .is_some_and(|v| self.options.iter().any(|o| o == v)),
         }
     }
     pub fn choice(key: &str, default: &str, options: &[&str]) -> Self {
@@ -59,6 +84,7 @@ impl ConfigField {
             default: ConfigValue::Str(default.into()),
             min: None,
             max: None,
+            integer: false,
             options: options.iter().map(|s| s.to_string()).collect(),
         }
     }

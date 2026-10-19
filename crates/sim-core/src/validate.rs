@@ -20,6 +20,10 @@ pub mod codes {
     pub const KIND_NOT_ALLOWED: &str = "limits.kind-not-allowed";
 }
 
+/// Upper bound on `node.replicas` (inclusive; the lower bound is 1). Large enough for any
+/// lesson design, small enough that instance counts and costs stay far from overflow.
+pub const MAX_REPLICAS: u32 = 1000;
+
 fn issue(code: &str, node: Option<&str>, edge: Option<&str>, blocking: bool) -> ValidationIssue {
     ValidationIssue {
         code: code.into(),
@@ -37,6 +41,25 @@ pub(crate) fn field_issue(code: &str, node: Option<&str>, field: &str) -> Valida
         edge_id: None,
         field: Some(field.into()),
         blocking: true,
+    }
+}
+
+/// `replicas` must be in 1..=MAX_REPLICAS, and every config key the component declares must
+/// satisfy its `ConfigField` (range, integrality, options). Fields are checked in the order
+/// the component lists them.
+fn check_node_fields(n: &Node, issues: &mut Vec<ValidationIssue>) {
+    if !(1..=MAX_REPLICAS).contains(&n.replicas) {
+        issues.push(field_issue(codes::CONFIG_INVALID, Some(&n.id), "replicas"));
+    }
+    let Some(model) = components::get(&n.kind) else {
+        return;
+    };
+    for field in model.meta().fields {
+        if let Some(value) = n.config.get(&field.key) {
+            if !field.accepts(value) {
+                issues.push(field_issue(codes::CONFIG_INVALID, Some(&n.id), &field.key));
+            }
+        }
     }
 }
 
@@ -79,6 +102,7 @@ pub fn validate_graph(graph: &Graph, limits: Option<&GraphLimits>) -> Vec<Valida
         if components::get(&n.kind).is_none() {
             issues.push(issue(codes::UNKNOWN_KIND, Some(&n.id), None, true));
         }
+        check_node_fields(n, &mut issues);
         check_node_overrides(n, &mut issues);
     }
 
@@ -185,13 +209,14 @@ fn check_limits(graph: &Graph, limits: &GraphLimits, issues: &mut Vec<Validation
         }
     }
     if let Some(max) = limits.max_instances {
-        let total: u32 = graph
+        // Summed in u64: u32 replicas from many nodes must not wrap around under the limit.
+        let total: u64 = graph
             .nodes
             .iter()
             .filter(|n| n.kind != "client")
-            .filter_map(|n| components::get(&n.kind).map(|m| m.instances(n)))
+            .filter_map(|n| components::get(&n.kind).map(|m| u64::from(m.instances(n))))
             .sum();
-        if total > max {
+        if total > u64::from(max) {
             issues.push(issue(codes::TOO_MANY_INSTANCES, None, None, true));
         }
     }
@@ -310,6 +335,108 @@ mod tests {
         assert_eq!(fields, vec!["costPerMonth", "rpsPerInstance"]);
         assert!(issues.iter().all(|i| i.node_id.as_deref() == Some("web")));
         assert!(has_blocking(&issues));
+    }
+
+    fn issue_fields(issues: &[ValidationIssue], code: &str) -> Vec<(String, String)> {
+        issues
+            .iter()
+            .filter(|i| i.code == code)
+            .map(|i| {
+                (
+                    i.node_id.clone().unwrap_or_default(),
+                    i.field.clone().unwrap_or_default(),
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn huge_read_replicas_are_blocking_not_a_panic() {
+        let mut g = web_tier(1, 1);
+        g.nodes
+            .push(node("pg", "postgres", 1, &[("readReplicas", 1e12)]));
+        g.edges.push(edge("web", "pg", EdgeKind::Db));
+        let issues = validate_graph(&g, None);
+        assert_eq!(
+            issue_fields(&issues, codes::CONFIG_INVALID),
+            vec![("pg".to_string(), "readReplicas".to_string())]
+        );
+        assert!(has_blocking(&issues));
+        // The model itself saturates instead of overflowing.
+        let pg = components::get("postgres").unwrap();
+        assert_eq!(pg.instances(&g.nodes[3]), u32::MAX);
+    }
+
+    #[test]
+    fn component_fields_are_checked_against_their_range_and_integrality() {
+        let mut g = web_tier(1, 1);
+        g.nodes
+            .push(node("pg", "postgres", 1, &[("readReplicas", 1.5)]));
+        g.edges.push(edge("web", "pg", EdgeKind::Db));
+        g.nodes[2] = node("web", "web-server", 1, &[("cpu", 1.5), ("memoryGb", 65.0)]);
+        g.nodes[1].config.insert(
+            "algorithm".into(),
+            crate::types::ConfigValue::Str("random".into()),
+        );
+        let issues = validate_graph(&g, None);
+        assert_eq!(
+            issue_fields(&issues, codes::CONFIG_INVALID),
+            vec![
+                ("lb".to_string(), "algorithm".to_string()),
+                ("web".to_string(), "cpu".to_string()),
+                ("web".to_string(), "memoryGb".to_string()),
+                ("pg".to_string(), "readReplicas".to_string()),
+            ]
+        );
+
+        let mut ok = web_tier(1, 1);
+        ok.nodes
+            .push(node("pg", "postgres", 1, &[("readReplicas", 5.0)]));
+        ok.edges.push(edge("web", "pg", EdgeKind::Db));
+        ok.nodes[2] = node(
+            "web",
+            "web-server",
+            1,
+            &[("cpu", 16.0), ("memoryGb", 0.5 + 1.0)],
+        );
+        ok.nodes[1].config.insert(
+            "algorithm".into(),
+            crate::types::ConfigValue::Str("least-conn".into()),
+        );
+        assert!(validate_graph(&ok, None).is_empty());
+    }
+
+    #[test]
+    fn replicas_must_be_between_one_and_the_cap() {
+        let g = web_tier(0, MAX_REPLICAS + 1);
+        let issues = validate_graph(&g, None);
+        assert_eq!(
+            issue_fields(&issues, codes::CONFIG_INVALID),
+            vec![
+                ("lb".to_string(), "replicas".to_string()),
+                ("web".to_string(), "replicas".to_string()),
+            ]
+        );
+        assert!(validate_graph(&web_tier(1, MAX_REPLICAS), None).is_empty());
+    }
+
+    #[test]
+    fn instance_limit_counts_without_overflow() {
+        let g = web_tier(u32::MAX, u32::MAX);
+        let limits = GraphLimits {
+            max_nodes: None,
+            max_instances: Some(10),
+            allowed_kinds: None,
+        };
+        let issues = validate_graph(&g, Some(&limits));
+        assert!(codes_of(&issues).contains(&codes::TOO_MANY_INSTANCES));
+        // Even an unlimited-looking cap is not bypassed by wrap-around.
+        let limits = GraphLimits {
+            max_instances: Some(u32::MAX),
+            ..limits
+        };
+        let issues = validate_graph(&g, Some(&limits));
+        assert!(codes_of(&issues).contains(&codes::TOO_MANY_INSTANCES));
     }
 
     #[test]

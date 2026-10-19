@@ -19,7 +19,7 @@ impl ComponentModel for WebServer {
             &[EdgeKind::Http],
             false,
             vec![
-                ConfigField::number("cpu", DEFAULT_CPU, 1.0, 16.0),
+                ConfigField::integer("cpu", DEFAULT_CPU, 1.0, 16.0),
                 ConfigField::number("memoryGb", DEFAULT_MEMORY_GB, 1.0, 64.0),
             ],
         )
