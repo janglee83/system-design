@@ -131,3 +131,42 @@ fn curriculum_refuses_a_broken_tree() {
     assert!(String::from_utf8_lossy(&out.get_output().stdout).contains("FAIL"));
     assert!(!tmp.path().join("curriculum.json").exists());
 }
+
+fn good_copy() -> tempfile::TempDir {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("good"), tmp.path());
+    tmp
+}
+
+#[test]
+fn curriculum_check_treats_crlf_as_stale() {
+    let tmp = good_copy();
+    cli()
+        .args(["content", "curriculum"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    let path = tmp.path().join("curriculum.json");
+    let crlf = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace('\n', "\r\n");
+    std::fs::write(&path, crlf).unwrap();
+    cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .code(1);
+}
+
+#[test]
+fn curriculum_check_read_error_exits_two_with_the_reason() {
+    let tmp = good_copy();
+    std::fs::create_dir(tmp.path().join("curriculum.json")).unwrap();
+    let out = cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("curriculum.json"), "{stderr}");
+}

@@ -139,7 +139,17 @@ fn content_cmd(cmd: ContentCmd) -> ExitCode {
             };
             let target = dir.join("curriculum.json");
             if check {
-                if std::fs::read_to_string(&target).ok().as_deref() == Some(text.as_str()) {
+                // A missing file is stale (exit 1); any other read failure is an unusable
+                // directory (exit 2). The comparison is byte-exact, so CRLF is stale too.
+                let committed = match std::fs::read(&target) {
+                    Ok(bytes) => Some(bytes),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                    Err(e) => {
+                        eprintln!("{}: {e}", target.display());
+                        return ExitCode::from(2);
+                    }
+                };
+                if committed.as_deref() == Some(text.as_bytes()) {
                     println!("curriculum.json is up to date");
                     ExitCode::SUCCESS
                 } else {
