@@ -55,7 +55,10 @@ fn fence_run(line: &str) -> Option<(char, usize, &str)> {
     }
     let c = body.chars().next().filter(|c| *c == '`' || *c == '~')?;
     let n = body.chars().take_while(|x| *x == c).count();
-    (n >= 3).then(|| (c, n, &body[n..]))
+    let rest = &body[n..];
+    // A backtick fence's info string may not contain a backtick (that line is inline code).
+    let inline_code = c == '`' && rest.contains('`');
+    (n >= 3 && !inline_code).then_some((c, n, rest))
 }
 
 /// The text of a `## ` heading with an optional closing `#` run removed, or `None` when the
@@ -269,5 +272,13 @@ mod tests {
         );
         assert!(parse_prose(&format!("{HEAD}##\n")).is_err());
         assert!(parse_prose(&format!("{HEAD}## ##\n")).is_err());
+    }
+
+    #[test]
+    fn a_backtick_in_a_backtick_info_string_means_no_fence() {
+        // CommonMark: this line is inline code, not a fence opener, so nothing is unclosed.
+        assert_eq!(keys("```a`b\n- **M1**: x\n"), vec!["M1"]);
+        // Tilde fences may carry backticks in their info string.
+        assert_eq!(keys("~~~a`b\n- **M1**: x\n~~~\n- **M2**: y\n"), vec!["M2"]);
     }
 }
