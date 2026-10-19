@@ -49,10 +49,10 @@ fn parse_doc<T: DeserializeOwned>(
     path: &str,
     issues: &mut Vec<ContentIssue>,
 ) -> Option<T> {
-    let text = match text {
+    let text = match text.text() {
         Ok(t) => t,
-        Err(e) => {
-            issues.push(parse_issue(path).detail(e.clone()));
+        Err(why) => {
+            issues.push(parse_issue(path).detail(why));
             return None;
         }
     };
@@ -89,9 +89,9 @@ fn parse_doc<T: DeserializeOwned>(
 }
 
 fn parse_md(text: &FileText, path: &str, issues: &mut Vec<ContentIssue>) -> Option<Prose> {
-    let result = match text {
+    let result = match text.text() {
         Ok(t) => parse_prose(t),
-        Err(e) => Err(e.clone()),
+        Err(why) => Err(why.to_string()),
     };
     result
         .map_err(|e| issues.push(parse_issue(path).detail(e)))
@@ -595,6 +595,7 @@ fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
 mod tests {
     use crate::issue::codes;
     use crate::test_util::*;
+    use crate::tree::FileText;
     use crate::validate_tree;
     use serde_json::json;
 
@@ -613,13 +614,14 @@ mod tests {
     #[test]
     fn unreadable_json_and_prose_are_parse_issues() {
         let mut t = good_tree();
-        t.lessons[0].json = Ok("{".into());
-        t.lessons[1].vi = Err("missing".into());
-        t.levels = Ok("[]".into());
+        t.lessons[0].json = FileText::Text("{".into());
+        t.lessons[1].vi = FileText::Missing;
+        t.levels = FileText::Text("[]".into());
         let r = validate_tree(&t);
         assert!(has(&r, "l0-fx-capacity", codes::PARSE));
         let vi = issues_of(&r, "l0-fx-reading");
         assert_eq!(vi[0].path, "lessons/l0-fx-reading/vi.md");
+        assert_eq!(vi[0].detail.as_deref(), Some("missing"));
         assert!(has(&r, "levels", codes::PARSE));
     }
 

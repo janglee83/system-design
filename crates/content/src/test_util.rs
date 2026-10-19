@@ -2,7 +2,7 @@
 
 //! Unit-test helpers: the good fixture tree in memory, and editors that change one thing.
 
-use crate::tree::{ContentTree, RawItem};
+use crate::tree::{ContentTree, FileText, RawItem};
 use serde_json::Value;
 
 macro_rules! fx {
@@ -19,15 +19,15 @@ macro_rules! fx {
 fn item(folder: &str, json: String, vi: String, en: String) -> RawItem {
     RawItem {
         folder: folder.into(),
-        json: Ok(json),
-        vi: Ok(vi),
-        en: Ok(en),
+        json: FileText::Text(json),
+        vi: FileText::Text(vi),
+        en: FileText::Text(en),
     }
 }
 
 pub fn good_tree() -> ContentTree {
     ContentTree {
-        levels: Ok(fx!("levels.json")),
+        levels: FileText::Text(fx!("levels.json")),
         research: ["fx-capacity".to_string()].into_iter().collect(),
         lessons: vec![
             item(
@@ -62,15 +62,15 @@ fn find<'a>(tree: &'a mut ContentTree, folder: &str) -> &'a mut RawItem {
 
 pub fn edit_json(tree: &mut ContentTree, folder: &str, f: impl FnOnce(&mut Value)) {
     let it = find(tree, folder);
-    let mut v: Value = serde_json::from_str(it.json.as_ref().unwrap()).unwrap();
+    let mut v: Value = serde_json::from_str(it.json.text().unwrap()).unwrap();
     f(&mut v);
-    it.json = Ok(serde_json::to_string_pretty(&v).unwrap());
+    it.json = FileText::Text(serde_json::to_string_pretty(&v).unwrap());
 }
 
 pub fn edit_levels(tree: &mut ContentTree, f: impl FnOnce(&mut Value)) {
-    let mut v: Value = serde_json::from_str(tree.levels.as_ref().unwrap()).unwrap();
+    let mut v: Value = serde_json::from_str(tree.levels.text().unwrap()).unwrap();
     f(&mut v);
-    tree.levels = Ok(serde_json::to_string_pretty(&v).unwrap());
+    tree.levels = FileText::Text(serde_json::to_string_pretty(&v).unwrap());
 }
 
 pub fn edit_prose(
@@ -81,7 +81,7 @@ pub fn edit_prose(
 ) {
     let it = find(tree, folder);
     let slot = if lang == "vi" { &mut it.vi } else { &mut it.en };
-    *slot = Ok(f(slot.as_ref().unwrap()));
+    *slot = FileText::Text(f(slot.text().unwrap()));
 }
 use crate::issue::ContentIssue;
 use crate::report::Report;

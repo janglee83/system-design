@@ -8,7 +8,7 @@ pub mod types;
 pub use types::*;
 
 pub mod tree;
-pub use tree::{load_dir, ContentTree, LoadError, RawItem};
+pub use tree::{load_dir, ContentTree, FileText, LoadError, RawItem};
 
 pub(crate) mod checks;
 pub mod ids;
