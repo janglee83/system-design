@@ -19,6 +19,7 @@ pub(crate) mod challenge;
 pub(crate) mod checks;
 pub(crate) mod choices;
 pub mod controls;
+pub mod curriculum;
 pub(crate) mod dup_keys;
 pub(crate) mod engine_input;
 pub(crate) mod experiment;
@@ -30,6 +31,7 @@ pub(crate) mod readiness;
 pub mod report;
 pub(crate) mod structure;
 
+pub use curriculum::{curriculum, curriculum_json, Curriculum};
 pub use report::{ItemKind, ItemReport, Readiness, Report, RunSummary};
 
 use structure::{Item, LEVELS_ID, LEVELS_PATH};
@@ -40,7 +42,6 @@ pub(crate) mod test_util;
 use rayon::prelude::*;
 use std::path::Path;
 
-#[allow(dead_code)] // fields besides `report` are read by the curriculum (plan Task 22); remove then
 pub(crate) struct Analysis {
     pub parsed: structure::Parsed,
     pub lesson_outcomes: Vec<checks::Outcome>,

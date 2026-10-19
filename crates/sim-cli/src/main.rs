@@ -87,6 +87,14 @@ enum ContentCmd {
         #[arg(long)]
         json: bool,
     },
+    /// Write <dir>/curriculum.json; with --check, fail if the committed file is out of date.
+    Curriculum {
+        dir: PathBuf,
+        #[arg(long)]
+        check: bool,
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn print_report(r: &content::Report, json: bool) {
@@ -114,6 +122,46 @@ fn content_cmd(cmd: ContentCmd) -> ExitCode {
                 }
             }
         },
+        ContentCmd::Curriculum { dir, check, json } => {
+            let tree = match content::load_dir(&dir) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(2);
+                }
+            };
+            let text = match content::curriculum_json(&tree) {
+                Ok(t) => t,
+                Err(report) => {
+                    print_report(&report, json);
+                    return ExitCode::from(1);
+                }
+            };
+            let target = dir.join("curriculum.json");
+            if check {
+                if std::fs::read_to_string(&target).ok().as_deref() == Some(text.as_str()) {
+                    println!("curriculum.json is up to date");
+                    ExitCode::SUCCESS
+                } else {
+                    eprintln!(
+                        "curriculum.json is STALE: run sim-cli content curriculum {}",
+                        dir.display()
+                    );
+                    ExitCode::from(1)
+                }
+            } else {
+                match std::fs::write(&target, &text) {
+                    Ok(()) => {
+                        println!("wrote {}", target.display());
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {e}", target.display());
+                        ExitCode::from(2)
+                    }
+                }
+            }
+        }
     }
 }
 

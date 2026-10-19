@@ -74,3 +74,60 @@ fn output_is_deterministic_across_thread_counts() {
     };
     assert_eq!(run("1"), run("8"));
 }
+
+fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
+    for entry in std::fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let target = to.join(entry.file_name());
+        if entry.path().is_dir() {
+            std::fs::create_dir_all(&target).unwrap();
+            copy_tree(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+#[test]
+fn curriculum_write_then_check() {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("good"), tmp.path());
+    cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .code(1); // no file yet
+    cli()
+        .args(["content", "curriculum"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .success();
+    let path = tmp.path().join("curriculum.json");
+    let stale = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("\"version\": 2", "\"version\": 1");
+    std::fs::write(&path, stale).unwrap();
+    cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .code(1);
+}
+
+#[test]
+fn curriculum_refuses_a_broken_tree() {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("broken"), tmp.path());
+    let out = cli()
+        .args(["content", "curriculum"])
+        .arg(tmp.path())
+        .assert()
+        .code(1);
+    assert!(String::from_utf8_lossy(&out.get_output().stdout).contains("FAIL"));
+    assert!(!tmp.path().join("curriculum.json").exists());
+}
