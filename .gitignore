@@ -6,3 +6,6 @@ dist/
 coverage/
 .worktrees/
 .superpowers/
+target/
+packages/sim/wasm/
+fixtures/parity/raw/

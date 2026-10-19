@@ -1,0 +1,25 @@
+{
+  "id": "web-tier-surge-scaled",
+  "description": "Same surge, behind an LB with 2 replicas and 5 web servers.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 5}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 8000, "surge": {"factor": 3, "atMs": 2000, "durationMs": 6000}},
+    "seed": 1
+  },
+  "expect": {
+    "p95": {"<=": 100},
+    "availability": {">=": 0.999},
+    "spofCount": {"==": 0},
+    "costPerMonth": {"<=": 200}
+  }
+}

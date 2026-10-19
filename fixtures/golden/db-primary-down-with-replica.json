@@ -1,0 +1,24 @@
+{
+  "id": "db-primary-down-with-replica",
+  "description": "With one read replica, the replica is promoted 600 ms after the primary is lost.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 3},
+        {"id": "pg", "kind": "postgres", "config": {"readReplicas": 1}}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"},
+        {"id": "e3", "from": "web", "to": "pg", "kind": "db"}
+      ]
+    },
+    "workload": {"baseRps": 2000},
+    "faults": [{"kind": "db-primary-down", "target": "pg", "atMs": 3000}],
+    "seed": 1
+  },
+  "expect": {"availability": {">=": 0.95}, "spofCount": {"==": 0}},
+  "expectEvents": ["db.primary-down", "db.promoted"]
+}

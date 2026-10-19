@@ -1,0 +1,11 @@
+{
+  "$defaults": {"replicas": 1},
+  "sim:scale-web-tier/surge": {
+    "durationMs": 11000,
+    "trafficEndMs": 10000,
+    "arrivals": "uniform",
+    "clientTimeoutMs": 1000,
+    "writeRatio": 0,
+    "surge": {"atMs": 4000, "durationMs": 2000}
+  }
+}

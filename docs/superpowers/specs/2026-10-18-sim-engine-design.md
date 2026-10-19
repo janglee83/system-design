@@ -132,7 +132,7 @@ createSimWorker(): SimWorker                            // same API, off the mai
 | `graph` | `Graph` | Nodes and edges; identical to what the canvas saves |
 | `workload` | `Workload` | Traffic shape and scenario parameters |
 | `faults` | `Fault[]` | Injected failures, each with a start time |
-| `durationMs` | `u32` | Default `10_000` |
+| `durationMs` | `u32` | Default `10_000`, at most `600_000` (10 minutes of simulated time) |
 | `seed` | `u32` | Drives the PRNG; same input → identical output |
 | `calibration` | `CalibrationOverrides?` | Optional overrides of world parameters (section 6.7) |
 
@@ -148,8 +148,18 @@ createSimWorker(): SimWorker                            // same API, off the mai
 - `profile`: `'read-heavy' | 'write-heavy' | 'mixed' | 'chat' | 'feed' | 'jobs'`
 - `baseRps`, `writeRatio`, `clients`, `clientTimeoutMs`
 - `surge?: { factor, atMs, durationMs }`
+- `arrivals?: 'poisson' | 'uniform'`: how a tick's request volume is drawn. Missing means
+  `'poisson'` (seeded Poisson noise). `'uniform'` sends exactly rate × tick, which matches
+  the deterministic arrivals of the reference runs.
+- `trafficEndMs?`: clients send nothing at or after this time, so a run can keep going to
+  drain queues after traffic stops. Missing means traffic continues until `durationMs`.
 - `params?: Record<string, number>` for scenario values (group size, friends per user,
   connection-drop rate, drop length, …)
+- Validation (blocking `workload.invalid`, `field` names the key; nothing is silently
+  replaced): `baseRps` finite and ≥ 0; `writeRatio` finite and in `[0, 1]`;
+  `clientTimeoutMs` finite and > 0; `surge.factor` finite and ≥ 0; `durationMs` ≤ `600_000`
+  (reported with `field: "durationMs"`). A `trafficEndMs` at or past `durationMs` is valid
+  and has no effect: traffic runs for the whole duration.
 
 `Fault`: `{ kind: FaultKind, target?: nodeId, atMs }`. The fault kinds for v1:
 
@@ -230,7 +240,8 @@ for `simulate` including the boundary, and under 5 ms to read all of `metrics`.
 Fixed 10 ms virtual ticks (1,000 ticks for 10 s). On every tick:
 
 1. **Generate traffic.** Each client emits the tick's request volume from the workload,
-   with Poisson noise from the seeded PRNG, split into request classes.
+   with Poisson noise from the seeded PRNG (or exactly rate × tick when `arrivals` is
+   `'uniform'`; nothing after `trafficEndMs`), split into request classes.
 2. **Route along edges.** Load balancers split across healthy replicas (round robin or
    least connections). Web tiers try the cache first; cache misses fall through to the
    database at a hit rate derived from cache size and key space. Writes go to the primary;
@@ -314,15 +325,33 @@ run, so lessons, challenges and the Lab can model slower hardware, other cloud p
 slower networks.
 
 - **Run level:** `SimInput.calibration` overrides any field of `Calibration`: web rps per vCPU,
-  web service time, queue per GB, web cost per vCPU; LB rps, service time, queue seconds and
-  cost per replica; Postgres qps, service time, queue seconds, cost per instance and failover
-  time; network delay per edge kind; the utilization cap used for latency. Missing fields use
-  the defaults, which are fitted to the reference runs (`fixtures/parity`).
+  web service time, requests held per GB of memory (`webQueuePerGb`), web cost of the first
+  vCPU and of each extra vCPU; LB rps, service time, queue seconds, cost per replica and
+  latency utilization cap (`lbMaxUtilizationForLatency`); Postgres qps, service time, queue
+  seconds, cost per instance, failover time and latency utilization cap
+  (`pgMaxUtilizationForLatency`); network delay per edge kind. Missing fields use the
+  defaults. The web fields and `lbServiceMs` are fitted to the reference runs
+  (`fixtures/parity`); the rest are teaching-scale estimates.
+- **Latency per role.** The web tier follows the reference model: latency = `webServiceMs` +
+  FIFO queue wait, where the server holds `webQueuePerGb × memoryGb` requests (waiting or in
+  service) and rejects the rest. Balancers and databases add a utilization knee so they slow
+  down before they overload: latency = `serviceMs / (1 − min(ρ, cap)) + wait`, with ρ the
+  arriving load over capacity and `cap` the role's `…MaxUtilizationForLatency` (default
+  0.95). No role caps its queue at the client timeout: a server does not know its callers'
+  timeout, so requests can wait past it and the client books them as timed out at their
+  real latency.
 - **Node level:** `node.config` may set `rpsPerInstance`, `serviceMs` and `costPerMonth`
   (price of one instance) for that node only.
 - **Not overridable:** tick length, frame interval and trace count (engine mechanics).
-- **Validation:** non-finite, negative, or zero-where-positive values are blocking issues
-  (`calibration.invalid` with the field name, `config.invalid` with node and field).
+- **Validation:** non-finite, negative, or zero-where-positive values, and utilization caps
+  outside the open interval (0, 1), are blocking issues (`calibration.invalid` with the
+  field name, `config.invalid` with node and field).
+  Component config is checked against the component's `ConfigField` schema: number fields
+  must be finite and within `min..=max`, fields flagged `integer` (`cpu`, `readReplicas`)
+  must be whole numbers, and choice fields must be one of `options`. `replicas` must be in
+  `1..=1000`. Any violation is a blocking `config.invalid` with node and field. The
+  `limits.too-many-instances` total is summed in 64 bits, so huge replica counts cannot wrap
+  around the limit.
 - **API:** `defaultCalibration()` returns the defaults so the UI can show and edit them.
   Named presets ("default cloud", "on-prem", "cross-region network") are content/UI data,
   not engine code.

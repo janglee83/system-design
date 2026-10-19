@@ -1,0 +1,22 @@
+{
+  "id": "web-tier-surge-single",
+  "description": "One 1-vCPU web server reached directly by clients; traffic triples for 6 s.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "web", "kind": "web-server"}
+      ],
+      "edges": [{"id": "e1", "from": "users", "to": "web", "kind": "http"}]
+    },
+    "workload": {"baseRps": 8000, "surge": {"factor": 3, "atMs": 2000, "durationMs": 6000}},
+    "seed": 1
+  },
+  "expect": {
+    "p95": {">=": 300},
+    "availability": {"<=": 0.95},
+    "spofCount": {"==": 1},
+    "exposedBackends": {"==": 1}
+  },
+  "expectEvents": ["node.overloaded"]
+}

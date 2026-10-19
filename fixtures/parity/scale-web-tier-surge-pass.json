@@ -1,0 +1,30 @@
+{
+  "id": "scale-web-tier-surge-pass",
+  "source": {"site": "reference", "runId": "807734e1-c0fa-4b84-a0f9-07c78d2bc887", "engineVersion": "2.2.4", "capturedAt": "2026-10-18"},
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 5, "config": {"cpu": 1, "memoryGb": 2}}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 8000, "writeRatio": 0, "clientTimeoutMs": 1000, "surge": {"factor": 3, "atMs": 4000, "durationMs": 2000}, "trafficEndMs": 10000, "arrivals": "uniform"},
+    "durationMs": 11000,
+    "seed": 1
+  },
+  "reference": {
+    "metrics": {"p95": 7, "p99": 7, "availability": 1.0, "costPerMonth": 162.5, "spofCount": 0, "exposedBackends": 0, "requestsTotal": 112000},
+    "goals": [
+      {"id": "latency-p95", "metric": "p95", "op": "<=", "value": 100, "passed": true},
+      {"id": "availability", "metric": "availability", "op": ">=", "value": 0.999, "passed": true},
+      {"id": "single-entry", "metric": "exposedBackends", "op": "==", "value": 0, "passed": true},
+      {"id": "no-single-point", "metric": "spofCount", "op": "==", "value": 0, "passed": true},
+      {"id": "budget", "metric": "costPerMonth", "op": "<=", "value": 200, "passed": true}
+    ]
+  }
+}
