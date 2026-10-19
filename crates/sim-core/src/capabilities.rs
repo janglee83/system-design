@@ -2,6 +2,7 @@
 //! from "broken": a lesson needing anything outside these lists is `blocked`, not failing.
 
 use crate::types::FaultKind;
+use std::collections::BTreeMap;
 
 /// Fault kinds the engine applies. Every other kind parses but only emits `fault.unsupported`.
 pub const SUPPORTED_FAULTS: [FaultKind; 4] = [
@@ -35,23 +36,85 @@ pub const MEASURED_METRICS: [&str; 16] = [
 /// `workload.params` keys the engine reads. None yet; every key is ignored.
 pub const WORKLOAD_PARAMS: [&str; 0] = [];
 
-#[derive(Debug, Clone, PartialEq)]
+/// Top-level `calibration` override keys (`CalibrationOverrides`, camelCase), sorted.
+pub const CALIBRATION_FIELDS: [&str; 20] = [
+    "edgeDelayCacheMs",
+    "edgeDelayDbMs",
+    "edgeDelayHttpMs",
+    "edgeDelayMsgMs",
+    "lbCostPerReplica",
+    "lbMaxUtilizationForLatency",
+    "lbQueueSeconds",
+    "lbRpsPerReplica",
+    "lbServiceMs",
+    "pgCostPerInstance",
+    "pgFailoverMs",
+    "pgMaxUtilizationForLatency",
+    "pgQpsPerInstance",
+    "pgQueueSeconds",
+    "pgServiceMs",
+    "webCostPerExtraVcpu",
+    "webCostPerVcpu",
+    "webQueuePerGb",
+    "webRpsPerVcpu",
+    "webServiceMs",
+];
+
+/// Everything this engine build reads, for telling "not built yet" from "broken".
+/// Every list is sorted, so output built from it is stable.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Capabilities {
+    /// Component kinds in the registry.
     pub components: Vec<String>,
+    /// Fault kinds the engine applies (sorted by enum order).
     pub faults: Vec<FaultKind>,
+    /// Metric keys every run reports (`grade::metric_value` names).
     pub metrics: Vec<String>,
+    /// `workload.params` keys the engine reads.
     pub workload_params: Vec<String>,
+    /// `calibration` override keys.
+    pub calibration_fields: Vec<String>,
+    /// Component kind -> the `config` keys it declares.
+    pub config_keys: BTreeMap<String, Vec<String>>,
+    /// `config` keys every node accepts as per-node overrides.
+    pub node_override_keys: Vec<String>,
+}
+
+impl Capabilities {
+    /// Supported fault kinds by their kebab-case names, sorted.
+    pub fn fault_names(&self) -> Vec<&'static str> {
+        let mut v: Vec<&'static str> = self.faults.iter().map(|f| f.as_str()).collect();
+        v.sort_unstable();
+        v
+    }
+}
+
+fn sorted_strings<'a>(items: impl IntoIterator<Item = &'a str>) -> Vec<String> {
+    let mut v: Vec<String> = items.into_iter().map(str::to_string).collect();
+    v.sort();
+    v.dedup();
+    v
 }
 
 pub fn capabilities() -> Capabilities {
+    let metas = crate::components::list_components();
+    let config_keys = metas
+        .iter()
+        .map(|m| {
+            let keys = sorted_strings(m.fields.iter().map(|f| f.key.as_str()));
+            (m.kind.clone(), keys)
+        })
+        .collect();
+    let mut faults = SUPPORTED_FAULTS.to_vec();
+    faults.sort();
     Capabilities {
-        components: crate::components::list_components()
-            .into_iter()
-            .map(|m| m.kind)
-            .collect(),
-        faults: SUPPORTED_FAULTS.to_vec(),
-        metrics: MEASURED_METRICS.iter().map(|s| s.to_string()).collect(),
-        workload_params: WORKLOAD_PARAMS.iter().map(|s| s.to_string()).collect(),
+        components: sorted_strings(metas.iter().map(|m| m.kind.as_str())),
+        faults,
+        metrics: sorted_strings(MEASURED_METRICS),
+        workload_params: sorted_strings(WORKLOAD_PARAMS),
+        calibration_fields: sorted_strings(CALIBRATION_FIELDS),
+        config_keys,
+        node_override_keys: sorted_strings(crate::components::NODE_OVERRIDE_KEYS),
     }
 }
 
@@ -115,5 +178,63 @@ mod tests {
         assert_eq!(c.components, vec!["client", "lb", "postgres", "web-server"]);
         assert_eq!(c.faults.len(), 4);
         assert!(c.workload_params.is_empty());
+    }
+
+    fn sorted(v: &[String]) -> bool {
+        v.windows(2).all(|w| w[0] < w[1])
+    }
+
+    #[test]
+    fn calibration_fields_are_every_override_key() {
+        let keys = serde_json::to_value(crate::types::CalibrationOverrides::default()).unwrap();
+        let mut expected: Vec<String> = keys.as_object().unwrap().keys().cloned().collect();
+        expected.sort();
+        assert_eq!(capabilities().calibration_fields, expected);
+    }
+
+    #[test]
+    fn config_keys_come_from_component_fields_and_overrides_are_listed() {
+        let c = capabilities();
+        assert_eq!(
+            c.config_keys.keys().cloned().collect::<Vec<_>>(),
+            c.components
+        );
+        assert_eq!(c.config_keys["web-server"], vec!["cpu", "memoryGb"]);
+        for keys in c.config_keys.values() {
+            assert!(sorted(keys));
+        }
+        assert_eq!(
+            c.node_override_keys,
+            vec!["costPerMonth", "rpsPerInstance", "serviceMs"]
+        );
+    }
+
+    #[test]
+    fn every_list_is_sorted_and_fault_names_are_kebab_case() {
+        let c = capabilities();
+        for list in [
+            &c.components,
+            &c.metrics,
+            &c.workload_params,
+            &c.calibration_fields,
+        ] {
+            assert!(sorted(list), "{list:?}");
+        }
+        assert!(c.faults.windows(2).all(|w| w[0] < w[1]));
+        for kind in ALL_FAULTS {
+            assert_eq!(
+                serde_json::to_value(kind).unwrap(),
+                serde_json::Value::String(kind.as_str().into())
+            );
+        }
+        assert_eq!(
+            c.fault_names(),
+            vec![
+                "db-primary-down",
+                "instance-down",
+                "lb-node-down",
+                "traffic-surge-3x"
+            ]
+        );
     }
 }
