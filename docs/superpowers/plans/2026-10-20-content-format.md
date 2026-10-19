@@ -4920,3 +4920,1399 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
+## Phase 5: Orchestration, golden test, CLI, curriculum, TS export
+
+### Task 18: Parallel, deterministic validation and text output
+
+**Files:**
+- Modify: `crates/content/src/lib.rs`, `crates/content/src/report.rs`
+
+**Interfaces:**
+- Produces: `pub(crate) struct Analysis { parsed, lesson_outcomes, challenge_outcomes, report }` and `pub(crate) fn analyze(&ContentTree) -> Analysis` (the curriculum reuses it in Task 22). `validate_tree` now returns `analyze(tree).report`. `validate_dir(&Path) -> Result<Report, LoadError>`. `Report::to_text() -> String`.
+
+- [ ] **Step 1: Write the failing tests**: add a `tests` module to `lib.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::*;
+    use serde_json::json;
+
+    #[test]
+    fn same_report_with_one_thread_or_many() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["choices"][2]["failsGoals"] = json!(["fast"]));
+        let pool = |n| rayon::ThreadPoolBuilder::new().num_threads(n).build().unwrap();
+        let one = pool(1).install(|| validate_tree(&t));
+        let many = pool(4).install(|| validate_tree(&t));
+        assert_eq!(serde_json::to_string(&one).unwrap(), serde_json::to_string(&many).unwrap());
+        assert_eq!(one.to_text(), validate_tree(&t).to_text());
+    }
+
+    #[test]
+    fn text_output() {
+        assert_eq!(
+            validate_tree(&good_tree()).to_text(),
+            "PASS levels\nPASS c-l0-fx-shop\nPASS l0-fx-capacity\nPASS l0-fx-reading\n4 items: 4 passed, 0 failed, 0 warnings, 0 blocked\n"
+        );
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| {
+            v["experiment"]["choices"][2]["failsGoals"] = json!(["fast"]);
+            v["experiment"]["goals"][0]["value"] = 1.into();
+        });
+        let text = validate_tree(&t).to_text();
+        assert!(text.contains("\nFAIL l0-fx-capacity content.correct-fails lessons/l0-fx-capacity/lesson.json id=A field=fast measured=4."), "{text}");
+        assert!(text.contains("\nWARN l0-fx-capacity content.wrong-extra-fail lessons/l0-fx-capacity/lesson.json id=C field=no-drops measured="), "{text}");
+        assert!(!text.contains("PASS l0-fx-capacity"));
+        assert!(text.ends_with("4 items: 3 passed, 1 failed, 1 warnings, 0 blocked\n"), "{text}");
+    }
+
+    #[test]
+    fn engine_codes_and_details_print_on_one_line() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["base"]["graph"]["edges"][0]["kind"] = "db".into());
+        let text = validate_tree(&t).to_text();
+        assert!(text.contains("FAIL l0-fx-capacity content.engine-invalid lessons/l0-fx-capacity/lesson.json field=base engine=edge.not-accepted@e1\n"), "{text}");
+    }
+
+    #[test]
+    fn validate_dir_reads_the_good_fixture() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/good");
+        let r = validate_dir(&dir).unwrap();
+        assert_eq!(r, validate_tree(&good_tree()));
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content tests::`
+Expected: compile errors (`to_text`, `validate_dir` missing).
+
+- [ ] **Step 3: Add `to_text`** to `impl Report` in `report.rs`:
+
+```rust
+    /// `PASS <id>` per item without blocking issues, one `FAIL`/`WARN` line per issue, then a
+    /// summary. One issue per line; `detail` is Debug-quoted so it never breaks a line.
+    pub fn to_text(&self) -> String {
+        let mut out = String::new();
+        for item in &self.items {
+            if item.passed {
+                out.push_str(&format!("PASS {}\n", item.id));
+            }
+            for i in &item.issues {
+                let tag = if i.blocking { "FAIL" } else { "WARN" };
+                out.push_str(&format!("{tag} {} {}\n", item.id, describe(i)));
+            }
+        }
+        out.push_str(&format!(
+            "{} items: {} passed, {} failed, {} warnings, {} blocked\n",
+            self.items.len(), self.passed, self.failed, self.warnings, self.blocked
+        ));
+        out
+    }
+```
+
+and below it, in the same file:
+
+```rust
+fn describe(i: &ContentIssue) -> String {
+    let mut s = format!("{} {}", i.code, i.path);
+    if let Some(id) = &i.id {
+        s.push_str(&format!(" id={id}"));
+    }
+    if let Some(f) = &i.field {
+        s.push_str(&format!(" field={f}"));
+    }
+    if let Some(m) = i.measured {
+        s.push_str(&format!(" measured={m}"));
+    }
+    if !i.missing.is_empty() {
+        s.push_str(&format!(" missing={}", i.missing.join(",")));
+    }
+    if !i.engine.is_empty() {
+        let codes: Vec<String> = i.engine.iter().map(|e| {
+            match e.node_id.as_deref().or(e.edge_id.as_deref()).or(e.field.as_deref()) {
+                Some(at) => format!("{}@{at}", e.code),
+                None => e.code.clone(),
+            }
+        }).collect();
+        s.push_str(&format!(" engine={}", codes.join(",")));
+    }
+    if let Some(d) = &i.detail {
+        s.push_str(&format!(" detail={d:?}"));
+    }
+    s
+}
+```
+
+- [ ] **Step 4: Replace `validate_tree`** in `lib.rs` with the parallel analysis:
+
+```rust
+use rayon::prelude::*;
+use std::path::Path;
+
+pub(crate) struct Analysis {
+    pub parsed: structure::Parsed,
+    pub lesson_outcomes: Vec<checks::Outcome>,
+    pub challenge_outcomes: Vec<checks::Outcome>,
+    pub report: Report,
+}
+
+fn item_report<T>(kind: ItemKind, item: &Item<T>, o: &checks::Outcome) -> ItemReport {
+    let mut issues = item.issues.clone();
+    issues.extend(o.issues.iter().cloned());
+    ItemReport { id: item.id.clone(), kind, path: item.dir.clone(), readiness: o.readiness, passed: true, issues, runs: o.runs.clone() }
+}
+
+/// Parse and cross-check sequentially, check items in parallel, then build a sorted report.
+/// `par_iter().map().collect()` keeps input order, so thread count never changes the output.
+pub(crate) fn analyze(tree: &ContentTree) -> Analysis {
+    let mut parsed = structure::parse_tree(tree);
+    structure::check_cross(&mut parsed);
+    let ctx = checks::Ctx::new(parsed.levels.as_ref());
+    let lesson_outcomes: Vec<checks::Outcome> = parsed.lessons.par_iter().map(|l| checks::check_lesson(l, &ctx)).collect();
+    let challenge_outcomes: Vec<checks::Outcome> = parsed.challenges.par_iter().map(|c| checks::check_challenge(c, &ctx)).collect();
+    let mut items = vec![ItemReport {
+        id: LEVELS_ID.into(),
+        kind: ItemKind::Levels,
+        path: LEVELS_PATH.into(),
+        readiness: None,
+        passed: true,
+        issues: parsed.global.clone(),
+        runs: vec![],
+    }];
+    items.extend(parsed.lessons.iter().zip(&lesson_outcomes).map(|(l, o)| item_report(ItemKind::Lesson, l, o)));
+    items.extend(parsed.challenges.iter().zip(&challenge_outcomes).map(|(c, o)| item_report(ItemKind::Challenge, c, o)));
+    let report = Report::new(items);
+    Analysis { parsed, lesson_outcomes, challenge_outcomes, report }
+}
+
+/// Validate an in-memory tree. Deterministic: same tree, same report.
+pub fn validate_tree(tree: &ContentTree) -> Report {
+    analyze(tree).report
+}
+
+/// Load `dir` and validate it. `Err` means the directory itself is unusable (exit code 2).
+pub fn validate_dir(dir: &Path) -> Result<Report, LoadError> {
+    Ok(validate_tree(&load_dir(dir)?))
+}
+```
+
+`checks::Ctx` has to be `Sync` for `par_iter`. `PlannedFeatures` and `Capabilities` hold only `Vec`s of `String`/`FaultKind`, so it is.
+
+- [ ] **Step 5: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass. If `text_output`'s `measured=4.` prefix fails, read the actual line: it means the engine's p95 for 2 vCPU changed from 4.68, and that is an engine change to investigate (Global Constraints), not a test to edit.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): parallel deterministic validation and text report
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 19: Golden test over good and broken fixture trees
+
+**Files:**
+- Create: `crates/content/tests/fixtures/make-broken.mjs`, `crates/content/tests/fixtures/broken/**` (generated), `crates/content/tests/golden.rs`, `crates/content/tests/snapshots/golden__good.snap`, `crates/content/tests/snapshots/golden__broken.snap`
+
+**Interfaces:**
+- Produces: a committed broken tree with one item per issue code, regenerated by `./dev node crates/content/tests/fixtures/make-broken.mjs`.
+
+- [ ] **Step 1: Write the generator** `crates/content/tests/fixtures/make-broken.mjs`:
+
+```js
+// Regenerates ./broken from ./good: one item per issue code (spec §12, ruling R20).
+// Run: ./dev node crates/content/tests/fixtures/make-broken.mjs
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const good = join(here, "good");
+const out = join(here, "broken");
+rmSync(out, { recursive: true, force: true });
+
+const read = (rel) => readFileSync(join(good, rel), "utf8");
+const json = (rel) => JSON.parse(read(rel));
+const write = (rel, text) => {
+  const p = join(out, rel);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, text);
+};
+const dump = (v) => JSON.stringify(v, null, 2) + "\n";
+
+function prose(kind, from, id, edit = {}) {
+  for (const lang of ["vi", "en"]) {
+    let text = read(`${kind}/${from}/${lang}.md`).replace(/^id: .*$/m, `id: ${id}`);
+    if (edit[lang]) text = edit[lang](text);
+    write(`${kind}/${id}/${lang}.md`, text);
+  }
+}
+
+const lessons = [];
+function lesson(id, edit = () => {}, proseEdit = {}) {
+  const v = json("lessons/l0-fx-capacity/lesson.json");
+  v.id = id;
+  edit(v);
+  write(`lessons/${id}/lesson.json`, dump(v));
+  prose("lessons", "l0-fx-capacity", id, proseEdit);
+  lessons.push(id);
+}
+
+const challenges = [];
+function challenge(id, edit) {
+  const v = json("challenges/c-l0-fx-shop/challenge.json");
+  v.id = id;
+  v.prerequisites = ["l0-bk-key"];
+  edit(v);
+  write(`challenges/${id}/challenge.json`, dump(v));
+  prose("challenges", "c-l0-fx-shop", id);
+  challenges.push(id);
+}
+
+// content.parse: truncated JSON.
+write("lessons/l0-bk-parse/lesson.json", '{ "formatVersion": 1,\n');
+prose("lessons", "l0-fx-capacity", "l0-bk-parse");
+lessons.push("l0-bk-parse");
+
+lesson("l0-bk-version", (v) => { v.formatVersion = 2; });
+lesson("l0-bk-folder", (v) => { v.id = "l0-bk-other"; });
+lesson("l0-bk-dup-goal", (v) => {
+  v.experiment.goals[1] = { ...v.experiment.goals[0] };
+  for (const c of v.experiment.choices.slice(1)) c.failsGoals = ["fast"];
+});
+lesson("l0-bk-prereq", (v) => { v.prerequisites = ["l0-nope"]; });
+lesson("l0-bk-cycle-a", (v) => { v.prerequisites = ["l0-bk-cycle-b"]; });
+lesson("l0-bk-cycle-b", (v) => { v.prerequisites = ["l0-bk-cycle-a"]; });
+lesson("l0-bk-research", (v) => { v.research = ["no-such-note"]; });
+lesson("l0-bk-section", undefined, { en: (t) => t.replace(/## Takeaways\n[\s\S]*$/, "") });
+lesson("l0-bk-key", undefined, { vi: (t) => t.replace(/- \*\*M2\*\*:.*\n/, "") });
+lesson("l0-bk-control", (v) => { v.experiment.controls[0].path = "graph.nodes[ghost].config.cpu"; });
+lesson("l0-bk-choice", (v) => { v.experiment.choices[1].correct = true; });
+lesson("l0-bk-engine", (v) => { v.experiment.base.graph.edges[0].kind = "db"; });
+lesson("l0-bk-correct", (v) => { v.experiment.goals[0].value = 1; });
+lesson("l0-bk-wrong-passes", (v) => {
+  v.experiment.choices[2] = { id: "C", misconception: "M2", set: { cpu: 4 }, failsGoals: ["fast", "no-drops"] };
+});
+lesson("l0-bk-extra-fail", (v) => { v.experiment.choices[2].failsGoals = ["fast"]; });
+lesson("l0-bk-expect", (v) => {
+  v.experiment.choices[0].expect = { p95: { "<=": 1 } };
+  v.experiment.choices[1].expectEvents = ["db.promoted"];
+});
+lesson("l0-bk-blocked", (v) => { v.experiment.base.faults = [{ kind: "instance-slow", target: "web", atMs: 3000 }]; });
+
+challenge("c-l0-bk-ref", (v) => { v.modes[0].reference.graph.nodes[1].config.cpu = 1; });
+challenge("c-l0-bk-naive", (v) => {
+  v.modes[0].naive.graph.nodes[1].config = { cpu: 2 };
+  v.modes[0].naive.failsGoals = ["fast"];
+});
+challenge("c-l0-bk-limits", (v) => {
+  v.modes[1].reference.graph.nodes[2].replicas = 6;
+  v.modes[0].reference.graph.nodes[0].label = "visitors";
+});
+
+write("research/fx-capacity.md", read("research/fx-capacity.md"));
+const levels = json("levels.json");
+levels.description = "Broken fixture tree: one item per issue code (generated by make-broken.mjs).";
+levels.engineGaps = {};
+levels.roadmap = { lessons: [], challenges: [] };
+levels.levels[0].lessons = lessons;
+levels.levels[0].challenges = challenges;
+levels.levels[0].exitCheck.challenge = "c-l0-bk-ref";
+write("levels.json", dump(levels));
+console.log(`wrote ${lessons.length} lessons and ${challenges.length} challenges`);
+```
+
+Run: `./dev node crates/content/tests/fixtures/make-broken.mjs`
+Expected: `wrote 18 lessons and 3 challenges`.
+
+- [ ] **Step 2: Write the golden test** `crates/content/tests/golden.rs`:
+
+```rust
+//! Golden reports over committed fixture trees (spec §12).
+
+use content::{codes, validate_dir, Report};
+use std::collections::BTreeSet;
+use std::path::PathBuf;
+
+fn fixture(name: &str) -> Report {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name);
+    validate_dir(&dir).unwrap()
+}
+
+#[test]
+fn good_tree_passes_without_issues() {
+    let r = fixture("good");
+    assert!(!r.has_blocking());
+    assert_eq!(r.warnings, 0);
+    insta::assert_snapshot!("good", r.to_text());
+}
+
+#[test]
+fn broken_tree_covers_every_issue_code() {
+    let r = fixture("broken");
+    let seen: BTreeSet<&str> = r.items.iter().flat_map(|i| &i.issues).map(|i| i.code.as_str()).collect();
+    for code in codes::ALL {
+        assert!(seen.contains(code), "no fixture produces {code}");
+    }
+    insta::assert_snapshot!("broken", r.to_text());
+}
+
+#[test]
+fn each_broken_item_reports_its_own_code() {
+    let r = fixture("broken");
+    let expect = [
+        ("l0-bk-parse", codes::PARSE),
+        ("l0-bk-version", codes::FORMAT_VERSION),
+        ("l0-bk-folder", codes::ID),
+        ("l0-bk-dup-goal", codes::DUPLICATE_ID),
+        ("l0-bk-prereq", codes::PREREQUISITE_MISSING),
+        ("l0-bk-cycle-a", codes::PREREQUISITE_CYCLE),
+        ("l0-bk-cycle-b", codes::PREREQUISITE_CYCLE),
+        ("l0-bk-research", codes::RESEARCH_MISSING),
+        ("l0-bk-section", codes::PROSE_SECTION),
+        ("l0-bk-key", codes::PROSE_KEY),
+        ("l0-bk-control", codes::CONTROL),
+        ("l0-bk-choice", codes::CHOICE),
+        ("l0-bk-engine", codes::ENGINE_INVALID),
+        ("l0-bk-correct", codes::CORRECT_FAILS),
+        ("l0-bk-wrong-passes", codes::WRONG_PASSES),
+        ("l0-bk-extra-fail", codes::WRONG_EXTRA_FAIL),
+        ("l0-bk-expect", codes::EXPECT),
+        ("l0-bk-blocked", codes::BLOCKED),
+        ("c-l0-bk-ref", codes::REFERENCE_FAILS),
+        ("c-l0-bk-naive", codes::NAIVE_PASSES),
+        ("c-l0-bk-limits", codes::LIMITS),
+    ];
+    for (id, code) in expect {
+        let item = r.items.iter().find(|i| i.id == id).unwrap_or_else(|| panic!("no item {id}"));
+        assert!(item.issues.iter().any(|i| i.code == code), "{id} lacks {code}: {:#?}", item.issues);
+    }
+    // Warnings alone do not fail an item.
+    for id in ["l0-bk-extra-fail", "l0-bk-blocked"] {
+        assert!(r.items.iter().find(|i| i.id == id).unwrap().passed, "{id}");
+    }
+}
+```
+
+- [ ] **Step 3: Run it and create the snapshots**
+
+Run: `./dev sh -c 'INSTA_UPDATE=always cargo test -p content --test golden'`
+Expected: 3 passed. Two new files appear under `crates/content/tests/snapshots/`.
+
+Review both snapshot files by hand before committing:
+- `golden__good.snap` is exactly the 5 lines from Task 18's `text_output` test.
+- `golden__broken.snap` has a `FAIL` or `WARN` line for each item in the table above. `PASS` appears only for `levels`, `l0-bk-extra-fail` and `l0-bk-blocked`, plus `l0-bk-key` if its only issues are the prose keys of one language (it fails, so in fact no `PASS`). The `l0-bk-blocked` line reads `WARN l0-bk-blocked content.blocked lessons/l0-bk-blocked/lesson.json missing=fault:instance-slow`.
+- Incidental issues are expected and fine. Examples: `l0-bk-folder` also yields `content.id` for the unlisted `l0-bk-other` and for the listed id with no matching folder id on `levels`, and `l0-bk-parse`/`l0-bk-version` are reported on `levels` as listed without a parsed document. Record anything surprising in the commit message.
+
+Then run without `INSTA_UPDATE` to confirm that the snapshots match:
+Run: `./dev cargo test -p content --test golden`
+Expected: 3 passed.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add crates/content/tests
+git commit -m "test(content): golden reports over good and broken fixture trees
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 20: `sim-cli content validate`
+
+**Files:**
+- Modify: `crates/sim-cli/Cargo.toml`, `crates/sim-cli/src/main.rs`
+- Create: `crates/sim-cli/tests/content_cli.rs`
+
+**Interfaces:**
+- Produces: `sim-cli content validate <dir> [--json]` with exit codes 0, 1 and 2 (ruling R18). `print_report` is reused by `curriculum` in Task 22.
+
+- [ ] **Step 1: Write the failing tests** `crates/sim-cli/tests/content_cli.rs`:
+
+```rust
+use assert_cmd::Command;
+use std::path::PathBuf;
+
+fn fixtures(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../content/tests/fixtures").join(name)
+}
+
+fn cli() -> Command {
+    Command::cargo_bin("sim-cli").unwrap()
+}
+
+#[test]
+fn validate_good_tree_exits_zero() {
+    let out = cli().args(["content", "validate"]).arg(fixtures("good")).assert().success();
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(stdout.contains("PASS l0-fx-capacity\n"));
+    assert!(stdout.ends_with("4 items: 4 passed, 0 failed, 0 warnings, 0 blocked\n"));
+}
+
+#[test]
+fn validate_broken_tree_exits_one() {
+    let out = cli().args(["content", "validate"]).arg(fixtures("broken")).assert().code(1);
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(stdout.contains("FAIL l0-bk-correct content.correct-fails"));
+    assert!(stdout.contains("WARN l0-bk-blocked content.blocked"));
+}
+
+#[test]
+fn unreadable_directories_exit_two() {
+    cli().args(["content", "validate", "/no/such/dir"]).assert().code(2);
+    let empty = tempfile::tempdir().unwrap();
+    cli().args(["content", "validate"]).arg(empty.path()).assert().code(2);
+}
+
+#[test]
+fn json_output_is_the_report() {
+    let out = cli().args(["content", "validate", "--json"]).arg(fixtures("good")).assert().success();
+    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(v["items"].as_array().unwrap().len(), 4);
+    assert_eq!(v["items"][2]["runs"][0]["label"], "choice:A");
+}
+
+#[test]
+fn output_is_deterministic_across_thread_counts() {
+    let run = |threads: &str| {
+        let out = cli().env("RAYON_NUM_THREADS", threads).args(["content", "validate", "--json"])
+            .arg(fixtures("broken")).assert().code(1);
+        out.get_output().stdout.clone()
+    };
+    assert_eq!(run("1"), run("8"));
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p sim-cli --test content_cli`
+Expected: failures (clap reports an unknown subcommand `content`, exit code 2).
+
+- [ ] **Step 3: Implement**
+
+`crates/sim-cli/Cargo.toml`, `[dependencies]`: add `content = { path = "../content" }`.
+
+`crates/sim-cli/src/main.rs`: add a variant to `Cmd`:
+
+```rust
+    /// Validate lessons and challenges, or regenerate the curriculum.
+    Content {
+        #[command(subcommand)]
+        cmd: ContentCmd,
+    },
+```
+
+and below `enum Cmd`:
+
+```rust
+#[derive(Subcommand)]
+enum ContentCmd {
+    /// Validate every lesson and challenge in a content directory on the engine.
+    Validate {
+        dir: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+fn print_report(r: &content::Report, json: bool) {
+    if json {
+        println!("{}", serde_json::to_string_pretty(r).expect("serializable"));
+    } else {
+        print!("{}", r.to_text());
+    }
+}
+
+/// Exit codes: 0 no blocking issue, 1 any blocking issue, 2 unusable directory.
+fn content_cmd(cmd: ContentCmd) -> ExitCode {
+    match cmd {
+        ContentCmd::Validate { dir, json } => match content::validate_dir(&dir) {
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(2)
+            }
+            Ok(r) => {
+                print_report(&r, json);
+                if r.has_blocking() { ExitCode::from(1) } else { ExitCode::SUCCESS }
+            }
+        },
+    }
+}
+```
+
+In `main`'s `match`, add the arm `Cmd::Content { cmd } => content_cmd(cmd),`.
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p sim-cli`
+Expected: all pass (the existing CLI tests plus 5 new ones).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/sim-cli Cargo.lock
+git commit -m "feat(sim-cli): content validate with exit codes 0/1/2 and --json
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 21: Convert today's curriculum into `content/levels.json`
+
+**Files:**
+- Create: `content/tools/split_curriculum.mjs` (one-off; deleted in Task 24), `content/levels.json`
+
+**Interfaces:**
+- Produces: `content/levels.json` holding every level, all 136 lessons and 44 challenges as roadmap stubs, the planned-feature catalog and the 59 engine gaps. Phase 7 turns stubs into folders one at a time.
+
+- [ ] **Step 1: Write the converter** `content/tools/split_curriculum.mjs`:
+
+```js
+// One-off: split the generated content/curriculum.json (version 1) into content/levels.json
+// (ruling R8). Run once: ./dev node content/tools/split_curriculum.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const old = JSON.parse(readFileSync("content/curriculum.json", "utf8"));
+if (old.version !== 1) throw new Error("expected curriculum.json version 1");
+
+const kind = (format) => (format === "experiment" ? "experiment" : "reading");
+const needs = (e) => {
+  const n = {};
+  for (const k of ["components", "faults", "dynamic", "behaviors", "calibration", "nodeOverrides", "metrics"]) {
+    if (e[k]?.length) n[k] = e[k];
+  }
+  return n;
+};
+
+const levels = {
+  formatVersion: 1,
+  description:
+    "System Design Lab learning path, level 0 to 100: level metadata, lesson and challenge order, planning stubs for items not written yet, and the engine features they wait for. Authored items live in content/lessons and content/challenges.",
+  fields: {
+    roadmap: "Planning stubs for lessons and challenges that have no folder yet. Remove a stub when its folder is added.",
+    engineGaps: "Engine features no plan covers yet, each with the items that need it.",
+    "engine.planned": "Engine features a plan covers but the engine does not have yet. Items that use them are reported as blocked.",
+  },
+  engine: {
+    planned: { ...old.engine.planned, fields: [] },
+  },
+  engineGaps: Object.fromEntries(
+    Object.entries(old.engineGaps).map(([id, g]) => [id, { description: g.description, neededBy: g.neededBy }]),
+  ),
+  levels: old.levels.map((lv) => ({
+    id: lv.id,
+    titleVi: lv.title_vi,
+    titleEn: lv.title_en,
+    score: lv.score,
+    entryAssumptionsVi: lv.entry_assumptions_vi,
+    entryAssumptionsEn: lv.entry_assumptions_en,
+    outcomesVi: lv.outcomes_vi,
+    outcomesEn: lv.outcomes_en,
+    exitCheck: {
+      challenge: lv.exit_check.challenge,
+      mode: lv.exit_check.mode,
+      reviewMinScore: lv.exit_check.review_min_score,
+      descriptionVi: lv.exit_check.description_vi,
+      descriptionEn: lv.exit_check.description_en,
+    },
+    lessons: lv.lessons.map((l) => l.id),
+    challenges: lv.challenges.map((c) => c.id),
+  })),
+  roadmap: {
+    lessons: old.levels.flatMap((lv) =>
+      lv.lessons.map((l) => ({
+        id: l.id,
+        titleVi: l.title_vi,
+        titleEn: l.title_en,
+        kind: kind(l.format),
+        minutes: l.minutes,
+        difficulty: l.difficulty,
+        prerequisites: l.prerequisites,
+        concepts: l.concepts,
+        research: l.research,
+        needs: needs(l.engine),
+      })),
+    ),
+    challenges: old.levels.flatMap((lv) =>
+      lv.challenges.map((c) => ({
+        id: c.id,
+        titleVi: c.title_vi,
+        titleEn: c.title_en,
+        prerequisites: c.prerequisites,
+        allowedKinds: c.allowedKinds,
+        workload: c.workload,
+        goals: c.goals,
+        modes: c.modes,
+        briefVi: c.brief_vi,
+        briefEn: c.brief_en,
+      })),
+    ),
+  },
+};
+
+writeFileSync("content/levels.json", JSON.stringify(levels, null, 2) + "\n");
+const nl = levels.roadmap.lessons.length;
+const nc = levels.roadmap.challenges.length;
+console.log(`levels.json: ${levels.levels.length} levels, ${nl} lessons, ${nc} challenges, ${Object.keys(levels.engineGaps).length} gaps`);
+```
+
+The `research` lists already contain the "Feeds lessons:" links that `gen_curriculum.py` merged in (ruling R19).
+
+- [ ] **Step 2: Run it and validate**
+
+Run: `./dev node content/tools/split_curriculum.mjs`
+Expected: `levels.json: 7 levels, 136 lessons, 44 challenges, 59 gaps`
+
+Run: `./dev cargo run -q -p sim-cli -- content validate content`
+Expected: `PASS levels` and `1 items: 1 passed, 0 failed, 0 warnings, 0 blocked`. A failure here means the old data broke a rule the Python generator did not check (for example a roadmap challenge whose prerequisite is a challenge). Fix the data in `levels.json` and say so in the commit message; never relax a check.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add content/levels.json content/tools/split_curriculum.mjs
+git commit -m "content: levels.json with the roadmap, catalogs and gaps from curriculum.json
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 22: Curriculum generator and `sim-cli content curriculum [--check]`
+
+**Files:**
+- Create: `crates/content/src/curriculum.rs`
+- Modify: `crates/content/src/lib.rs`, `crates/sim-cli/src/main.rs`, `crates/sim-cli/tests/content_cli.rs`, `content/curriculum.json` (regenerated, version 2)
+- Create (one-off, deleted in Task 24): `content/tools/compare_curriculum.mjs`
+
+**Interfaces:**
+- Produces: `Curriculum` and its parts (`CurriculumEngine`, `AvailableFeatures`, `CurriculumLevel`, `CurriculumLesson`, `CurriculumChallenge`, `CurriculumMode`, `EngineSummary`, `Counts`). `curriculum(&ContentTree) -> Result<Curriculum, Report>` returns `Err` with the report when anything blocks. `curriculum_json(&ContentTree) -> Result<String, Report>` gives pretty JSON with a trailing newline. CLI: `sim-cli content curriculum <dir> [--check] [--json]`.
+
+- [ ] **Step 1: Write the failing tests** at the bottom of `curriculum.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::*;
+
+    #[test]
+    fn good_tree_curriculum() {
+        let c = curriculum(&good_tree()).unwrap();
+        assert_eq!(c.version, 2);
+        let lv = &c.levels[0];
+        let ids: Vec<&str> = lv.lessons.iter().map(|l| l.id.as_str()).collect();
+        assert_eq!(ids, vec!["l0-fx-capacity", "l0-fx-reading", "l0-fx-planned"]);
+        let cap = &lv.lessons[0];
+        assert_eq!(cap.title_en, "The capacity of one server (fixture)");
+        assert_eq!(cap.engine.readiness, Readiness::Ready);
+        assert_eq!(cap.engine.needs.components, vec!["client", "web-server"]);
+        assert_eq!(cap.path.as_deref(), Some("lessons/l0-fx-capacity"));
+        assert_eq!(lv.lessons[1].engine.readiness, Readiness::NotNeeded);
+        let planned = &lv.lessons[2];
+        assert_eq!((planned.engine.readiness, planned.status), (Readiness::Planned, None));
+        assert_eq!(planned.engine.missing, vec!["component:redis"]);
+        assert_eq!(planned.engine_gaps, vec!["fx-gap"]);
+        assert_eq!(lv.challenges[0].modes.len(), 2);
+        assert_eq!(c.counts.lesson_readiness["planned"], 1);
+        assert_eq!(c.counts.lessons_by_level["L0"], 3);
+    }
+
+    #[test]
+    fn json_is_stable_and_snapshotted() {
+        let a = curriculum_json(&good_tree()).unwrap();
+        assert_eq!(a, curriculum_json(&good_tree()).unwrap());
+        assert!(a.ends_with("}\n"));
+        insta::assert_snapshot!("good_curriculum", a);
+    }
+
+    #[test]
+    fn refuses_to_build_with_blocking_issues() {
+        let mut t = good_tree();
+        edit_json(&mut t, "l0-fx-capacity", |v| v["experiment"]["goals"][0]["value"] = 1.into());
+        let r = curriculum(&t).unwrap_err();
+        assert!(r.has_blocking());
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content curriculum`
+Expected: compile errors.
+
+- [ ] **Step 3: Implement `crates/content/src/curriculum.rs`** (above the tests):
+
+```rust
+//! curriculum.json (spec §7, ruling R19): the whole map, generated from levels.json and the
+//! folders. Built only when validation has no blocking issue.
+
+use crate::checks::Outcome;
+use crate::report::{Readiness, Report};
+use crate::structure::Item;
+use crate::tree::ContentTree;
+use crate::types::*;
+use crate::Analysis;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sim_core::{Capabilities, FaultKind, Goal};
+use std::collections::{BTreeMap, BTreeSet};
+
+pub const CURRICULUM_VERSION: u32 = 2;
+
+macro_rules! exported {
+    ($item:item) => {
+        #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+        $item
+    };
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AvailableFeatures { pub components: Vec<String>, pub faults: Vec<String>, pub metrics: Vec<String> }
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurriculumEngine { pub available: AvailableFeatures, pub planned: PlannedFeatures }
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineSummary { pub needs: EngineNeeds, pub missing: Vec<String>, pub readiness: Readiness }
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurriculumLesson {
+    pub id: String,
+    pub title_vi: String,
+    pub title_en: String,
+    pub kind: LessonKind,
+    pub minutes: u32,
+    pub difficulty: u8,
+    pub prerequisites: Vec<String>,
+    pub concepts: Vec<String>,
+    pub research: Vec<String>,
+    /// `None` for a roadmap stub.
+    pub status: Option<Status>,
+    /// Folder relative to the content dir; `None` for a roadmap stub.
+    pub path: Option<String>,
+    pub engine: EngineSummary,
+    pub engine_gaps: Vec<String>,
+}
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurriculumMode {
+    pub id: String,
+    pub budget_per_month: f64,
+    #[cfg_attr(feature = "ts", ts(as = "Vec<sim_core::Fault>"))]
+    pub faults: Value,
+}
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurriculumChallenge {
+    pub id: String,
+    pub title_vi: String,
+    pub title_en: String,
+    pub prerequisites: Vec<String>,
+    pub allowed_kinds: Vec<String>,
+    pub workload: Value,
+    pub goals: Vec<Goal>,
+    pub modes: Vec<CurriculumMode>,
+    /// Roadmap stubs only; an authored challenge's brief is its prose.
+    pub brief_vi: Option<String>,
+    pub brief_en: Option<String>,
+    pub status: Option<Status>,
+    pub path: Option<String>,
+    pub engine: EngineSummary,
+    pub engine_gaps: Vec<String>,
+}
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurriculumLevel {
+    pub id: LevelId,
+    pub title_vi: String,
+    pub title_en: String,
+    pub score: [u32; 2],
+    pub entry_assumptions_vi: Vec<String>,
+    pub entry_assumptions_en: Vec<String>,
+    pub outcomes_vi: Vec<String>,
+    pub outcomes_en: Vec<String>,
+    pub exit_check: ExitCheck,
+    pub lessons: Vec<CurriculumLesson>,
+    pub challenges: Vec<CurriculumChallenge>,
+}
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Counts {
+    pub levels: u32,
+    pub lessons: u32,
+    pub challenges: u32,
+    pub engine_gaps: u32,
+    pub lessons_by_level: BTreeMap<String, u32>,
+    pub challenges_by_level: BTreeMap<String, u32>,
+    pub lesson_readiness: BTreeMap<String, u32>,
+    pub challenge_readiness: BTreeMap<String, u32>,
+}
+}
+
+exported! {
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Curriculum {
+    pub version: u32,
+    pub description: String,
+    pub fields: BTreeMap<String, String>,
+    pub engine: CurriculumEngine,
+    pub engine_gaps: BTreeMap<String, EngineGap>,
+    pub levels: Vec<CurriculumLevel>,
+    pub counts: Counts,
+}
+}
+
+fn name_of<T: Serialize>(v: &T) -> String {
+    serde_json::to_value(v).ok().and_then(|v| v.as_str().map(String::from)).unwrap_or_default()
+}
+
+/// What a roadmap stub needs that this engine build lacks.
+fn roadmap_missing(n: &EngineNeeds, caps: &Capabilities, planned: &PlannedFeatures) -> Vec<String> {
+    let mut m = BTreeSet::new();
+    for c in n.components.iter().filter(|c| !caps.components.contains(c)) {
+        m.insert(format!("component:{c}"));
+    }
+    for f in &n.faults {
+        let ok = serde_json::from_value::<FaultKind>(Value::from(f.as_str())).is_ok_and(|k| caps.faults.contains(&k));
+        if !ok {
+            m.insert(format!("fault:{f}"));
+        }
+    }
+    for d in n.dynamic.iter().filter(|d| planned.dynamic.contains(d)) {
+        m.insert(format!("dynamic:{d}"));
+    }
+    for b in n.behaviors.iter().filter(|b| planned.behaviors.contains(b)) {
+        m.insert(format!("behavior:{b}"));
+    }
+    for x in n.metrics.iter().filter(|x| !caps.metrics.contains(x)) {
+        m.insert(format!("metric:{x}"));
+    }
+    m.into_iter().collect()
+}
+
+fn titles<T>(item: &Item<T>) -> (String, String) {
+    let t = |p: &Option<crate::prose::Prose>| p.as_ref().map(|p| p.title.clone()).unwrap_or_default();
+    (t(&item.vi), t(&item.en))
+}
+
+fn summary(o: &Outcome) -> EngineSummary {
+    EngineSummary { needs: o.needs.clone(), missing: o.missing.clone(), readiness: o.readiness.unwrap_or(Readiness::Ready) }
+}
+
+fn sorted_set(items: impl IntoIterator<Item = String>) -> Vec<String> {
+    items.into_iter().collect::<BTreeSet<_>>().into_iter().collect()
+}
+
+fn build(levels: &Levels, a: &Analysis) -> Curriculum {
+    let caps = sim_core::capabilities();
+    let planned = &levels.engine.planned;
+    let mut gaps: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+    for (gap, g) in &levels.engine_gaps {
+        for id in &g.needed_by {
+            gaps.entry(id.as_str()).or_default().push(gap.clone());
+        }
+    }
+    let gaps_of = |id: &str| gaps.get(id).cloned().unwrap_or_default();
+    let lessons: BTreeMap<&str, (&Item<Lesson>, &Outcome)> = a.parsed.lessons.iter().zip(&a.lesson_outcomes)
+        .filter_map(|(i, o)| i.doc.as_ref().map(|d| (d.id.as_str(), (i, o)))).collect();
+    let challenges: BTreeMap<&str, (&Item<Challenge>, &Outcome)> = a.parsed.challenges.iter().zip(&a.challenge_outcomes)
+        .filter_map(|(i, o)| i.doc.as_ref().map(|d| (d.id.as_str(), (i, o)))).collect();
+    let stub_lessons: BTreeMap<&str, &RoadmapLesson> = levels.roadmap.lessons.iter().map(|s| (s.id.as_str(), s)).collect();
+    let stub_challenges: BTreeMap<&str, &RoadmapChallenge> = levels.roadmap.challenges.iter().map(|s| (s.id.as_str(), s)).collect();
+
+    let lesson_entry = |id: &str| -> Option<CurriculumLesson> {
+        if let Some((item, o)) = lessons.get(id) {
+            let l = item.doc.as_ref()?;
+            let (title_vi, title_en) = titles(item);
+            return Some(CurriculumLesson {
+                id: l.id.clone(), title_vi, title_en, kind: l.kind, minutes: l.minutes, difficulty: l.difficulty,
+                prerequisites: l.prerequisites.clone(), concepts: l.concepts.clone(), research: l.research.clone(),
+                status: Some(l.status), path: Some(item.dir.clone()), engine: summary(o), engine_gaps: gaps_of(id),
+            });
+        }
+        let s = stub_lessons.get(id)?;
+        Some(CurriculumLesson {
+            id: s.id.clone(), title_vi: s.title_vi.clone(), title_en: s.title_en.clone(), kind: s.kind,
+            minutes: s.minutes, difficulty: s.difficulty, prerequisites: s.prerequisites.clone(),
+            concepts: s.concepts.clone(), research: s.research.clone(), status: None, path: None,
+            engine: EngineSummary { needs: s.needs.clone(), missing: roadmap_missing(&s.needs, &caps, planned), readiness: Readiness::Planned },
+            engine_gaps: gaps_of(id),
+        })
+    };
+    let challenge_entry = |id: &str| -> Option<CurriculumChallenge> {
+        if let Some((item, o)) = challenges.get(id) {
+            let c = item.doc.as_ref()?;
+            let (title_vi, title_en) = titles(item);
+            return Some(CurriculumChallenge {
+                id: c.id.clone(), title_vi, title_en, prerequisites: c.prerequisites.clone(),
+                allowed_kinds: c.limits.allowed_kinds.clone().unwrap_or_default(),
+                workload: c.start["workload"].clone(), goals: c.goals.clone(),
+                modes: c.modes.iter().map(|m| CurriculumMode { id: m.id.clone(), budget_per_month: m.budget_per_month, faults: m.faults.clone() }).collect(),
+                brief_vi: None, brief_en: None, status: Some(c.status), path: Some(item.dir.clone()),
+                engine: summary(o), engine_gaps: gaps_of(id),
+            });
+        }
+        let s = stub_challenges.get(id)?;
+        let needs = EngineNeeds {
+            components: s.allowed_kinds.clone(),
+            faults: sorted_set(s.modes.iter().flat_map(|m| m.faults.as_array().cloned().unwrap_or_default())
+                .filter_map(|f| f.get("kind").and_then(Value::as_str).map(String::from))),
+            calibration: sorted_set(s.modes.iter().filter_map(|m| m.calibration.as_ref()?.as_object().cloned())
+                .flat_map(|o| o.keys().cloned().collect::<Vec<_>>())),
+            metrics: sorted_set(s.goals.iter().map(|g| g.metric.clone())),
+            ..EngineNeeds::default()
+        };
+        Some(CurriculumChallenge {
+            id: s.id.clone(), title_vi: s.title_vi.clone(), title_en: s.title_en.clone(),
+            prerequisites: s.prerequisites.clone(), allowed_kinds: s.allowed_kinds.clone(),
+            workload: s.workload.clone(), goals: s.goals.clone(),
+            modes: s.modes.iter().map(|m| CurriculumMode { id: m.id.clone(), budget_per_month: m.budget_per_month, faults: m.faults.clone() }).collect(),
+            brief_vi: Some(s.brief_vi.clone()), brief_en: Some(s.brief_en.clone()), status: None, path: None,
+            engine: EngineSummary { missing: roadmap_missing(&needs, &caps, planned), needs, readiness: Readiness::Planned },
+            engine_gaps: gaps_of(id),
+        })
+    };
+
+    let out_levels: Vec<CurriculumLevel> = levels.levels.iter().map(|lv| CurriculumLevel {
+        id: lv.id,
+        title_vi: lv.title_vi.clone(),
+        title_en: lv.title_en.clone(),
+        score: lv.score,
+        entry_assumptions_vi: lv.entry_assumptions_vi.clone(),
+        entry_assumptions_en: lv.entry_assumptions_en.clone(),
+        outcomes_vi: lv.outcomes_vi.clone(),
+        outcomes_en: lv.outcomes_en.clone(),
+        exit_check: lv.exit_check.clone(),
+        lessons: lv.lessons.iter().filter_map(|id| lesson_entry(id)).collect(),
+        challenges: lv.challenges.iter().filter_map(|id| challenge_entry(id)).collect(),
+    }).collect();
+
+    let zero = |keys: &[Readiness]| keys.iter().map(|r| (name_of(r), 0u32)).collect::<BTreeMap<_, _>>();
+    let mut counts = Counts {
+        levels: out_levels.len() as u32,
+        lessons: 0,
+        challenges: 0,
+        engine_gaps: levels.engine_gaps.len() as u32,
+        lessons_by_level: BTreeMap::new(),
+        challenges_by_level: BTreeMap::new(),
+        lesson_readiness: zero(&[Readiness::Ready, Readiness::Blocked, Readiness::NotNeeded, Readiness::Planned]),
+        challenge_readiness: zero(&[Readiness::Ready, Readiness::Blocked, Readiness::Planned]),
+    };
+    for lv in &out_levels {
+        let key = name_of(&lv.id);
+        counts.lessons += lv.lessons.len() as u32;
+        counts.challenges += lv.challenges.len() as u32;
+        counts.lessons_by_level.insert(key.clone(), lv.lessons.len() as u32);
+        counts.challenges_by_level.insert(key, lv.challenges.len() as u32);
+        for l in &lv.lessons {
+            *counts.lesson_readiness.entry(name_of(&l.engine.readiness)).or_default() += 1;
+        }
+        for c in &lv.challenges {
+            *counts.challenge_readiness.entry(name_of(&c.engine.readiness)).or_default() += 1;
+        }
+    }
+
+    Curriculum {
+        version: CURRICULUM_VERSION,
+        description: levels.description.clone(),
+        fields: levels.fields.clone(),
+        engine: CurriculumEngine {
+            available: AvailableFeatures {
+                components: caps.components.clone(),
+                faults: caps.faults.iter().map(name_of).collect(),
+                metrics: caps.metrics.clone(),
+            },
+            planned: planned.clone(),
+        },
+        engine_gaps: levels.engine_gaps.clone(),
+        levels: out_levels,
+        counts,
+    }
+}
+
+pub fn curriculum(tree: &ContentTree) -> Result<Curriculum, Report> {
+    let a = crate::analyze(tree);
+    if a.report.has_blocking() {
+        return Err(a.report);
+    }
+    let levels = a.parsed.levels.clone().expect("no blocking issue means levels.json parsed");
+    Ok(build(&levels, &a))
+}
+
+/// Pretty JSON with a trailing newline: the exact bytes of content/curriculum.json.
+pub fn curriculum_json(tree: &ContentTree) -> Result<String, Report> {
+    curriculum(tree).map(|c| serde_json::to_string_pretty(&c).expect("serializable") + "\n")
+}
+```
+
+In `lib.rs`: `pub mod curriculum;` and `pub use curriculum::{curriculum, curriculum_json, Curriculum};`.
+
+- [ ] **Step 4: Run the library tests and review the snapshot**
+
+Run: `./dev sh -c 'INSTA_UPDATE=always cargo test -p content curriculum'`
+Expected: 3 passed. Review `crates/content/src/snapshots/content__curriculum__tests__good_curriculum.snap`: camelCase keys, lessons in levels.json order, `"readiness": "planned"` on `l0-fx-planned`, and `counts.lessonReadiness` = `{"blocked":0,"not-needed":1,"planned":1,"ready":1}`.
+
+- [ ] **Step 5: Add the CLI subcommand.** In `main.rs`, add to `ContentCmd`:
+
+```rust
+    /// Write <dir>/curriculum.json; with --check, fail if the committed file is out of date.
+    Curriculum {
+        dir: PathBuf,
+        #[arg(long)]
+        check: bool,
+        #[arg(long)]
+        json: bool,
+    },
+```
+
+and the arm in `content_cmd`:
+
+```rust
+        ContentCmd::Curriculum { dir, check, json } => {
+            let tree = match content::load_dir(&dir) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(2);
+                }
+            };
+            let text = match content::curriculum_json(&tree) {
+                Ok(t) => t,
+                Err(report) => {
+                    print_report(&report, json);
+                    return ExitCode::from(1);
+                }
+            };
+            let target = dir.join("curriculum.json");
+            if check {
+                if std::fs::read_to_string(&target).ok().as_deref() == Some(text.as_str()) {
+                    println!("curriculum.json is up to date");
+                    ExitCode::SUCCESS
+                } else {
+                    eprintln!("curriculum.json is STALE: run sim-cli content curriculum {}", dir.display());
+                    ExitCode::from(1)
+                }
+            } else {
+                match std::fs::write(&target, &text) {
+                    Ok(()) => {
+                        println!("wrote {}", target.display());
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {e}", target.display());
+                        ExitCode::from(2)
+                    }
+                }
+            }
+        }
+```
+
+Add the CLI tests to `content_cli.rs`:
+
+```rust
+fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
+    for entry in std::fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let target = to.join(entry.file_name());
+        if entry.path().is_dir() {
+            std::fs::create_dir_all(&target).unwrap();
+            copy_tree(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+#[test]
+fn curriculum_write_then_check() {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("good"), tmp.path());
+    cli().args(["content", "curriculum", "--check"]).arg(tmp.path()).assert().code(1); // no file yet
+    cli().args(["content", "curriculum"]).arg(tmp.path()).assert().success();
+    cli().args(["content", "curriculum", "--check"]).arg(tmp.path()).assert().success();
+    let path = tmp.path().join("curriculum.json");
+    let stale = std::fs::read_to_string(&path).unwrap().replace("\"version\": 2", "\"version\": 1");
+    std::fs::write(&path, stale).unwrap();
+    cli().args(["content", "curriculum", "--check"]).arg(tmp.path()).assert().code(1);
+}
+
+#[test]
+fn curriculum_refuses_a_broken_tree() {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("broken"), tmp.path());
+    let out = cli().args(["content", "curriculum"]).arg(tmp.path()).assert().code(1);
+    assert!(String::from_utf8_lossy(&out.get_output().stdout).contains("FAIL"));
+    assert!(!tmp.path().join("curriculum.json").exists());
+}
+```
+
+Run: `./dev cargo test -p sim-cli`
+Expected: all pass.
+
+- [ ] **Step 6: Regenerate `content/curriculum.json` and check that it is equivalent**
+
+Keep the old file for comparison, then regenerate:
+
+```bash
+git show HEAD:content/curriculum.json > target-old-curriculum.json
+./dev cargo run -q -p sim-cli -- content curriculum content
+./dev cargo run -q -p sim-cli -- content curriculum content --check
+```
+
+Expected: `wrote content/curriculum.json`, then `curriculum.json is up to date`.
+
+Write `content/tools/compare_curriculum.mjs`:
+
+```js
+// One-off: check that the Rust curriculum (v2) carries the same data as the Python one (v1).
+// Run: ./dev node content/tools/compare_curriculum.mjs <old.json> <new.json>
+import { readFileSync } from "node:fs";
+
+const [oldPath, newPath] = process.argv.slice(2);
+const o = JSON.parse(readFileSync(oldPath, "utf8"));
+const n = JSON.parse(readFileSync(newPath, "utf8"));
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const sorted = (a) => [...(a ?? [])].sort();
+let bad = 0;
+const fail = (what) => { bad += 1; console.error("MISMATCH", what); };
+
+if (o.levels.length !== n.levels.length) fail("level count");
+o.levels.forEach((lo, i) => {
+  const ln = n.levels[i];
+  const pairs = [["title_vi", "titleVi"], ["title_en", "titleEn"], ["score", "score"],
+    ["entry_assumptions_vi", "entryAssumptionsVi"], ["entry_assumptions_en", "entryAssumptionsEn"],
+    ["outcomes_vi", "outcomesVi"], ["outcomes_en", "outcomesEn"]];
+  for (const [a, b] of pairs) if (!eq(lo[a], ln[b])) fail(`${lo.id}.${a}`);
+  if (lo.exit_check.challenge !== ln.exitCheck.challenge || lo.exit_check.mode !== ln.exitCheck.mode) fail(`${lo.id}.exitCheck`);
+  if (!eq(lo.lessons.map((l) => l.id), ln.lessons.map((l) => l.id))) fail(`${lo.id} lesson order`);
+  if (!eq(lo.challenges.map((c) => c.id), ln.challenges.map((c) => c.id))) fail(`${lo.id} challenge order`);
+  lo.lessons.forEach((l, k) => {
+    const m = ln.lessons[k];
+    const lp = [["title_vi", "titleVi"], ["title_en", "titleEn"], ["minutes", "minutes"], ["difficulty", "difficulty"],
+      ["prerequisites", "prerequisites"], ["concepts", "concepts"], ["research", "research"]];
+    for (const [a, b] of lp) if (!eq(l[a], m[b])) fail(`${l.id}.${a}`);
+    if ((l.format === "experiment") !== (m.kind === "experiment")) fail(`${l.id}.kind`);
+    if (!eq(sorted(l.engine_gaps), sorted(m.engineGaps))) fail(`${l.id}.engine_gaps`);
+    for (const k2 of ["components", "faults", "dynamic", "behaviors", "calibration", "nodeOverrides", "metrics"]) {
+      if (!eq(l.engine[k2], m.engine.needs[k2])) fail(`${l.id}.engine.${k2}`);
+    }
+  });
+  lo.challenges.forEach((c, k) => {
+    const m = ln.challenges[k];
+    const cp = [["title_vi", "titleVi"], ["title_en", "titleEn"], ["prerequisites", "prerequisites"],
+      ["allowedKinds", "allowedKinds"], ["goals", "goals"], ["workload", "workload"], ["brief_vi", "briefVi"], ["brief_en", "briefEn"]];
+    for (const [a, b] of cp) if (!eq(c[a], m[b])) fail(`${c.id}.${a}`);
+    if (!eq(sorted(c.engine_gaps), sorted(m.engineGaps))) fail(`${c.id}.engine_gaps`);
+    if (!eq(c.modes.map((x) => [x.id, x.budgetPerMonth, x.faults]), m.modes.map((x) => [x.id, x.budgetPerMonth, x.faults]))) fail(`${c.id}.modes`);
+  });
+});
+for (const [g, v] of Object.entries(o.engineGaps)) {
+  if (!eq(v.description, n.engineGaps[g]?.description) || !eq(v.neededBy, n.engineGaps[g]?.neededBy)) fail(`gap ${g}`);
+}
+for (const k of ["levels", "lessons", "challenges", "engineGaps"]) if (o.counts[k] !== n.counts[k]) fail(`counts.${k}`);
+console.log(bad ? `curriculum differs in ${bad} places` : "curriculum equivalent");
+process.exitCode = bad ? 1 : 0;
+```
+
+Run: `./dev node content/tools/compare_curriculum.mjs target-old-curriculum.json content/curriculum.json`
+Expected: `curriculum equivalent`. (`target-old-curriculum.json` is created at the repo root by the redirect above; it is untracked. `target/` is a Docker volume and is not visible to host tools, so the file is not put there. Delete it after this step: `git clean -f target-old-curriculum.json`.)
+
+Readiness is not compared one-to-one. The old `ready-1a` / `needs-1b` / `blocked-by-gap` become `planned` plus `missing` (empty for old `ready-1a`) plus `engineGaps` (non-empty for old `blocked-by-gap`). Spot-check two lessons by hand: one old `ready-1a` (`l0-client-server`, `missing: []`) and one old `needs-1b`.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add crates/content crates/sim-cli content/curriculum.json content/tools/compare_curriculum.mjs
+git commit -m "feat(content): curriculum generator and sim-cli content curriculum [--check]
+
+Regenerates content/curriculum.json (version 2) from levels.json; checked equivalent to the
+version 1 file with content/tools/compare_curriculum.mjs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 23: TypeScript types in `packages/content` and a freshness check
+
+**Files:**
+- Create: `packages/content/package.json`, `packages/content/tsconfig.json`, `packages/content/src/index.ts`, `packages/content/src/generated/*.ts` (generated)
+- Modify: `scripts/check-types.sh`, `compose.yaml`, `pnpm-lock.yaml`
+
+**Interfaces:**
+- Produces: the `@sd/content` package re-exporting every content type, and `scripts/check-types.sh` checking both generated dirs.
+
+- [ ] **Step 1: Generate the types**
+
+Run: `./dev sh -c 'TS_RS_EXPORT_DIR=packages/content/src/generated cargo test -q -p content --features ts export_bindings'`
+Expected: tests pass, and `packages/content/src/generated/` holds `Lesson.ts`, `Challenge.ts`, `Curriculum.ts`, `Report.ts`, … plus the sim-core types they import (`SimInput.ts`, `Goal.ts`, …), because ts-rs exports dependencies next to them. With feature `serde-json-impl`, `serde_json::Value` becomes `JsonValue`, written under `serde_json/`. If a referenced sim-core type is missing (an import that does not resolve), Step 3's `tsc` fails. In that case also run `TS_RS_EXPORT_DIR=packages/content/src/generated cargo test -q -p sim-core --features ts export_bindings` and add that command to `check-types.sh` for this dir.
+
+- [ ] **Step 2: Write the package**
+
+`packages/content/package.json`:
+
+```json
+{
+  "name": "@sd/content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
+```
+
+`packages/content/tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src"]
+}
+```
+
+`packages/content/src/index.ts`:
+
+```ts
+// Content format types, generated from crates/content with ts-rs. Loading content files in
+// the app is sub-project 3-4 work; this package only shares the shapes.
+export type { Lesson } from "./generated/Lesson";
+export type { LessonKind } from "./generated/LessonKind";
+export type { LevelId } from "./generated/LevelId";
+export type { Status } from "./generated/Status";
+export type { Experiment } from "./generated/Experiment";
+export type { Control } from "./generated/Control";
+export type { ControlType } from "./generated/ControlType";
+export type { Choice } from "./generated/Choice";
+export type { Check } from "./generated/Check";
+export type { Question } from "./generated/Question";
+export type { QuestionType } from "./generated/QuestionType";
+export type { Answer } from "./generated/Answer";
+export type { Challenge } from "./generated/Challenge";
+export type { Mode } from "./generated/Mode";
+export type { Design } from "./generated/Design";
+export type { NaiveDesign } from "./generated/NaiveDesign";
+export type { Limits } from "./generated/Limits";
+export type { Levels } from "./generated/Levels";
+export type { Level } from "./generated/Level";
+export type { ExitCheck } from "./generated/ExitCheck";
+export type { PlannedFeatures } from "./generated/PlannedFeatures";
+export type { EngineCatalog } from "./generated/EngineCatalog";
+export type { EngineGap } from "./generated/EngineGap";
+export type { EngineNeeds } from "./generated/EngineNeeds";
+export type { Roadmap } from "./generated/Roadmap";
+export type { RoadmapLesson } from "./generated/RoadmapLesson";
+export type { RoadmapChallenge } from "./generated/RoadmapChallenge";
+export type { RoadmapMode } from "./generated/RoadmapMode";
+export type { ContentIssue } from "./generated/ContentIssue";
+export type { Readiness } from "./generated/Readiness";
+export type { ItemKind } from "./generated/ItemKind";
+export type { RunSummary } from "./generated/RunSummary";
+export type { ItemReport } from "./generated/ItemReport";
+export type { Report } from "./generated/Report";
+export type { Curriculum } from "./generated/Curriculum";
+export type { CurriculumEngine } from "./generated/CurriculumEngine";
+export type { AvailableFeatures } from "./generated/AvailableFeatures";
+export type { EngineSummary } from "./generated/EngineSummary";
+export type { CurriculumLevel } from "./generated/CurriculumLevel";
+export type { CurriculumLesson } from "./generated/CurriculumLesson";
+export type { CurriculumMode } from "./generated/CurriculumMode";
+export type { CurriculumChallenge } from "./generated/CurriculumChallenge";
+export type { Counts } from "./generated/Counts";
+```
+
+In `compose.yaml`, add a volume so this package's `node_modules` stays out of the bind mount, matching `packages/sim`:
+
+```yaml
+      - node-modules-content:/work/packages/content/node_modules
+```
+
+(under `services.dev.volumes`), and `node-modules-content:` under the top-level `volumes:`.
+
+- [ ] **Step 3: Install and type-check**
+
+Run: `./dev pnpm install && ./dev pnpm --filter @sd/content test`
+Expected: the install updates `pnpm-lock.yaml`; `tsc --noEmit` exits 0.
+
+- [ ] **Step 4: Extend `scripts/check-types.sh`** (replace the whole file):
+
+```sh
+#!/usr/bin/env sh
+# Regenerates TS types from Rust into temp dirs and fails if they differ from the committed
+# files (packages/sim/src/generated, packages/content/src/generated). Does not use git.
+set -e
+cd "$(dirname "$0")/.."
+
+check() {
+  crate="$1"
+  dir="$2"
+  tmp="$(mktemp -d)"
+  TS_RS_EXPORT_DIR="$tmp" cargo test -q -p "$crate" --features ts export_bindings >/dev/null
+  if ! diff -r "$tmp" "$dir"; then
+    rm -rf "$tmp"
+    echo "generated types for $crate are STALE: regenerate with TS_RS_EXPORT_DIR=$dir cargo test -p $crate --features ts export_bindings"
+    exit 1
+  fi
+  rm -rf "$tmp"
+  echo "generated types for $crate are up to date"
+}
+
+check sim-core packages/sim/src/generated
+check content packages/content/src/generated
+```
+
+Run: `./dev pnpm test:types`
+Expected: two `up to date` lines. Then prove the check works: change one character in `packages/content/src/generated/Lesson.ts`, run again and expect `STALE` with exit 1, then restore the file with `git checkout packages/content/src/generated/Lesson.ts`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/content scripts/check-types.sh compose.yaml pnpm-lock.yaml
+git commit -m "feat(content): TypeScript types in @sd/content with a freshness check
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
