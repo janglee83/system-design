@@ -58,6 +58,23 @@ fn fence_run(line: &str) -> Option<(char, usize, &str)> {
     (n >= 3).then(|| (c, n, &body[n..]))
 }
 
+/// The text of a `## ` heading with an optional closing `#` run removed, or `None` when the
+/// line is not a level-2 heading.
+fn h2_text(line: &str) -> Option<&str> {
+    let rest = if line.trim_end() == "##" {
+        ""
+    } else {
+        line.strip_prefix("## ")?
+    };
+    let rest = rest.trim();
+    let without = rest.trim_end_matches('#');
+    if without.is_empty() || without.ends_with(' ') {
+        Some(without.trim_end())
+    } else {
+        Some(rest)
+    }
+}
+
 pub fn parse_prose(text: &str) -> Result<Prose, String> {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut lines = text.lines().map(|l| l.trim_end_matches('\r')).enumerate();
@@ -106,7 +123,7 @@ pub fn parse_prose(text: &str) -> Result<Prose, String> {
 
     let mut sections: Vec<Section> = Vec::new();
     let mut fence: Option<(char, usize)> = None;
-    for (_, line) in lines {
+    for (n, line) in lines {
         let run = fence_run(line);
         match (fence, run) {
             (None, Some((c, n, _))) => {
@@ -122,9 +139,12 @@ pub fn parse_prose(text: &str) -> Result<Prose, String> {
             (Some(_), _) => continue,
             (None, None) => {}
         }
-        if let Some(h) = line.strip_prefix("## ") {
+        if let Some(h) = h2_text(line) {
+            if h.is_empty() {
+                return Err(format!("line {}: empty heading", n + 1));
+            }
             sections.push(Section {
-                heading: h.trim().to_string(),
+                heading: h.to_string(),
                 keys: vec![],
             });
         } else if let Some(key) = list_key(line) {
@@ -226,5 +246,28 @@ mod tests {
         );
         assert!(parse_prose("---\nid:   \ntitle: t\n---\n").is_err());
         assert!(parse_prose("---\nid: \"\"\ntitle: t\n---\n").is_err());
+    }
+
+    fn headings(body: &str) -> Vec<String> {
+        let p = parse_prose(&format!("{HEAD}{body}")).unwrap();
+        p.sections.into_iter().map(|s| s.heading).collect()
+    }
+
+    #[test]
+    fn closing_hashes_are_trimmed_from_headings() {
+        assert_eq!(
+            headings("## Outcome ##\n## C# basics\n## Terms #\n"),
+            vec!["Outcome", "C# basics", "Terms"]
+        );
+    }
+
+    #[test]
+    fn an_empty_heading_is_an_error() {
+        assert_eq!(
+            parse_prose(&format!("{HEAD}## Outcome\n## \n")).unwrap_err(),
+            "line 6: empty heading"
+        );
+        assert!(parse_prose(&format!("{HEAD}##\n")).is_err());
+        assert!(parse_prose(&format!("{HEAD}## ##\n")).is_err());
     }
 }
