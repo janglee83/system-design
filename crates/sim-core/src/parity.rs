@@ -88,9 +88,10 @@ pub struct ParityReport {
     pub validation: Vec<ValidationIssue>,
 }
 
-/// Allowed absolute difference for `metric` given the reference value.
+/// Allowed absolute difference for `metric` given the reference value. An override with
+/// neither `rel` nor `abs` set falls back to the default rule.
 pub fn allowed_difference(metric: &str, reference: f64, overrides: &BTreeMap<String, Tolerance>) -> f64 {
-    if let Some(t) = overrides.get(metric) {
+    if let Some(t) = overrides.get(metric).filter(|t| t.rel.is_some() || t.abs.is_some()) {
         let rel = t.rel.map_or(0.0, |r| r * reference.abs());
         return rel.max(t.abs.unwrap_or(0.0));
     }
@@ -103,39 +104,65 @@ pub fn allowed_difference(metric: &str, reference: f64, overrides: &BTreeMap<Str
     }
 }
 
+fn issue(code: &str, field: &str) -> ValidationIssue {
+    ValidationIssue { code: code.into(), node_id: None, edge_id: None, field: Some(field.into()), blocking: true }
+}
+
+/// Problems in the fixture itself: goal ops we do not know and unusable tolerances.
+/// `field` names the goal id or the tolerance's metric. Goals whose metric the run did not
+/// measure are reported by `check_parity` as `parity.unknown-metric`.
+pub fn fixture_issues(f: &ParityFixture) -> Vec<ValidationIssue> {
+    let mut out = Vec::new();
+    for g in &f.reference.goals {
+        if parse_op(&g.op).is_none() {
+            out.push(issue("parity.unknown-op", &g.id));
+        }
+    }
+    for (metric, t) in &f.tolerance {
+        let bad = |v: Option<f64>| v.is_some_and(|x| !x.is_finite() || x < 0.0);
+        if bad(t.rel) || bad(t.abs) {
+            out.push(issue("parity.invalid-tolerance", metric));
+        }
+    }
+    out
+}
+
 pub fn check_parity(f: &ParityFixture) -> ParityReport {
+    let mut issues = fixture_issues(f);
     let result = match simulate(&f.input) {
         Ok(r) => r,
-        Err(issues) => {
+        Err(sim_issues) => {
             return ParityReport {
                 id: f.id.clone(),
                 passed: false,
                 goal_mismatches: vec![],
                 metric_mismatches: vec![],
-                validation: issues,
+                validation: issues.into_iter().chain(sim_issues).collect(),
             }
         }
     };
     let m = &result.metrics;
 
-    let goal_mismatches: Vec<GoalMismatch> = f
-        .reference
-        .goals
-        .iter()
-        .filter_map(|g| {
-            let measured = metric_value(m, &g.metric);
-            let ours = match (parse_op(&g.op), measured) {
-                (Some(op), Some(v)) => compare(v, op, g.value),
-                _ => false,
-            };
-            (ours != g.passed).then(|| GoalMismatch {
+    let mut goal_mismatches = Vec::new();
+    for g in &f.reference.goals {
+        let measured = metric_value(m, &g.metric);
+        if measured.is_none() {
+            issues.push(issue("parity.unknown-metric", &g.id));
+        }
+        // A goal we cannot evaluate never counts as agreement, even when the reference failed.
+        let (ours, evaluable) = match (parse_op(&g.op), measured) {
+            (Some(op), Some(v)) => (compare(v, op, g.value), true),
+            _ => (false, false),
+        };
+        if !evaluable || ours != g.passed {
+            goal_mismatches.push(GoalMismatch {
                 id: g.id.clone(),
                 reference_passed: g.passed,
                 our_passed: ours,
                 measured,
-            })
-        })
-        .collect();
+            });
+        }
+    }
 
     let metric_mismatches: Vec<MetricMismatch> = f
         .reference
@@ -151,10 +178,10 @@ pub fn check_parity(f: &ParityFixture) -> ParityReport {
 
     ParityReport {
         id: f.id.clone(),
-        passed: goal_mismatches.is_empty() && metric_mismatches.is_empty(),
+        passed: goal_mismatches.is_empty() && metric_mismatches.is_empty() && issues.is_empty(),
         goal_mismatches,
         metric_mismatches,
-        validation: vec![],
+        validation: issues,
     }
 }
 
@@ -202,6 +229,43 @@ mod tests {
         let r = check_parity(&fixture(&[("availability", 0.9), ("costPerMonth", 95.5)], vec![]));
         let metrics: Vec<&str> = r.metric_mismatches.iter().map(|m| m.metric.as_str()).collect();
         assert_eq!(metrics, vec!["availability", "costPerMonth"]);
+    }
+
+    #[test]
+    fn an_unknown_op_or_metric_is_a_mismatch_even_when_the_reference_failed() {
+        let r = check_parity(&fixture(
+            &[],
+            vec![goal("op", "p95", "<", 100.0, false), goal("metric", "p42", "<=", 100.0, false)],
+        ));
+        assert!(!r.passed);
+        let ids: Vec<&str> = r.goal_mismatches.iter().map(|g| g.id.as_str()).collect();
+        assert_eq!(ids, vec!["op", "metric"]);
+        assert_eq!(r.goal_mismatches[1].measured, None);
+        let codes: Vec<&str> = r.validation.iter().map(|v| v.code.as_str()).collect();
+        assert_eq!(codes, vec!["parity.unknown-op", "parity.unknown-metric"]);
+    }
+
+    #[test]
+    fn negative_or_non_finite_tolerances_are_reported() {
+        let mut f = fixture(&[("availability", 1.0)], vec![]);
+        f.tolerance.insert("availability".into(), Tolerance { rel: Some(-0.1), abs: None });
+        f.tolerance.insert("p95".into(), Tolerance { rel: None, abs: Some(f64::NAN) });
+        let r = check_parity(&f);
+        assert!(!r.passed);
+        let fields: Vec<_> = r.validation.iter().map(|v| (v.code.as_str(), v.field.as_deref())).collect();
+        assert_eq!(
+            fields,
+            vec![("parity.invalid-tolerance", Some("availability")), ("parity.invalid-tolerance", Some("p95"))]
+        );
+    }
+
+    #[test]
+    fn an_empty_tolerance_override_uses_the_default_rule() {
+        let mut o = BTreeMap::new();
+        o.insert("availability".to_string(), Tolerance::default());
+        assert_eq!(allowed_difference("availability", 0.9, &o), 0.005);
+        o.insert("availability".to_string(), Tolerance { rel: None, abs: Some(0.01) });
+        assert_eq!(allowed_difference("availability", 0.9, &o), 0.01);
     }
 
     #[test]
