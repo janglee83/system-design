@@ -85,6 +85,30 @@ impl Report {
     pub fn has_blocking(&self) -> bool {
         self.failed > 0
     }
+
+    /// `PASS <id>` per item without blocking issues, one `FAIL`/`WARN` line per issue, then a
+    /// summary. One issue per line; `detail` is Debug-quoted so it never breaks a line.
+    pub fn to_text(&self) -> String {
+        let mut out = String::new();
+        for item in &self.items {
+            if item.passed {
+                out.push_str(&format!("PASS {}\n", item.id));
+            }
+            for i in &item.issues {
+                let tag = if i.blocking { "FAIL" } else { "WARN" };
+                out.push_str(&format!("{tag} {} {}\n", item.id, describe(i)));
+            }
+        }
+        out.push_str(&format!(
+            "{} items: {} passed, {} failed, {} warnings, {} blocked\n",
+            self.items.len(),
+            self.passed,
+            self.failed,
+            self.warnings,
+            self.blocked
+        ));
+        out
+    }
 }
 
 impl RunSummary {
@@ -97,6 +121,44 @@ impl RunSummary {
             events: events.into_iter().collect(),
         }
     }
+}
+
+fn describe(i: &ContentIssue) -> String {
+    let mut s = format!("{} {}", i.code, i.path);
+    if let Some(id) = &i.id {
+        s.push_str(&format!(" id={id}"));
+    }
+    if let Some(f) = &i.field {
+        s.push_str(&format!(" field={f}"));
+    }
+    if let Some(m) = i.measured {
+        s.push_str(&format!(" measured={m}"));
+    }
+    if !i.missing.is_empty() {
+        s.push_str(&format!(" missing={}", i.missing.join(",")));
+    }
+    if !i.engine.is_empty() {
+        let codes: Vec<String> = i
+            .engine
+            .iter()
+            .map(|e| {
+                match e
+                    .node_id
+                    .as_deref()
+                    .or(e.edge_id.as_deref())
+                    .or(e.field.as_deref())
+                {
+                    Some(at) => format!("{}@{at}", e.code),
+                    None => e.code.clone(),
+                }
+            })
+            .collect();
+        s.push_str(&format!(" engine={}", codes.join(",")));
+    }
+    if let Some(d) = &i.detail {
+        s.push_str(&format!(" detail={d:?}"));
+    }
+    s
 }
 
 #[cfg(test)]
