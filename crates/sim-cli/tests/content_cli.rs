@@ -205,3 +205,75 @@ fn curriculum_write_replaces_the_file_and_leaves_no_temp_file() {
         .collect();
     assert_eq!(names, vec!["curriculum.json"]);
 }
+
+fn stdout_of(out: &assert_cmd::assert::Assert) -> String {
+    String::from_utf8(out.get_output().stdout.clone()).unwrap()
+}
+
+fn stderr_of(out: &assert_cmd::assert::Assert) -> String {
+    String::from_utf8(out.get_output().stderr.clone()).unwrap()
+}
+
+#[test]
+fn validate_json_snapshots() {
+    let good = cli()
+        .args(["content", "validate", "--json"])
+        .arg(fixtures("good"))
+        .assert()
+        .success();
+    insta::assert_snapshot!("validate_good_json", stdout_of(&good));
+    let broken = cli()
+        .args(["content", "validate", "--json"])
+        .arg(fixtures("broken"))
+        .assert()
+        .code(1);
+    insta::assert_snapshot!("validate_broken_json", stdout_of(&broken));
+}
+
+#[test]
+fn reports_go_to_stdout_and_stderr_stays_empty() {
+    let ok = cli()
+        .args(["content", "validate"])
+        .arg(fixtures("good"))
+        .assert()
+        .success();
+    assert_eq!(stderr_of(&ok), "");
+    let fail = cli()
+        .args(["content", "validate"])
+        .arg(fixtures("broken"))
+        .assert()
+        .code(1);
+    assert_eq!(stderr_of(&fail), "");
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("broken"), tmp.path());
+    let refused = cli()
+        .args(["content", "curriculum"])
+        .arg(tmp.path())
+        .assert()
+        .code(1);
+    assert_eq!(stderr_of(&refused), "");
+}
+
+#[test]
+fn curriculum_on_a_missing_dir_exits_two_with_empty_stdout() {
+    let out = cli()
+        .args(["content", "curriculum", "/no/such/dir"])
+        .assert()
+        .code(2);
+    assert_eq!(stdout_of(&out), "");
+    assert!(!stderr_of(&out).is_empty());
+}
+
+#[test]
+fn curriculum_check_on_a_broken_tree_leaves_the_file_untouched() {
+    let tmp = tempfile::tempdir().unwrap();
+    copy_tree(&fixtures("broken"), tmp.path());
+    let path = tmp.path().join("curriculum.json");
+    std::fs::write(&path, "committed").unwrap();
+    cli()
+        .args(["content", "curriculum", "--check"])
+        .arg(tmp.path())
+        .assert()
+        .code(1);
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "committed");
+}

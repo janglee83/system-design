@@ -813,6 +813,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "content",
+ "insta",
  "rayon",
  "serde",
  "serde_json",

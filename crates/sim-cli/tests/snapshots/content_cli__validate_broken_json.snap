@@ -1,0 +1,2149 @@
+---
+source: crates/sim-cli/tests/content_cli.rs
+expression: stdout_of(&broken)
+---
+{
+  "items": [
+    {
+      "id": "levels",
+      "kind": "levels",
+      "path": "levels.json",
+      "readiness": null,
+      "passed": true,
+      "issues": [],
+      "runs": []
+    },
+    {
+      "id": "c-l0-bk-limits",
+      "kind": "challenge",
+      "path": "challenges/c-l0-bk-limits",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.limits",
+          "path": "challenges/c-l0-bk-limits/challenge.json",
+          "id": "standard/reference",
+          "field": "users",
+          "blocking": true,
+          "measured": null,
+          "detail": "locked node changed",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.limits",
+          "path": "challenges/c-l0-bk-limits/challenge.json",
+          "id": "chaos/reference",
+          "field": null,
+          "blocking": true,
+          "measured": null,
+          "detail": null,
+          "engine": [
+            {
+              "code": "limits.too-many-instances",
+              "nodeId": null,
+              "edgeId": null,
+              "field": null,
+              "blocking": true
+            }
+          ],
+          "missing": []
+        },
+        {
+          "code": "content.reference-fails",
+          "path": "challenges/c-l0-bk-limits/challenge.json",
+          "id": "chaos/reference",
+          "field": "budget",
+          "blocking": true,
+          "measured": 160.0,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "mode:standard/reference",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "mode:standard/naive",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "mode:chaos/reference",
+          "metrics": {
+            "p50": 7.616311070948209,
+            "p95": 7.616311070948209,
+            "p99": 7.616311070948209,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 160.0,
+            "spofCount": 1,
+            "exposedBackends": 0,
+            "peakBusy": 0.3377777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "instance.down"
+          ]
+        },
+        {
+          "label": "mode:chaos/naive",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 0.29958928287619097,
+            "throughputRps": 3581.5,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 35815.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 83732.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "instance.down"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-l0-bk-naive",
+      "kind": "challenge",
+      "path": "challenges/c-l0-bk-naive",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.naive-passes",
+          "path": "challenges/c-l0-bk-naive/challenge.json",
+          "id": "standard/naive",
+          "field": "fast",
+          "blocking": true,
+          "measured": 4.6757543095443195,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "mode:standard/reference",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "mode:standard/naive",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "mode:chaos/reference",
+          "metrics": {
+            "p50": 7.616311070948209,
+            "p95": 7.616311070948209,
+            "p99": 7.616311070948209,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 92.5,
+            "spofCount": 1,
+            "exposedBackends": 0,
+            "peakBusy": 0.8444444444444444,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "instance.down"
+          ]
+        },
+        {
+          "label": "mode:chaos/naive",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 0.29958928287619097,
+            "throughputRps": 3581.5,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 35815.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 83732.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "instance.down"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-l0-bk-ref",
+      "kind": "challenge",
+      "path": "challenges/c-l0-bk-ref",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.reference-fails",
+          "path": "challenges/c-l0-bk-ref/challenge.json",
+          "id": "standard/reference",
+          "field": "fast",
+          "blocking": true,
+          "measured": 953.8614152175433,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.reference-fails",
+          "path": "challenges/c-l0-bk-ref/challenge.json",
+          "id": "standard/reference",
+          "field": "up",
+          "blocking": true,
+          "measured": 0.8210661915397292,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "mode:standard/reference",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "mode:standard/naive",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "mode:chaos/reference",
+          "metrics": {
+            "p50": 7.616311070948209,
+            "p95": 7.616311070948209,
+            "p99": 7.616311070948209,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 92.5,
+            "spofCount": 1,
+            "exposedBackends": 0,
+            "peakBusy": 0.8444444444444444,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "instance.down"
+          ]
+        },
+        {
+          "label": "mode:chaos/naive",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 0.29958928287619097,
+            "throughputRps": 3581.5,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 35815.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 83732.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "instance.down"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-blocked",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-blocked",
+      "readiness": "blocked",
+      "passed": true,
+      "issues": [
+        {
+          "code": "content.blocked",
+          "path": "lessons/l0-bk-blocked/lesson.json",
+          "id": null,
+          "field": null,
+          "blocking": false,
+          "measured": null,
+          "detail": null,
+          "engine": [],
+          "missing": [
+            "fault:instance-slow"
+          ]
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-choice",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-choice",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.prose-key",
+          "path": "lessons/l0-bk-choice/vi.md",
+          "id": "M1",
+          "field": "Phản hồi",
+          "blocking": true,
+          "measured": null,
+          "detail": "misconception without feedback",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.prose-key",
+          "path": "lessons/l0-bk-choice/en.md",
+          "id": "M1",
+          "field": "Feedback",
+          "blocking": true,
+          "measured": null,
+          "detail": "misconception without feedback",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.choice",
+          "path": "lessons/l0-bk-choice/lesson.json",
+          "id": null,
+          "field": "correct",
+          "blocking": true,
+          "measured": null,
+          "detail": "needs exactly one correct choice",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.choice",
+          "path": "lessons/l0-bk-choice/lesson.json",
+          "id": "B",
+          "field": "correct",
+          "blocking": true,
+          "measured": null,
+          "detail": "the correct choice has no misconception or failsGoals",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-control",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-control",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.control",
+          "path": "lessons/l0-bk-control/lesson.json",
+          "id": "cpu",
+          "field": "path",
+          "blocking": true,
+          "measured": null,
+          "detail": "no node ghost",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-correct",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-correct",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.correct-fails",
+          "path": "lessons/l0-bk-correct/lesson.json",
+          "id": "A",
+          "field": "fast",
+          "blocking": true,
+          "measured": 4.6757543095443195,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-cycle-a",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-cycle-a",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.prerequisite-cycle",
+          "path": "lessons/l0-bk-cycle-a/lesson.json",
+          "id": "l0-bk-cycle-b",
+          "field": "prerequisites",
+          "blocking": true,
+          "measured": null,
+          "detail": "listed after",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.prerequisite-cycle",
+          "path": "lessons/l0-bk-cycle-a/lesson.json",
+          "id": "l0-bk-cycle-a",
+          "field": "prerequisites",
+          "blocking": true,
+          "measured": null,
+          "detail": "cycle",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-cycle-b",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-cycle-b",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.prerequisite-cycle",
+          "path": "lessons/l0-bk-cycle-b/lesson.json",
+          "id": "l0-bk-cycle-b",
+          "field": "prerequisites",
+          "blocking": true,
+          "measured": null,
+          "detail": "cycle",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-dup-goal",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-dup-goal",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.duplicate-id",
+          "path": "lessons/l0-bk-dup-goal/lesson.json",
+          "id": "fast",
+          "field": "goals",
+          "blocking": true,
+          "measured": null,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-engine",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-engine",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.engine-invalid",
+          "path": "lessons/l0-bk-engine/lesson.json",
+          "id": null,
+          "field": "base",
+          "blocking": true,
+          "measured": null,
+          "detail": null,
+          "engine": [
+            {
+              "code": "edge.not-accepted",
+              "nodeId": null,
+              "edgeId": "e1",
+              "field": null,
+              "blocking": true
+            }
+          ],
+          "missing": []
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-expect",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-expect",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.expect",
+          "path": "lessons/l0-bk-expect/lesson.json",
+          "id": "A",
+          "field": "p95",
+          "blocking": true,
+          "measured": 4.6757543095443195,
+          "detail": "<= 1",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.expect",
+          "path": "lessons/l0-bk-expect/lesson.json",
+          "id": "B",
+          "field": "event:db.promoted",
+          "blocking": true,
+          "measured": null,
+          "detail": "event did not occur",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-extra-fail",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-extra-fail",
+      "readiness": "ready",
+      "passed": true,
+      "issues": [
+        {
+          "code": "content.wrong-extra-fail",
+          "path": "lessons/l0-bk-extra-fail/lesson.json",
+          "id": "C",
+          "field": "no-drops",
+          "blocking": false,
+          "measured": 21391.0,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-folder",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-folder",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.id",
+          "path": "lessons/l0-bk-folder/lesson.json",
+          "id": "l0-bk-other",
+          "field": "id",
+          "blocking": true,
+          "measured": null,
+          "detail": "folder name differs",
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.id",
+          "path": "lessons/l0-bk-folder/lesson.json",
+          "id": "l0-bk-other",
+          "field": "levels",
+          "blocking": true,
+          "measured": null,
+          "detail": "not listed in levels.json",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-key",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-key",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.prose-key",
+          "path": "lessons/l0-bk-key/vi.md",
+          "id": "M2",
+          "field": "Hiểu lầm thường gặp",
+          "blocking": true,
+          "measured": null,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-parse",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-parse",
+      "readiness": null,
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.parse",
+          "path": "lessons/l0-bk-parse/lesson.json",
+          "id": null,
+          "field": null,
+          "blocking": true,
+          "measured": null,
+          "detail": "EOF while parsing a value at line 2 column 0",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-prereq",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-prereq",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.prerequisite-missing",
+          "path": "lessons/l0-bk-prereq/lesson.json",
+          "id": "l0-nope",
+          "field": "prerequisites",
+          "blocking": true,
+          "measured": null,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-research",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-research",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.research-missing",
+          "path": "lessons/l0-bk-research/lesson.json",
+          "id": "no-such-note",
+          "field": "research",
+          "blocking": true,
+          "measured": null,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-section",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-section",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.prose-section",
+          "path": "lessons/l0-bk-section/en.md",
+          "id": null,
+          "field": "Takeaways",
+          "blocking": true,
+          "measured": null,
+          "detail": "missing",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l0-bk-version",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-version",
+      "readiness": null,
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.format-version",
+          "path": "lessons/l0-bk-version/lesson.json",
+          "id": null,
+          "field": "formatVersion",
+          "blocking": true,
+          "measured": null,
+          "detail": "2",
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": []
+    },
+    {
+      "id": "l0-bk-wrong-passes",
+      "kind": "lesson",
+      "path": "lessons/l0-bk-wrong-passes",
+      "readiness": "ready",
+      "passed": false,
+      "issues": [
+        {
+          "code": "content.wrong-passes",
+          "path": "lessons/l0-bk-wrong-passes/lesson.json",
+          "id": "C",
+          "field": "fast",
+          "blocking": true,
+          "measured": 4.6757543095443195,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        },
+        {
+          "code": "content.wrong-passes",
+          "path": "lessons/l0-bk-wrong-passes/lesson.json",
+          "id": "C",
+          "field": "no-drops",
+          "blocking": true,
+          "measured": 0.0,
+          "detail": null,
+          "engine": [],
+          "missing": []
+        }
+      ],
+      "runs": [
+        {
+          "label": "choice:A",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 50.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.8777777777777778,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        },
+        {
+          "label": "choice:B",
+          "metrics": {
+            "p50": 953.8614152175433,
+            "p95": 953.8614152175433,
+            "p99": 953.8614152175433,
+            "availability": 0.8210661915397292,
+            "throughputRps": 9815.6,
+            "costPerMonth": 22.5,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 1.0,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 98156.0,
+            "requestsRejected": 21391.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": [
+            "node.overloaded"
+          ]
+        },
+        {
+          "label": "choice:C",
+          "metrics": {
+            "p50": 4.6757543095443195,
+            "p95": 4.6757543095443195,
+            "p99": 4.6757543095443195,
+            "availability": 1.0,
+            "throughputRps": 11954.7,
+            "costPerMonth": 105.0,
+            "spofCount": 1,
+            "exposedBackends": 1,
+            "peakBusy": 0.4388888888888889,
+            "peakDbConnections": 0.0,
+            "cacheOps": 0.0,
+            "requestsTotal": 119547.0,
+            "requestsOk": 119547.0,
+            "requestsRejected": 0.0,
+            "requestsTimedOut": 0.0,
+            "requestsUnreachable": 0.0,
+            "duplicateIds": null,
+            "outOfOrderIds": null,
+            "lostUpdates": null,
+            "writeConflicts": null,
+            "duplicateWrites": null,
+            "staleReads": null,
+            "peakQueueDepth": null,
+            "lostMessages": null,
+            "statusFlaps": null,
+            "staleOnline": null,
+            "inboxWritesPerSec": null
+          },
+          "events": []
+        }
+      ]
+    }
+  ],
+  "passed": 3,
+  "failed": 19,
+  "warnings": 2,
+  "blocked": 1
+}
