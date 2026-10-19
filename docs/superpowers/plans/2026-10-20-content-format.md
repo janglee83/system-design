@@ -1369,7 +1369,7 @@ pub struct Levels {
 }
 ```
 
-`GraphLimits` already uses `#[serde(default)]` per field and camelCase, so `{"maxNodes": 4, ...}` parses. It does not deny unknown fields; a typo there is caught by Task 15 (`limits` must be one of the three keys, checked on the raw JSON).
+`GraphLimits` already uses `#[serde(default)]` per field and camelCase, so `{"maxNodes": 4, ...}` parses. It does not deny unknown fields, so a typo such as `maxNode` would be dropped silently. Task 15 replaces this field's type with a content-owned `Limits` (with `deny_unknown_fields`) that converts to `GraphLimits`.
 
 - [ ] **Step 5: Run the tests**
 
@@ -4382,6 +4382,538 @@ Expected: all pass.
 ```bash
 git add crates/content
 git commit -m "feat(content): numeric expectations and expected events
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
+## Phase 4: Challenge validation
+
+### Task 15: Challenge structure and mode inputs
+
+**Files:**
+- Create: `crates/content/src/challenge.rs`
+- Modify: `crates/content/src/types.rs` (`Limits`), `crates/content/src/engine_input.rs` (`mode_input`), `crates/content/src/checks.rs`, `crates/content/src/lib.rs` (`pub(crate) mod challenge;`)
+
+**Interfaces:**
+- Produces: `types::Limits` (`deny_unknown_fields`, with `graph_limits() -> GraphLimits`), `engine_input::mode_input(start, &Mode, graph) -> Value`, `challenge::{BUDGET_GOAL, goals_for, check_structure}`.
+- Codes covered (structural): `content.limits` (budget, limits values, locked nodes missing from start), `content.choice` (modes, naive `failsGoals`), `content.duplicate-id` (modes, locked nodes, hints, a `budget` goal), `content.id` (bad mode or hint id), `content.parse` (`faults` not an array, `workloadOverride` not an object, a design graph that is not an object, unknown `limits` key).
+
+- [ ] **Step 1: Write the failing tests**
+
+Add to `engine_input.rs` tests:
+
+```rust
+    #[test]
+    fn mode_input_merges_workload_and_replaces_faults_and_graph() {
+        use crate::types::{Design, Mode, NaiveDesign};
+        let start = normalized(&json!({"graph": {"nodes": []}, "workload": {"baseRps": 10, "writeRatio": 0.5,
+            "surge": {"factor": 2, "atMs": 0, "durationMs": 1}}, "faults": [{"kind": "instance-down", "atMs": 1}]}));
+        let mode = Mode {
+            id: "m".into(),
+            budget_per_month: 1.0,
+            faults: json!([]),
+            workload_override: json!({"baseRps": 20, "surge": null}),
+            reference: Design { graph: json!({}) },
+            naive: NaiveDesign { graph: json!({}), fails_goals: vec![] },
+        };
+        let v = mode_input(&start, &mode, &json!({"nodes": [{"id": "x"}]}));
+        assert_eq!(v["workload"], json!({"baseRps": 20, "writeRatio": 0.5}));
+        assert_eq!(v["faults"], json!([]));
+        assert_eq!(v["graph"]["nodes"][0]["id"], "x");
+        assert_eq!(v["seed"], json!(1));
+    }
+```
+
+At the bottom of `challenge.rs`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::issue::codes;
+    use crate::test_util::*;
+    use crate::{validate_tree, ContentIssue};
+    use serde_json::{json, Value};
+
+    fn shop(edit: impl FnOnce(&mut Value)) -> Vec<ContentIssue> {
+        let mut t = good_tree();
+        edit_json(&mut t, "c-l0-fx-shop", edit);
+        issues_of(&validate_tree(&t), "c-l0-fx-shop")
+    }
+
+    fn has_code(i: &[ContentIssue], code: &str) -> bool {
+        i.iter().any(|i| i.code == code)
+    }
+
+    #[test]
+    fn structural_rules() {
+        let cases: Vec<(&str, &str, Box<dyn FnOnce(&mut Value)>)> = vec![
+            ("budget goal id is reserved", codes::DUPLICATE_ID, Box::new(|c| c["goals"][1]["id"] = "budget".into())),
+            ("no modes", codes::CHOICE, Box::new(|c| c["modes"] = json!([]))),
+            ("duplicate mode", codes::DUPLICATE_ID, Box::new(|c| c["modes"][1]["id"] = "standard".into())),
+            ("bad mode id", codes::ID, Box::new(|c| c["modes"][1]["id"] = "X".into())),
+            ("zero budget", codes::LIMITS, Box::new(|c| c["modes"][0]["budgetPerMonth"] = 0.into())),
+            ("naive fails nothing", codes::CHOICE, Box::new(|c| c["modes"][0]["naive"]["failsGoals"] = json!([]))),
+            ("naive unknown goal", codes::CHOICE, Box::new(|c| c["modes"][0]["naive"]["failsGoals"] = json!(["slow"]))),
+            ("faults not an array", codes::PARSE, Box::new(|c| c["modes"][0]["faults"] = json!({}))),
+            ("override not an object", codes::PARSE, Box::new(|c| c["modes"][0]["workloadOverride"] = json!(3))),
+            ("design graph not an object", codes::PARSE, Box::new(|c| c["modes"][0]["reference"]["graph"] = json!([]))),
+            ("locked node not in start", codes::LIMITS, Box::new(|c| c["lockedNodes"] = json!(["ghost"]))),
+            ("locked twice", codes::DUPLICATE_ID, Box::new(|c| c["lockedNodes"] = json!(["users", "users"]))),
+            ("bad hint id", codes::ID, Box::new(|c| c["hints"] = json!(["hint1"]))),
+            ("hint twice", codes::DUPLICATE_ID, Box::new(|c| c["hints"] = json!(["h1", "h1"]))),
+            ("limit zero", codes::LIMITS, Box::new(|c| c["limits"]["maxNodes"] = 0.into())),
+            ("limits typo", codes::PARSE, Box::new(|c| c["limits"]["maxNode"] = 4.into())),
+        ];
+        for (name, code, edit) in cases {
+            assert!(has_code(&shop(edit), code), "{name}");
+        }
+    }
+
+    #[test]
+    fn budget_may_be_listed_as_a_naive_failure() {
+        let i = shop(|c| c["modes"][0]["naive"]["failsGoals"] = json!(["fast", "up", "budget"]));
+        assert!(!has_code(&i, codes::CHOICE));
+    }
+}
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content challenge mode_input`
+Expected: compile errors, then failures.
+
+- [ ] **Step 3: Add `Limits`** to `types.rs` and use it in `Challenge` (`pub limits: Limits,` replaces `pub limits: GraphLimits,`):
+
+```rust
+exported! {
+/// Same fields as sim-core's `GraphLimits`, but a typo is an error here.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Limits {
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub max_nodes: Option<u32>,
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub max_instances: Option<u32>,
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub allowed_kinds: Option<Vec<String>>,
+}
+}
+
+impl Limits {
+    pub fn graph_limits(&self) -> GraphLimits {
+        GraphLimits {
+            max_nodes: self.max_nodes,
+            max_instances: self.max_instances,
+            allowed_kinds: self.allowed_kinds.clone(),
+        }
+    }
+}
+```
+
+- [ ] **Step 4: Add `mode_input`** to `engine_input.rs`:
+
+```rust
+/// Ruling R15: `start` (already normalized) with `workloadOverride` shallow-merged into
+/// `workload` (`null` removes a key), `faults` replaced and `graph` replaced by the design's.
+pub(crate) fn mode_input(start: &Value, mode: &Mode, graph: &Value) -> Value {
+    let mut v = start.clone();
+    let Some(o) = v.as_object_mut() else { return v };
+    if let (Some(w), Some(over)) = (o.get_mut("workload").and_then(Value::as_object_mut), mode.workload_override.as_object()) {
+        for (k, val) in over {
+            if val.is_null() {
+                w.remove(k);
+            } else {
+                w.insert(k.clone(), val.clone());
+            }
+        }
+    }
+    o.insert("faults".into(), mode.faults.clone());
+    o.insert("graph".into(), graph.clone());
+    v
+}
+```
+
+- [ ] **Step 5: Implement the structure part of `challenge.rs`** (above the tests):
+
+```rust
+//! Challenges (spec §4, rulings R15 and R16): structure here; designs and runs in Tasks 16–17.
+
+use crate::choices::check_goals;
+use crate::ids;
+use crate::issue::{codes, ContentIssue};
+use crate::types::*;
+use serde_json::Value;
+use sim_core::{Goal, GoalOp};
+use std::collections::BTreeSet;
+
+pub(crate) const BUDGET_GOAL: &str = "budget";
+
+/// The challenge's goals plus the implicit budget goal of `mode`.
+pub(crate) fn goals_for(c: &Challenge, m: &Mode) -> Vec<Goal> {
+    let mut g = c.goals.clone();
+    g.push(Goal { id: BUDGET_GOAL.into(), metric: "costPerMonth".into(), op: GoalOp::Le, value: m.budget_per_month });
+    g
+}
+
+pub(crate) fn start_node_ids(c: &Challenge) -> BTreeSet<String> {
+    c.start["graph"]["nodes"].as_array().into_iter().flatten()
+        .filter_map(|n| n.get("id").and_then(Value::as_str).map(String::from))
+        .collect()
+}
+
+pub(crate) fn check_structure(path: &str, c: &Challenge) -> Vec<ContentIssue> {
+    let mut out = check_goals(path, &c.goals, Some(BUDGET_GOAL));
+    let new = |code: &str| ContentIssue::new(code, path);
+    if c.modes.is_empty() {
+        out.push(new(codes::CHOICE).field("modes").detail("needs at least one mode"));
+    }
+    let goal_ids: BTreeSet<&str> = c.goals.iter().map(|g| g.id.as_str()).chain([BUDGET_GOAL]).collect();
+    let mut seen = BTreeSet::new();
+    for m in &c.modes {
+        let id = m.id.clone();
+        if !seen.insert(m.id.as_str()) {
+            out.push(new(codes::DUPLICATE_ID).id(id.clone()).field("modes"));
+        }
+        if !ids::is_mode_id(&m.id) {
+            out.push(new(codes::ID).id(id.clone()).field("modes").detail("bad mode id"));
+        }
+        if !(m.budget_per_month.is_finite() && m.budget_per_month > 0.0) {
+            out.push(new(codes::LIMITS).id(id.clone()).field("budgetPerMonth").detail("must be > 0"));
+        }
+        if !m.faults.is_array() {
+            out.push(new(codes::PARSE).id(id.clone()).field("faults").detail("must be an array"));
+        }
+        if !m.workload_override.is_object() {
+            out.push(new(codes::PARSE).id(id.clone()).field("workloadOverride").detail("must be an object"));
+        }
+        for (name, g) in [("reference.graph", &m.reference.graph), ("naive.graph", &m.naive.graph)] {
+            if !g.is_object() {
+                out.push(new(codes::PARSE).id(id.clone()).field(name).detail("must be an object"));
+            }
+        }
+        if m.naive.fails_goals.is_empty() {
+            out.push(new(codes::CHOICE).id(id.clone()).field("naive.failsGoals").detail("a naive design must fail at least one goal"));
+        }
+        for g in m.naive.fails_goals.iter().filter(|g| !goal_ids.contains(g.as_str())) {
+            out.push(new(codes::CHOICE).id(id.clone()).field("naive.failsGoals").detail(format!("unknown goal {g}")));
+        }
+    }
+    let l = &c.limits;
+    if l.max_nodes == Some(0) || l.max_instances == Some(0) || l.allowed_kinds.as_ref().is_some_and(Vec::is_empty) {
+        out.push(new(codes::LIMITS).field("limits").detail("limits must allow at least one node"));
+    }
+    let start_nodes = start_node_ids(c);
+    let mut locked = BTreeSet::new();
+    for n in &c.locked_nodes {
+        if !locked.insert(n.as_str()) {
+            out.push(new(codes::DUPLICATE_ID).id(n.clone()).field("lockedNodes"));
+        }
+        if !start_nodes.contains(n) {
+            out.push(new(codes::LIMITS).id(n.clone()).field("lockedNodes").detail("not in the start graph"));
+        }
+    }
+    let mut hints = BTreeSet::new();
+    for h in &c.hints {
+        if !hints.insert(h.as_str()) {
+            out.push(new(codes::DUPLICATE_ID).id(h.clone()).field("hints"));
+        }
+        if !ids::numbered(h, 'h') {
+            out.push(new(codes::ID).id(h.clone()).field("hints").detail("bad hint id"));
+        }
+    }
+    out
+}
+```
+
+In `checks.rs` `check_challenge` (change `_ctx` to `ctx`; Task 16 uses it):
+
+```rust
+pub(crate) fn check_challenge(item: &Item<Challenge>, ctx: &Ctx) -> Outcome {
+    let mut out = Outcome::default();
+    let Some(c) = &item.doc else { return out };
+    out.readiness = Some(Readiness::Ready);
+    out.issues.extend(crate::prose_check::check_challenge_prose(item));
+    let path = item.file("challenge.json");
+    let structure = crate::challenge::check_structure(&path, c);
+    let structural_ok = c.start.is_object() && !structure.iter().any(|i| i.blocking);
+    out.issues.extend(structure);
+    let _ = (ctx, structural_ok); // used from Task 16
+    out
+}
+```
+
+- [ ] **Step 6: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass. The good shop has no issues.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): challenge structure and mode inputs
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 16: Designs: readiness, engine acceptance, limits and locked nodes
+
+**Files:**
+- Modify: `crates/content/src/challenge.rs`, `crates/content/src/checks.rs`
+
+**Interfaces:**
+- Produces: `challenge::check_engine(path, &Challenge, &Ctx, structural_ok, &mut Outcome)`. Design labels are `<mode>/reference` and `<mode>/naive`, used as issue `id`s.
+- Codes covered: `content.limits` (design breaks limits or changes a locked node; start breaks limits), `content.engine-invalid` (design rejected), `content.blocked` for challenges.
+
+- [ ] **Step 1: Write the failing tests** (add them to the `challenge.rs` tests):
+
+```rust
+    fn shop_item(edit: impl FnOnce(&mut Value)) -> crate::ItemReport {
+        let mut t = good_tree();
+        edit_json(&mut t, "c-l0-fx-shop", edit);
+        validate_tree(&t).items.into_iter().find(|i| i.id == "c-l0-fx-shop").unwrap()
+    }
+
+    #[test]
+    fn design_over_the_instance_limit() {
+        let it = shop_item(|c| c["modes"][1]["reference"]["graph"]["nodes"][2]["replicas"] = 6.into()); // lb 1 + web 6 = 7 > 6
+        let i = it.issues.iter().find(|i| i.code == codes::LIMITS).unwrap();
+        assert_eq!(i.id.as_deref(), Some("chaos/reference"));
+        assert_eq!(i.engine[0].code, "limits.too-many-instances");
+    }
+
+    #[test]
+    fn kind_not_allowed() {
+        let it = shop_item(|c| c["limits"]["allowedKinds"] = json!(["client", "web-server"]));
+        assert!(it.issues.iter().any(|i| i.code == codes::LIMITS && i.id.as_deref() == Some("chaos/reference")
+            && i.engine.iter().any(|e| e.code == "limits.kind-not-allowed")));
+    }
+
+    #[test]
+    fn locked_node_changed_or_equal() {
+        let it = shop_item(|c| c["modes"][0]["reference"]["graph"]["nodes"][0]["label"] = "visitors".into());
+        assert!(it.issues.iter().any(|i| i.code == codes::LIMITS && i.id.as_deref() == Some("standard/reference")
+            && i.field.as_deref() == Some("users")));
+        // Review focus 5: the same node written differently is unchanged.
+        let it = shop_item(|c| c["modes"][0]["reference"]["graph"]["nodes"][0] = json!({"kind": "client", "replicas": 1, "id": "users"}));
+        assert!(!it.issues.iter().any(|i| i.code == codes::LIMITS));
+    }
+
+    #[test]
+    fn start_over_the_limits() {
+        let it = shop_item(|c| c["limits"]["maxNodes"] = 1.into());
+        assert!(it.issues.iter().any(|i| i.code == codes::LIMITS && i.id.as_deref() == Some("start")));
+    }
+
+    #[test]
+    fn design_rejected_by_the_engine() {
+        let it = shop_item(|c| c["modes"][0]["naive"]["graph"]["edges"][0]["kind"] = "db".into());
+        let i = it.issues.iter().find(|i| i.code == codes::ENGINE_INVALID).unwrap();
+        assert_eq!(i.id.as_deref(), Some("standard/naive"));
+        assert_eq!(i.engine[0].code, "edge.not-accepted");
+    }
+
+    #[test]
+    fn blocked_challenge_and_unknown_override_field() {
+        let it = shop_item(|c| c["modes"][1]["faults"] = json!([{"kind": "instance-slow", "atMs": 3000}]));
+        assert!(it.issues.iter().any(|i| i.code == codes::BLOCKED && i.missing == vec!["fault:instance-slow"]));
+        assert!(it.runs.is_empty() && it.passed);
+        assert_eq!(it.readiness, Some(crate::Readiness::Blocked));
+        let it = shop_item(|c| c["modes"][0]["workloadOverride"] = json!({"burst": 2}));
+        assert!(it.issues.iter().any(|i| i.code == codes::ENGINE_INVALID && i.field.as_deref() == Some("workload.burst")));
+    }
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content challenge`
+Expected: the 6 new tests fail.
+
+- [ ] **Step 3: Implement**: add to `challenge.rs`, with the imports `use crate::checks::{Ctx, Outcome}; use crate::engine_input::{engine_check, mode_input, normalized, EngineCheck}; use crate::readiness::Scan; use crate::report::Readiness; use sim_core::{validate_graph, Graph, SimInput, ValidationIssue};`:
+
+```rust
+fn limit_issues(graph: &Graph, limits: &sim_core::GraphLimits) -> Vec<ValidationIssue> {
+    validate_graph(graph, Some(limits)).into_iter().filter(|i| i.code.starts_with("limits.")).collect()
+}
+
+pub(crate) fn check_engine(path: &str, c: &Challenge, ctx: &Ctx, structural_ok: bool, out: &mut Outcome) {
+    let start = normalized(&c.start);
+    let mut scan = Scan::default();
+    scan.input(&start, ctx);
+    let mut designs: Vec<(&Mode, &str, Value)> = vec![];
+    for m in &c.modes {
+        if !(m.faults.is_array() && m.workload_override.is_object()) {
+            continue; // reported structurally
+        }
+        for (name, graph) in [("reference", &m.reference.graph), ("naive", &m.naive.graph)] {
+            let v = mode_input(&start, m, graph);
+            scan.input(&v, ctx);
+            designs.push((m, name, v));
+        }
+    }
+    for g in &c.goals {
+        scan.metric(&g.metric, ctx);
+    }
+    scan.metric("costPerMonth", ctx);
+    out.issues.extend(scan.issues(path));
+    out.needs = scan.needs();
+    out.missing = scan.missing.iter().cloned().collect();
+    if !scan.missing.is_empty() {
+        out.readiness = Some(Readiness::Blocked);
+    }
+    if !structural_ok || scan.stops_engine() {
+        return;
+    }
+
+    let limits = c.limits.graph_limits();
+    let start_graph: Graph = match serde_json::from_value(start["graph"].clone()) {
+        Ok(g) => g,
+        Err(e) => {
+            out.issues.push(ContentIssue::new(codes::ENGINE_INVALID, path).id("start").detail(e.to_string()));
+            return;
+        }
+    };
+    let lim = limit_issues(&start_graph, &limits);
+    if !lim.is_empty() {
+        out.issues.push(ContentIssue::new(codes::LIMITS, path).id("start").engine(lim));
+    }
+    for (m, name, v) in designs {
+        let label = format!("{}/{name}", m.id);
+        let input = match engine_check(&v) {
+            EngineCheck::Accepted(i) => i,
+            failed => {
+                if let Some(issue) = failed.issue(codes::ENGINE_INVALID, path) {
+                    out.issues.push(issue.id(label));
+                }
+                continue;
+            }
+        };
+        let lim = limit_issues(&input.graph, &limits);
+        if !lim.is_empty() {
+            out.issues.push(ContentIssue::new(codes::LIMITS, path).id(label.clone()).engine(lim));
+        }
+        for id in &c.locked_nodes {
+            let before = start_graph.nodes.iter().find(|n| &n.id == id);
+            let after = input.graph.nodes.iter().find(|n| &n.id == id);
+            if before.is_some() && before != after {
+                out.issues.push(ContentIssue::new(codes::LIMITS, path).id(label.clone()).field(id.clone()).detail("locked node changed"));
+            }
+        }
+        run_design(path, c, m, name, &label, &input, out); // Task 17
+    }
+}
+
+/// Task 17.
+fn run_design(_path: &str, _c: &Challenge, _m: &Mode, _name: &str, _label: &str, _input: &SimInput, _out: &mut Outcome) {}
+```
+
+In `checks.rs` `check_challenge`, replace `let _ = (ctx, structural_ok);` with:
+
+```rust
+    crate::challenge::check_engine(&path, c, ctx, structural_ok, &mut out);
+```
+
+- [ ] **Step 4: Run the tests**
+
+Run: `./dev cargo test -p content`
+Expected: all pass. The good shop's designs are within limits: 3 nodes and 4 instances at most, `users` unchanged.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): challenge designs: readiness, limits and locked nodes
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 17: Run modes: reference must pass, naive must fail
+
+**Files:**
+- Modify: `crates/content/src/challenge.rs` (replace the `run_design` stub)
+
+**Interfaces:**
+- Produces: runs labelled `mode:<mode>/reference` and `mode:<mode>/naive`.
+- Codes covered: `content.reference-fails`, `content.naive-passes`.
+
+- [ ] **Step 1: Write the failing tests** (add them to the `challenge.rs` tests):
+
+```rust
+    #[test]
+    fn good_shop_runs_every_design() {
+        let it = shop_item(|_| {});
+        let labels: Vec<&str> = it.runs.iter().map(|r| r.label.as_str()).collect();
+        assert_eq!(labels, vec!["mode:standard/reference", "mode:standard/naive", "mode:chaos/reference", "mode:chaos/naive"]);
+        // Measured while writing the plan.
+        assert_eq!(it.runs[0].metrics.cost_per_month, 50.0);
+        assert!(it.runs[3].metrics.availability < 0.5); // one web instance, lost at 3 s
+        assert!(it.passed, "{:#?}", it.issues);
+    }
+
+    #[test]
+    fn reference_missing_goals_and_budget() {
+        let it = shop_item(|c| c["modes"][0]["reference"]["graph"]["nodes"][1]["config"]["cpu"] = 1.into());
+        let f: Vec<_> = it.issues.iter().filter(|i| i.code == codes::REFERENCE_FAILS).filter_map(|i| i.field.clone()).collect();
+        assert_eq!(f, vec!["fast", "up"]);
+        let it = shop_item(|c| c["modes"][0]["budgetPerMonth"] = 40.into());
+        let b = it.issues.iter().find(|i| i.code == codes::REFERENCE_FAILS).unwrap();
+        assert_eq!((b.field.as_deref(), b.measured), (Some("budget"), Some(50.0)));
+    }
+
+    #[test]
+    fn naive_passing_a_goal_it_should_fail() {
+        let it = shop_item(|c| {
+            c["modes"][0]["naive"]["graph"]["nodes"][1]["config"] = json!({"cpu": 2});
+            c["modes"][0]["naive"]["failsGoals"] = json!(["fast"]);
+        });
+        let i = it.issues.iter().find(|i| i.code == codes::NAIVE_PASSES).unwrap();
+        assert_eq!((i.id.as_deref(), i.field.as_deref()), (Some("standard/naive"), Some("fast")));
+    }
+```
+
+- [ ] **Step 2: Run and see them fail**
+
+Run: `./dev cargo test -p content challenge`
+Expected: the 3 new tests fail.
+
+- [ ] **Step 3: Implement**: replace `run_design`, and add the imports `use crate::report::RunSummary; use sim_core::{grade, simulate};`:
+
+```rust
+fn run_design(path: &str, c: &Challenge, m: &Mode, name: &str, label: &str, input: &SimInput, out: &mut Outcome) {
+    let result = match simulate(input) {
+        Ok(r) => r,
+        Err(e) => {
+            out.issues.push(ContentIssue::new(codes::ENGINE_INVALID, path).id(label).engine(e));
+            return;
+        }
+    };
+    out.runs.push(RunSummary::of(format!("mode:{label}"), &result));
+    for g in grade(&result, &goals_for(c, m)).goals {
+        let code = match (name, g.passed) {
+            ("reference", false) => codes::REFERENCE_FAILS,
+            ("naive", true) if m.naive.fails_goals.contains(&g.id) => codes::NAIVE_PASSES,
+            _ => continue,
+        };
+        out.issues.push(ContentIssue::new(code, path).id(label).field(g.id.clone()).measured(g.measured));
+    }
+}
+```
+
+- [ ] **Step 4: Run the whole crate**
+
+Run: `./dev cargo test -p content && ./dev cargo clippy -p content --all-targets -- -D warnings`
+Expected: all pass, clippy clean.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add crates/content
+git commit -m "feat(content): run challenge modes against reference and naive designs
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
