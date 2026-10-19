@@ -8,14 +8,14 @@ use sim_core::Capabilities;
 
 pub(crate) struct Ctx {
     pub planned: PlannedFeatures,
-    pub caps: Capabilities,
+    pub caps: &'static Capabilities,
 }
 
 impl Ctx {
     pub fn new(levels: Option<&Levels>) -> Ctx {
         Ctx {
             planned: levels.map(|l| l.engine.planned.clone()).unwrap_or_default(),
-            caps: sim_core::capabilities(),
+            caps: crate::known::caps(),
         }
     }
 }

@@ -38,7 +38,7 @@ impl Scan {
 
     pub fn input(&mut self, v: &Value, ctx: &Ctx) {
         let Some(o) = v.as_object() else { return };
-        self.extra_keys(o, &known::input_keys(), "");
+        self.extra_keys(o, known::input_keys(), "");
         if let Some(g) = o.get("graph") {
             self.graph(g, ctx);
         }
@@ -58,7 +58,7 @@ impl Scan {
                 }
             }
             if let Some(s) = w.get("surge").and_then(Value::as_object) {
-                self.extra_keys(s, &known::surge_keys(), "workload.surge.");
+                self.extra_keys(s, known::surge_keys(), "workload.surge.");
             }
         }
         if let Some(c) = o.get("calibration").and_then(Value::as_object) {
@@ -84,7 +84,7 @@ impl Scan {
 
     pub fn graph(&mut self, g: &Value, ctx: &Ctx) {
         let Some(go) = g.as_object() else { return };
-        self.extra_keys(go, &known::graph_keys(), "graph.");
+        self.extra_keys(go, known::graph_keys(), "graph.");
         for n in go
             .get("nodes")
             .and_then(Value::as_array)
@@ -93,7 +93,7 @@ impl Scan {
         {
             let Some(no) = n.as_object() else { continue };
             let id = no.get("id").and_then(Value::as_str).unwrap_or("?");
-            self.extra_keys(no, &known::node_keys(), &format!("graph.nodes[{id}]."));
+            self.extra_keys(no, known::node_keys(), &format!("graph.nodes[{id}]."));
             let kind = no.get("kind").and_then(Value::as_str).unwrap_or_default();
             self.components.insert(kind.to_string());
             match known::config_keys(kind) {
@@ -125,14 +125,14 @@ impl Scan {
         {
             if let Some(eo) = e.as_object() {
                 let id = eo.get("id").and_then(Value::as_str).unwrap_or("?");
-                self.extra_keys(eo, &known::edge_keys(), &format!("graph.edges[{id}]."));
+                self.extra_keys(eo, known::edge_keys(), &format!("graph.edges[{id}]."));
             }
         }
     }
 
     pub fn fault(&mut self, i: usize, f: &Value, ctx: &Ctx) {
         let Some(fo) = f.as_object() else { return };
-        self.extra_keys(fo, &known::fault_keys(), &format!("faults[{i}]."));
+        self.extra_keys(fo, known::fault_keys(), &format!("faults[{i}]."));
         let Some(name) = fo.get("kind").and_then(Value::as_str) else {
             return;
         };

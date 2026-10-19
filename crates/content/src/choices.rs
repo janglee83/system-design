@@ -421,4 +421,21 @@ mod tests {
             codes::CHOICE
         ));
     }
+
+    #[test]
+    fn a_reserved_goal_id_is_a_duplicate_only_when_reserved() {
+        let g = vec![sim_core::Goal {
+            id: "budget".into(),
+            metric: "p95".into(),
+            op: sim_core::GoalOp::Le,
+            value: 1.0,
+        }];
+        assert!(super::check_goals("x", &g, None).is_empty());
+        let i = super::check_goals("x", &g, Some("budget"));
+        assert_eq!(i.len(), 1);
+        assert_eq!(
+            (i[0].code.as_str(), i[0].id.as_deref()),
+            (codes::DUPLICATE_ID, Some("budget"))
+        );
+    }
 }
