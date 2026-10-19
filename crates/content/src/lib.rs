@@ -19,6 +19,7 @@ pub(crate) mod challenge;
 pub(crate) mod checks;
 pub(crate) mod choices;
 pub mod controls;
+pub(crate) mod dup_keys;
 pub(crate) mod engine_input;
 pub(crate) mod experiment;
 pub mod ids;

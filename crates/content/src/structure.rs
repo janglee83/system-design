@@ -67,6 +67,10 @@ fn parse_doc<T: DeserializeOwned>(
         issues.push(parse_issue(path).detail("expected a JSON object"));
         return None;
     }
+    if let Some(key) = crate::dup_keys::first_duplicate_key(text) {
+        issues.push(parse_issue(path).field(key).detail("duplicate key"));
+        return None;
+    }
     match value.get("formatVersion") {
         Some(v) if v.as_u64() == Some(FORMAT_VERSION) => {}
         other => {
@@ -79,7 +83,8 @@ fn parse_doc<T: DeserializeOwned>(
             return None;
         }
     }
-    match serde_json::from_value(value) {
+    // From the text, not from `value`: nothing was merged or dropped on the way.
+    match serde_json::from_str(text) {
         Ok(doc) => Some(doc),
         Err(e) => {
             issues.push(parse_issue(path).detail(e.to_string()));
@@ -637,6 +642,59 @@ mod tests {
         assert_eq!(i.len(), 1, "{i:#?}");
         assert_eq!(i[0].code, codes::PARSE);
         assert_eq!(i[0].path, "lessons/notes.txt");
+    }
+
+    fn raw_edit(t: &mut crate::tree::ContentTree, folder: &str, from: &str, to: &str) {
+        let it = t
+            .lessons
+            .iter_mut()
+            .chain(t.challenges.iter_mut())
+            .find(|i| i.folder == folder)
+            .unwrap();
+        let text = it.json.text().unwrap();
+        assert!(text.contains(from), "{from}");
+        it.json = FileText::Text(text.replacen(from, to, 1));
+    }
+
+    #[test]
+    fn duplicate_json_keys_are_parse_issues_with_their_path() {
+        let cases = [
+            (
+                "l0-fx-capacity",
+                "\"baseRps\": 12000",
+                "\"baseRps\": 12000, \"baseRps\": 1",
+                "experiment.base.workload.baseRps",
+            ),
+            (
+                "l0-fx-capacity",
+                "\"set\": { \"cpu\": 2 }",
+                "\"set\": { \"cpu\": 2, \"cpu\": 4 }",
+                "experiment.choices[0].set.cpu",
+            ),
+            (
+                "l0-fx-capacity",
+                "\"minutes\": 12,",
+                "\"minutes\": 12, \"minutes\": 13,",
+                "minutes",
+            ),
+            (
+                "c-l0-fx-shop",
+                "\"budgetPerMonth\": 60,",
+                "\"budgetPerMonth\": 60, \"budgetPerMonth\": 6,",
+                "modes[0].budgetPerMonth",
+            ),
+        ];
+        for (folder, from, to, field) in cases {
+            let mut t = good_tree();
+            raw_edit(&mut t, folder, from, to);
+            let i = issues_of(&validate_tree(&t), folder);
+            assert!(
+                i.iter().any(|i| i.code == codes::PARSE
+                    && i.detail.as_deref() == Some("duplicate key")
+                    && i.field.as_deref() == Some(field)),
+                "{field}: {i:#?}"
+            );
+        }
     }
 
     #[test]
