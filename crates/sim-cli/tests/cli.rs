@@ -62,3 +62,14 @@ fn checks_100_fixtures_under_two_seconds() {
     let elapsed = start.elapsed();
     assert!(elapsed.as_secs_f64() < 2.0, "took {elapsed:?}");
 }
+
+#[test]
+fn parity_reports_every_reference_fixture() {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/parity");
+    let out = Command::cargo_bin("sim-cli").unwrap().arg("parity").arg(dir).assert();
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(stdout.contains("scale-web-tier-surge-pass"));
+    assert!(stdout.contains("scale-web-tier-surge-direct"));
+    // Goal pass/fail must already agree; numeric calibration is Step 5.
+    assert!(!stdout.contains(" goal "), "goal verdicts must match the reference:\n{stdout}");
+}

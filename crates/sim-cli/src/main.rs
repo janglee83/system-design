@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use rayon::prelude::*;
 use sim_core::fixture::{check_fixture, Fixture, FixtureReport};
+use sim_core::parity::{check_parity, ParityFixture, ParityReport};
 use sim_core::{simulate, SimInput};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -20,6 +21,12 @@ enum Cmd {
     Result { file: PathBuf },
     /// Check fixtures (files or directories) and report pass/fail.
     Check {
+        paths: Vec<PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Compare against reference results (offline) and report mismatches.
+    Parity {
         paths: Vec<PathBuf>,
         #[arg(long)]
         json: bool,
@@ -125,6 +132,50 @@ fn main() -> ExitCode {
                             let measured = f.measured.map_or("null".to_string(), |v| v.to_string());
                             println!("FAIL {} {} {} {} measured={}", r.id, f.metric, f.op, f.expected, measured);
                         }
+                    }
+                }
+                println!("{} passed, {} failed", reports.len() - failed, failed);
+            }
+            if failed > 0 { ExitCode::from(1) } else { ExitCode::SUCCESS }
+        }
+        Cmd::Parity { paths, json } => {
+            let files = expand(&paths);
+            let mut reports: Vec<ParityReport> = files
+                .par_iter()
+                .map(|f| {
+                    let parsed = std::fs::read_to_string(f)
+                        .map_err(|e| e.to_string())
+                        .and_then(|t| serde_json::from_str::<ParityFixture>(&t).map_err(|e| e.to_string()));
+                    match parsed {
+                        Ok(fx) => check_parity(&fx),
+                        Err(e) => ParityReport {
+                            id: format!("{}: {e}", f.display()),
+                            passed: false,
+                            goal_mismatches: vec![],
+                            metric_mismatches: vec![],
+                            validation: vec![],
+                        },
+                    }
+                })
+                .collect();
+            reports.sort_by(|a, b| a.id.cmp(&b.id));
+            let failed = reports.iter().filter(|r| !r.passed).count();
+            if json {
+                println!("{}", serde_json::to_string_pretty(&reports).expect("serializable"));
+            } else {
+                for r in &reports {
+                    if r.passed {
+                        println!("PASS {}", r.id);
+                        continue;
+                    }
+                    for g in &r.goal_mismatches {
+                        println!("FAIL {} goal {} reference={} ours={} measured={:?}", r.id, g.id, g.reference_passed, g.our_passed, g.measured);
+                    }
+                    for m in &r.metric_mismatches {
+                        println!("FAIL {} metric {} reference={} measured={:?} allowed=±{}", r.id, m.metric, m.reference, m.measured, m.allowed);
+                    }
+                    if !r.validation.is_empty() || (r.goal_mismatches.is_empty() && r.metric_mismatches.is_empty()) {
+                        println!("FAIL {} unreadable or invalid", r.id);
                     }
                 }
                 println!("{} passed, {} failed", reports.len() - failed, failed);
