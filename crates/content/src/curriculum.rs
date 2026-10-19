@@ -469,11 +469,10 @@ pub fn curriculum(tree: &ContentTree) -> Result<Curriculum, Report> {
     if a.report.has_blocking() {
         return Err(a.report);
     }
-    let levels = a
-        .parsed
-        .levels
-        .clone()
-        .expect("no blocking issue means levels.json parsed");
+    // No blocking issue means levels.json parsed; if not, the report is still the answer.
+    let Some(levels) = a.parsed.levels.clone() else {
+        return Err(a.report);
+    };
     Ok(build(&levels, &a))
 }
 
