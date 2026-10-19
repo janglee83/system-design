@@ -60,8 +60,8 @@ pub struct Report {
 }
 
 impl Report {
-    /// Sorts items (`levels` first, then challenges, then lessons, each by id) and counts. Issue order inside an item is the
-    /// fixed check order and is kept, never sorted.
+    /// Sorts items (`levels` first, then challenges, then lessons, each by id) and counts.
+    /// Issue order inside an item is the fixed check order and is kept, never sorted.
     pub fn new(mut items: Vec<ItemReport>) -> Report {
         for it in &mut items {
             it.passed = !it.issues.iter().any(|i| i.blocking);
