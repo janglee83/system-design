@@ -276,7 +276,7 @@ fn listing(levels: &Levels, global: &mut Vec<ContentIssue>) -> Listing {
         if !seen_levels.insert(lv.id) {
             global.push(
                 ContentIssue::new(codes::DUPLICATE_ID, LEVELS_PATH)
-                    .id(format!("{:?}", lv.id))
+                    .id(lv.id.as_str())
                     .field("levels"),
             );
         }
@@ -580,7 +580,7 @@ fn check_references(p: &mut Parsed, levels: &Levels, listing: &Listing) {
     }
     for lv in &levels.levels {
         let ec = &lv.exit_check;
-        let field = format!("levels[{:?}].exitCheck", lv.id);
+        let field = format!("levels[{}].exitCheck", lv.id.as_str());
         match modes.get(&ec.challenge) {
             _ if unparsed_challenges.contains(ec.challenge.as_str())
                 && lv.challenges.contains(&ec.challenge) => {}

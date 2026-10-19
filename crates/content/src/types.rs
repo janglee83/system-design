@@ -55,6 +55,10 @@ pub enum LevelId { L0, L1, L2, L3, L4, L5, L6 }
 }
 
 impl LevelId {
+    /// The JSON name (`"L0"`), for paths and report text.
+    pub fn as_str(self) -> &'static str {
+        ["L0", "L1", "L2", "L3", "L4", "L5", "L6"][self as usize]
+    }
     /// The digit used in ids (`l0-…`, `c-l0-…`).
     pub fn digit(self) -> char {
         (b'0' + self as u8) as char
@@ -494,5 +498,14 @@ mod tests {
         let engine = serde_json::to_value(&g).unwrap();
         let strict: StrictGoal = serde_json::from_value(engine.clone()).unwrap();
         assert_eq!(Goal::from(strict), g);
+    }
+
+    #[test]
+    fn level_ids_have_a_stable_name_matching_json() {
+        for (l, s) in [(LevelId::L0, "L0"), (LevelId::L6, "L6")] {
+            assert_eq!(l.as_str(), s);
+            assert_eq!(serde_json::to_value(l).unwrap(), serde_json::Value::from(s));
+            assert_eq!(l.digit(), s.chars().nth(1).unwrap());
+        }
     }
 }
