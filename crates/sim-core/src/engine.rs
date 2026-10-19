@@ -43,6 +43,9 @@ pub(crate) struct NodeRt {
     pub okd_r: f64,
     pub okd_w: f64,
     pub path_lat_ms: f64,
+    /// Queue wait accumulated along the path (weighted like `path_lat_ms`). Requests completing
+    /// in a tick sat at different queue positions, so their latency spreads over this window.
+    pub path_wait_ms: f64,
     overload_reported: bool,
 }
 
@@ -81,8 +84,26 @@ impl NodeRt {
             okd_r: 0.0,
             okd_w: 0.0,
             path_lat_ms: 0.0,
+            path_wait_ms: 0.0,
             overload_reported: false,
         }
+    }
+}
+
+/// Sub-points used to spread completed requests over their queue-wait window in the histogram.
+const OK_SPREAD_POINTS: u32 = 4;
+
+/// Share of the requests completing in a tick that exceed the client timeout `t`.
+/// Their latencies are taken as uniform on [L - W, L] (L = path latency, W = path queue wait,
+/// i.e. FIFO position), so the share is (L - T) / W clamped to [0, 1]. Without a queue every
+/// request has latency L: all or nothing.
+pub(crate) fn timed_out_fraction(l: f64, w: f64, t: f64) -> f64 {
+    if w > 0.0 {
+        ((l - t) / w).clamp(0.0, 1.0)
+    } else if l > t {
+        1.0
+    } else {
+        0.0
     }
 }
 
@@ -376,16 +397,16 @@ impl<'a> Engine<'a> {
     fn resolve(&mut self, i: usize) {
         let targets = self.targets(i);
         let role = self.nodes[i].role;
-        let (cr, cw, cdr, cdw, clat) = if targets.is_empty() {
+        let (cr, cw, cdr, cdw, clat, cwait) = if targets.is_empty() {
             match role {
                 // Nowhere to send the request: it cannot complete.
-                Role::Client | Role::Balancer => (0.0, 0.0, 0.0, 0.0, 0.0),
+                Role::Client | Role::Balancer => (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 // Services without downstream and databases answer by themselves.
-                Role::Service | Role::Database => (1.0, 1.0, 1.0, 1.0, 0.0),
+                Role::Service | Role::Database => (1.0, 1.0, 1.0, 1.0, 0.0, 0.0),
             }
         } else {
             let w = 1.0 / targets.len() as f64;
-            let mut acc = (0.0, 0.0, 0.0, 0.0, 0.0);
+            let mut acc = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             for (c, kind) in targets {
                 let ch = &self.nodes[c];
                 acc.0 += w * ch.ok_r;
@@ -393,6 +414,7 @@ impl<'a> Engine<'a> {
                 acc.2 += w * ch.okd_r;
                 acc.3 += w * ch.okd_w;
                 acc.4 += w * (self.cal.edge_delay_ms(kind) + ch.path_lat_ms);
+                acc.5 += w * ch.path_wait_ms;
             }
             acc
         };
@@ -402,6 +424,7 @@ impl<'a> Engine<'a> {
         n.okd_r = (1.0 - n.fail_down_r) * cdr;
         n.okd_w = (1.0 - n.fail_down_w) * cdw;
         n.path_lat_ms = n.lat_ms + clat;
+        n.path_wait_ms = n.wait_ms + cwait;
     }
 
     fn book_clients(&mut self) {
@@ -420,12 +443,18 @@ impl<'a> Engine<'a> {
             self.totals.total += generated;
             self.totals.unreachable += unreachable;
             self.totals.rejected += rejected;
-            if n.path_lat_ms > timeout {
-                self.totals.timed_out += good;
-                self.hist.record(timeout, good);
-            } else {
-                self.totals.ok += good;
-                self.hist.record(n.path_lat_ms, good);
+            let (lat, wait) = (n.path_lat_ms, n.path_wait_ms);
+            let timed_out = good * timed_out_fraction(lat, wait, timeout);
+            let ok = good - timed_out;
+            self.totals.timed_out += timed_out;
+            self.totals.ok += ok;
+            self.hist.record(timeout, timed_out);
+            // Spread the completed requests over their FIFO window [L - W, min(L, T)].
+            let lo = (lat - wait).max(0.0).min(timeout);
+            let hi = lat.min(timeout);
+            for k in 0..OK_SPREAD_POINTS {
+                let at = lo + (hi - lo) * (k as f64 + 0.5) / OK_SPREAD_POINTS as f64;
+                self.hist.record(at, ok / OK_SPREAD_POINTS as f64);
             }
         }
     }
@@ -500,5 +529,36 @@ impl<'a> Engine<'a> {
             traces: self.traces,
             events: self.events,
         }
+    }
+}
+
+#[cfg(test)]
+mod timeout_tests {
+    use super::timed_out_fraction;
+
+    #[test]
+    fn without_queue_wait_it_is_all_or_nothing() {
+        assert_eq!(timed_out_fraction(900.0, 0.0, 1000.0), 0.0);
+        assert_eq!(timed_out_fraction(1000.0, 0.0, 1000.0), 0.0, "exactly at the timeout is ok");
+        assert_eq!(timed_out_fraction(1000.5, 0.0, 1000.0), 1.0);
+    }
+
+    #[test]
+    fn whole_window_below_the_timeout_is_ok() {
+        assert_eq!(timed_out_fraction(800.0, 500.0, 1000.0), 0.0);
+    }
+
+    #[test]
+    fn whole_window_above_the_timeout_times_out() {
+        // L - W = 1100 > T.
+        assert_eq!(timed_out_fraction(1600.0, 500.0, 1000.0), 1.0);
+    }
+
+    #[test]
+    fn partial_overlap_times_out_the_share_above_the_timeout() {
+        // Window [600, 1100]; 100 of its 500 ms lie above T = 1000.
+        assert!((timed_out_fraction(1100.0, 500.0, 1000.0) - 0.2).abs() < 1e-12);
+        // A full queue just over the timeout no longer flips the whole tick.
+        assert!(timed_out_fraction(1000.5, 986.7, 1000.0) < 0.001);
     }
 }
