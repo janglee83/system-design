@@ -43,8 +43,9 @@ pub struct ContentTree {
     pub research: BTreeSet<String>,
     pub lessons: Vec<RawItem>,
     pub challenges: Vec<RawItem>,
-    /// Entries under `lessons/` or `challenges/` that are not item folders, and entries with
-    /// non-UTF-8 names (shown lossily), relative to the content dir. Dot-entries are ignored.
+    /// Entries that are not content, relative to the content dir: non-folders under `lessons/`
+    /// or `challenges/`, extra files inside an item folder, non-`.md` entries in `research/`,
+    /// dangling symlinks, and non-UTF-8 names (shown lossily). Dot-entries are ignored.
     pub stray: Vec<String>,
 }
 
@@ -132,13 +133,25 @@ fn entries(dir: &Path) -> Result<Option<Vec<Entry>>, LoadError> {
     Ok(Some(out))
 }
 
-fn is_dir(path: &Path) -> Result<bool, LoadError> {
-    std::fs::metadata(path)
-        .map(|m| m.is_dir())
-        .map_err(io(path))
+#[derive(PartialEq)]
+enum EntryKind {
+    Dir,
+    File,
+    /// A symlink whose target does not exist.
+    Dangling,
 }
 
-/// Item folders under `<parent>/`; everything else there goes to `stray`.
+fn entry_kind(path: &Path) -> Result<EntryKind, LoadError> {
+    match std::fs::metadata(path) {
+        Ok(m) if m.is_dir() => Ok(EntryKind::Dir),
+        Ok(_) => Ok(EntryKind::File),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(EntryKind::Dangling),
+        Err(e) => Err(io(path)(e)),
+    }
+}
+
+/// Item folders under `<parent>/`; everything else there, and anything inside an item folder
+/// besides its three files, goes to `stray`.
 fn items(
     root: &Path,
     parent: &str,
@@ -148,12 +161,20 @@ fn items(
     let mut out = vec![];
     for (name, path) in entries(&root.join(parent))?.unwrap_or_default() {
         match name {
-            Ok(folder) if is_dir(&path)? => out.push(RawItem {
-                json: read_text(&path.join(json_name)),
-                vi: read_text(&path.join("vi.md")),
-                en: read_text(&path.join("en.md")),
-                folder,
-            }),
+            Ok(folder) if entry_kind(&path)? == EntryKind::Dir => {
+                for (inner, _) in entries(&path)?.unwrap_or_default() {
+                    match inner {
+                        Ok(f) if [json_name, "vi.md", "en.md"].contains(&f.as_str()) => {}
+                        Ok(f) | Err(f) => stray.push(format!("{parent}/{folder}/{f}")),
+                    }
+                }
+                out.push(RawItem {
+                    json: read_text(&path.join(json_name)),
+                    vi: read_text(&path.join("vi.md")),
+                    en: read_text(&path.join("en.md")),
+                    folder,
+                });
+            }
             Ok(n) | Err(n) => stray.push(format!("{parent}/{n}")),
         }
     }
@@ -171,15 +192,12 @@ pub fn load_dir(dir: &Path) -> Result<ContentTree, LoadError> {
     let mut stray = vec![];
     let mut research = BTreeSet::new();
     for (name, path) in entries(&dir.join("research"))?.unwrap_or_default() {
-        let is_file = std::fs::metadata(&path).map_err(io(&path))?.is_file();
+        let is_file = entry_kind(&path)? == EntryKind::File;
         match name {
-            Ok(n) if is_file => {
-                if let Some(stem) = n.strip_suffix(".md") {
-                    research.insert(stem.to_string());
-                }
+            Ok(n) if is_file && n.ends_with(".md") => {
+                research.insert(n[..n.len() - 3].to_string());
             }
-            Ok(_) => {}
-            Err(n) => stray.push(format!("research/{n}")),
+            Ok(n) | Err(n) => stray.push(format!("research/{n}")),
         }
     }
     let lessons = items(dir, "lessons", "lesson.json", &mut stray)?;
@@ -287,6 +305,7 @@ mod tests {
         fs::write(tmp.path().join("research/readme.txt"), "").unwrap();
         let t = load_dir(tmp.path()).unwrap();
         assert_eq!(t.research.iter().collect::<Vec<_>>(), vec!["note"]);
+        assert_eq!(t.stray, vec!["research/folder.md", "research/readme.txt"]);
     }
 
     #[cfg(unix)]
@@ -320,5 +339,49 @@ mod tests {
         let t = load_dir(tmp.path()).unwrap();
         assert_eq!(t.lessons[0].json, FileText::Text("{}".into()));
         assert_eq!(t.lessons[0].vi, FileText::Unreadable("too large"));
+    }
+
+    #[test]
+    fn unexpected_files_inside_an_item_folder_are_stray() {
+        let tmp = content_dir();
+        let d = tmp.path().join("lessons/l0-x");
+        fs::create_dir_all(d.join("assets")).unwrap();
+        for f in [
+            "lesson.json",
+            "vi.md",
+            "en.md",
+            "fr.md",
+            "lesson.json.bak",
+            ".hidden",
+        ] {
+            fs::write(d.join(f), "").unwrap();
+        }
+        let t = load_dir(tmp.path()).unwrap();
+        assert_eq!(t.lessons.len(), 1);
+        assert_eq!(
+            t.stray,
+            vec![
+                "lessons/l0-x/assets",
+                "lessons/l0-x/fr.md",
+                "lessons/l0-x/lesson.json.bak"
+            ]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_symlink_is_stray_not_a_load_error() {
+        let tmp = content_dir();
+        fs::create_dir_all(tmp.path().join("lessons")).unwrap();
+        std::os::unix::fs::symlink("/no/such/target", tmp.path().join("lessons/l0-gone")).unwrap();
+        std::os::unix::fs::symlink("/no/such/target", tmp.path().join("research/x.md"))
+            .or_else(|_| {
+                fs::create_dir_all(tmp.path().join("research"))?;
+                std::os::unix::fs::symlink("/no/such/target", tmp.path().join("research/x.md"))
+            })
+            .unwrap();
+        let t = load_dir(tmp.path()).unwrap();
+        assert!(t.lessons.is_empty());
+        assert_eq!(t.stray, vec!["lessons/l0-gone", "research/x.md"]);
     }
 }
