@@ -25,7 +25,9 @@ describe("tools/parity/convert.mjs", () => {
       baseRps: 8000,
       writeRatio: 0,
       clientTimeoutMs: 1000,
-      surge: { factor: 3, atMs: 4000, durationMs: 1500 },
+      surge: { factor: 3, atMs: 4000, durationMs: 2000 },
+      trafficEndMs: 10000,
+      arrivals: "uniform",
     });
     expect(f.input.durationMs).toBe(11000);
     expect(f.input.seed).toBe(7);
@@ -37,6 +39,20 @@ describe("tools/parity/convert.mjs", () => {
       { id: "no-single-point", metric: "spofCount", op: "==", value: 0, passed: true },
       { id: "budget", metric: "costPerMonth", op: "<=", value: 1200, passed: false },
     ]);
+  });
+
+  it("takes a missing replicas count from the explicit $defaults, and fails without one", () => {
+    const raw = sample();
+    delete raw.run.design.graph.nodes[0].replicas;
+    expect(convert(raw, "x", scenarios).input.graph.nodes[0].replicas).toBe(1);
+    const { $defaults: _unused, ...withoutDefaults } = scenarios;
+    expect(() => convert(raw, "x", withoutDefaults)).toThrow(/\$defaults\.replicas/);
+  });
+
+  it("treats a partial rule as not passed", () => {
+    const raw = sample();
+    raw.score.rules[0].status = "partial";
+    expect(convert(raw, "x", scenarios).reference.goals[0].passed).toBe(false);
   });
 
   it("keeps cpu: 0 instead of dropping it", () => {
@@ -64,7 +80,7 @@ describe("tools/parity/convert.mjs", () => {
     ["a prose engine version", (r) => (r.run.engineVersion = "latest build"), /engineVersion/],
     ["a prose completion date", (r) => (r.run.completedAt = "yesterday"), /completedAt/],
     ["a non-finite metric value", (r) => (r.result.metrics[0].value = "fast"), /metrics\[0\]\.value/],
-    ["a missing replicas count", (r) => delete r.run.design.graph.nodes[1].replicas, /node\[1\]\.replicas/],
+    ["a non-numeric replicas count", (r) => (r.run.design.graph.nodes[1].replicas = "two"), /node\[1\]\.replicas/],
     ["a missing seed", (r) => delete r.run.seed, /run\.seed/],
     ["non-numeric outcomes", (r) => (r.result.outcomes.ok = "many"), /outcomes/],
     ["outcomes that are not an object", (r) => (r.result.outcomes = [1, 2]), /outcomes/],
@@ -103,6 +119,12 @@ describe("tools/parity/convert.mjs", () => {
     expect(ok.status, ok.stderr).toBe(0);
     const written = JSON.parse(fs.readFileSync(path.join(out, "sample-fixture.json"), "utf8"));
     expect(written.id).toBe("sample-fixture");
+
+    const doubled = path.join(out, "doubled.json");
+    fs.writeFileSync(doubled, JSON.stringify(fs.readFileSync(samplePath, "utf8")));
+    const twice = spawnSync(process.execPath, [path.join(toolDir, "convert.mjs"), doubled, "doubled-fixture", out], { encoding: "utf8" });
+    expect(twice.status, twice.stderr).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(out, "doubled-fixture.json"), "utf8")).input).toEqual(written.input);
 
     const bad = path.join(out, "bad.json");
     fs.writeFileSync(bad, "{not json");

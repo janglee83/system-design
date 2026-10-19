@@ -24,6 +24,9 @@ const METRIC = { p95_latency: "p95", p99_latency: "p99", availability: "availabi
 // Reference metrics we know about but do not compare (our own metrics cover them differently).
 const IGNORED_METRICS = new Set(["web_busy", "errors"]);
 const EDGE_KINDS = new Set(["http", "db", "cache", "msg"]);
+const ARRIVALS = new Set(["poisson", "uniform"]);
+// "partial" means partial credit: the target itself was not met, so the goal did not pass.
+const STATUSES = new Set(["passed", "failed", "partial"]);
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,7 +86,7 @@ const RULE = {
   budget: { metric: "costPerMonth", op: "<=", parse: (t, w) => parseTarget(t, /^\$?(?:\/mo(?:nth)?)?$/, w) },
 };
 
-function convertNode(n, i) {
+function convertNode(n, i, defaults) {
   const where = `node[${i}]`;
   object(n, where);
   const kind = KIND[n.componentId] ?? fail(`${where}: unknown component ${JSON.stringify(n.componentId)}`);
@@ -96,7 +99,10 @@ function convertNode(n, i) {
   }
   const rr = n.config?.replication?.readReplicas;
   if (rr !== undefined) config.readReplicas = finite(rr, `${where}.readReplicas`);
-  return { id: id(n.id, `${where}.id`), kind, replicas: finite(n.replicas, `${where}.replicas`), config };
+  // Captures omit replicas on single-instance nodes (e.g. the client); the default is explicit
+  // in scenarios.json ("$defaults"), never guessed here.
+  const replicas = n.replicas === undefined ? finite(defaults.replicas, "scenarios.json $defaults.replicas") : n.replicas;
+  return { id: id(n.id, `${where}.id`), kind, replicas: finite(replicas, `${where}.replicas`), config };
 }
 
 function convertEdge(e, i) {
@@ -115,7 +121,8 @@ export function convert(raw, fixtureId, scenarios) {
   const score = object(raw.score, "score");
   const graph = object(object(run.design, "run.design").graph, "run.design.graph");
 
-  const nodes = array(graph.nodes, "run.design.graph.nodes").map(convertNode);
+  const defaults = object(scenarios.$defaults ?? {}, "scenarios.json $defaults");
+  const nodes = array(graph.nodes, "run.design.graph.nodes").map((n, i) => convertNode(n, i, defaults));
   const edges = array(graph.edges, "run.design.graph.edges").map(convertEdge);
 
   const simId = matching(object(run.simulation, "run.simulation").id, /^[A-Za-z0-9:_-]{1,64}$/, "run.simulation.id");
@@ -138,6 +145,11 @@ export function convert(raw, fixtureId, scenarios) {
     clientTimeoutMs: finite(s.clientTimeoutMs, `scenario ${key} clientTimeoutMs`),
     surge,
   };
+  if (s.trafficEndMs !== undefined) workload.trafficEndMs = finite(s.trafficEndMs, `scenario ${key} trafficEndMs`);
+  if (s.arrivals !== undefined) {
+    if (!ARRIVALS.has(s.arrivals)) fail(`scenario ${key} arrivals: expected one of ${[...ARRIVALS].join(", ")}`);
+    workload.arrivals = s.arrivals;
+  }
 
   const metrics = {};
   for (const [i, m] of array(result.metrics, "result.metrics").entries()) {
@@ -155,7 +167,7 @@ export function convert(raw, fixtureId, scenarios) {
     const where = `score.rules[${i}]`;
     object(r, where);
     const rule = RULE[r.ruleId] ?? fail(`${where}: unknown rule ${JSON.stringify(r.ruleId)}`);
-    if (r.status !== "passed" && r.status !== "failed") fail(`${where}.status: expected "passed" or "failed"`);
+    if (!STATUSES.has(r.status)) fail(`${where}.status: expected one of ${[...STATUSES].join(", ")}`);
     return { id: r.ruleId, metric: rule.metric, op: rule.op, value: rule.parse(r.target, `${where}.target`), passed: r.status === "passed" };
   });
 
@@ -184,11 +196,15 @@ function readJson(file, what) {
   } catch (e) {
     fail(`cannot read ${what} ${file}: ${e.code ?? e.message}`);
   }
+  let value;
   try {
-    return JSON.parse(text);
+    value = JSON.parse(text);
+    // Saved API responses may be JSON-encoded twice (a JSON string holding the document).
+    if (typeof value === "string") value = JSON.parse(value);
   } catch {
     fail(`${what} ${file} is not valid JSON`);
   }
+  return value;
 }
 
 function main(argv) {
