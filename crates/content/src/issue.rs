@@ -75,6 +75,7 @@ pub struct ContentIssue {
 
 impl ContentIssue {
     pub fn new(code: &str, path: impl Into<String>) -> Self {
+        debug_assert!(codes::ALL.contains(&code), "unknown issue code {code}");
         ContentIssue {
             code: code.into(),
             path: path.into(),
@@ -146,5 +147,12 @@ mod tests {
         assert_eq!(v["code"], "content.expect");
         assert_eq!(v["measured"], 4.5);
         assert_eq!(v["engine"], serde_json::json!([]));
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "unknown issue code")]
+    fn an_unknown_code_is_a_programming_error() {
+        let _ = ContentIssue::new("content.made-up", "x");
     }
 }
