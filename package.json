@@ -6,7 +6,10 @@
     "test:rust": "cargo fmt --all -- --check && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings && cargo clippy -p sim-wasm --target wasm32-unknown-unknown -- -D warnings",
     "test:perf": "cargo test -p sim-cli --release -- --ignored",
     "test:types": "sh scripts/check-types.sh",
-    "test": "pnpm test:rust && pnpm test:types && pnpm -r test && pnpm test:perf && pnpm test:parity",
+    "test": "pnpm test:rust && pnpm test:types && pnpm -r test && pnpm test:perf && pnpm test:parity && pnpm test:content",
+    "test:content": "cargo run -q --profile ci -p sim-cli -- content validate content && cargo run -q --profile ci -p sim-cli -- content curriculum content --check",
+    "content:validate": "cargo run -q --profile ci -p sim-cli -- content validate content",
+    "content:curriculum": "cargo run -q --profile ci -p sim-cli -- content curriculum content",
     "test:parity": "cargo run -q -p sim-cli -- parity fixtures/parity"
   }
 }

@@ -59,7 +59,7 @@ jobs:
       - name: Install JS dependencies
         run: ./dev pnpm install --frozen-lockfile
 
-      # Rust tests, fmt, clippy (native + wasm), generated-type freshness,
-      # wasm build + TS tests, perf budget, offline parity.
+      # Rust tests, fmt, clippy (native + wasm), generated-type freshness (sim + content),
+      # wasm build + TS tests, perf budget, offline parity, content validation.
       - name: Run full test suite
         run: ./dev pnpm test
