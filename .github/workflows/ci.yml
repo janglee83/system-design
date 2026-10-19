@@ -28,3 +28,19 @@ jobs:
       # wasm build + TS tests, perf budget, offline parity.
       - name: Run full test suite
         run: ./dev pnpm test
+
+  content:
+    name: curriculum generator check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # The generator fails on any broken lesson/note/challenge link; the diff
+      # fails if the committed curriculum.json is stale.
+      - name: Regenerate curriculum and compare
+        run: |
+          python3 content/tools/gen_curriculum.py "$RUNNER_TEMP/curriculum.json"
+          diff -u content/curriculum.json "$RUNNER_TEMP/curriculum.json"
