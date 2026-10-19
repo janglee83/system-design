@@ -7,7 +7,9 @@ use crate::engine_input::{engine_check, lesson_input};
 use crate::issue::codes;
 use crate::report::RunSummary;
 use crate::types::*;
-use sim_core::{grade, simulate};
+use sim_core::fixture::parse_op;
+use sim_core::grade::compare;
+use sim_core::{grade, metric_value, simulate};
 use std::collections::BTreeMap;
 
 /// Runs only when the structure is sound and readiness allows it; `paths[i]` belongs to
@@ -86,13 +88,38 @@ fn run_choices(
     }
 }
 
-/// Task 14.
 fn expect_issues(
-    _path: &str,
-    _c: &Choice,
-    _r: &sim_core::SimResult,
+    path: &str,
+    c: &Choice,
+    r: &sim_core::SimResult,
 ) -> Vec<crate::issue::ContentIssue> {
-    vec![]
+    let mut out = vec![];
+    for (metric, ops) in &c.expect {
+        let measured = metric_value(&r.metrics, metric);
+        for (op, expected) in ops {
+            let Some(parsed) = parse_op(op) else { continue }; // reported structurally
+            if !measured.is_some_and(|v| compare(v, parsed, *expected)) {
+                out.push(
+                    crate::issue::ContentIssue::new(codes::EXPECT, path)
+                        .id(c.id.clone())
+                        .field(metric.clone())
+                        .measured(measured)
+                        .detail(format!("{op} {expected}")),
+                );
+            }
+        }
+    }
+    for code in &c.expect_events {
+        if !r.events.iter().any(|e| &e.code == code) {
+            out.push(
+                crate::issue::ContentIssue::new(codes::EXPECT, path)
+                    .id(c.id.clone())
+                    .field(format!("event:{code}"))
+                    .detail("event did not occur"),
+            );
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -216,5 +243,47 @@ mod tests {
             (Some("C"), Some("no-drops"), false)
         );
         assert!(it.passed);
+    }
+
+    #[test]
+    fn failed_numeric_expectation_reports_the_measured_value() {
+        let it = item(|e| e["choices"][0]["expect"] = json!({"p95": {"<=": 1, ">=": 0}}));
+        let x: Vec<_> = it
+            .issues
+            .iter()
+            .filter(|i| i.code == codes::EXPECT)
+            .collect();
+        assert_eq!(x.len(), 1, "only <= 1 fails");
+        assert_eq!(
+            (
+                x[0].id.as_deref(),
+                x[0].field.as_deref(),
+                x[0].detail.as_deref()
+            ),
+            (Some("A"), Some("p95"), Some("<= 1"))
+        );
+        assert!((x[0].measured.unwrap() - 4.68).abs() < 0.1);
+    }
+
+    #[test]
+    fn missing_event() {
+        let it =
+            item(|e| e["choices"][1]["expectEvents"] = json!(["node.overloaded", "db.promoted"]));
+        let x: Vec<_> = it
+            .issues
+            .iter()
+            .filter(|i| i.code == codes::EXPECT)
+            .collect();
+        assert_eq!(x.len(), 1);
+        assert_eq!(x[0].field.as_deref(), Some("event:db.promoted"));
+    }
+
+    #[test]
+    fn unknown_ops_are_reported_once() {
+        let it = item(|e| e["choices"][0]["expect"] = json!({"p95": {"<": 3}}));
+        assert_eq!(
+            it.issues.iter().filter(|i| i.code == codes::EXPECT).count(),
+            1
+        );
     }
 }
