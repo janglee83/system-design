@@ -51,7 +51,11 @@ pub fn parse_path(s: &str) -> Option<ControlPath> {
         if tail != ".atMs" {
             return None;
         }
-        return i.parse().ok().map(FaultAt);
+        // Canonical digits only: no sign, no spaces, no leading zero.
+        let canonical = !i.is_empty()
+            && i.bytes().all(|b| b.is_ascii_digit())
+            && (i == "0" || !i.starts_with('0'));
+        return canonical.then(|| i.parse().ok()).flatten().map(FaultAt);
     }
     None
 }
@@ -280,6 +284,7 @@ mod tests {
             Some(NodeConfig("web".into(), "cpu".into()))
         );
         assert_eq!(parse_path("faults[0].atMs"), Some(FaultAt(0)));
+        assert_eq!(parse_path("faults[10].atMs"), Some(FaultAt(10)));
         for bad in [
             "workload",
             "workload.surge.factor",
@@ -287,6 +292,10 @@ mod tests {
             "graph.nodes[web].label",
             "faults[x].atMs",
             "faults[99999999999999999999].atMs",
+            "faults[+1].atMs",
+            "faults[01].atMs",
+            "faults[ 1].atMs",
+            "faults[].atMs",
             "nodes.web.config.cpu",
             "",
         ] {
