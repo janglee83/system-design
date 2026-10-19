@@ -80,9 +80,15 @@ at least one challenge, and an exit check the learner must pass before moving on
 ## Output
 
 - Research notes: `content/research/<topic>.md` (facts with citations, your own words).
-- Curriculum map: `content/curriculum.json` (levels, lessons, prerequisites, challenges).
-- Lessons and challenges: in the format defined by sub-project 2 (`packages/content`). Until
-  that exists, write drafts to `content/drafts/<lesson-id>.md` using the standard above.
+- Levels, ordering, planned engine features and roadmap stubs: `content/levels.json`.
+- Lessons: `content/lessons/<id>/lesson.json` + `vi.md` + `en.md`; challenges:
+  `content/challenges/<id>/challenge.json` + `vi.md` + `en.md`. The format is defined in
+  `docs/superpowers/specs/2026-10-20-content-format-design.md` (and the plan's rulings).
+  Expectations are numeric ranges measured on the real engine (`sim-cli content validate content
+  --json` prints every run's metrics), never free text.
+- Every item must pass `sim-cli content validate content`; fix the content, never the validator.
+- `content/curriculum.json` is generated: run `sim-cli content curriculum content`, never edit it
+  by hand. A research note feeds a lesson only when the lesson lists its id in `research`.
 
 Report back with: what you added, how many sources you used, open questions, and any lesson
 whose experiment could not be expressed with the current engine (so the engine team can add
