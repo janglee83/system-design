@@ -18,6 +18,7 @@ pub use tree::{load_dir, ContentTree, FileText, LoadError, RawItem};
 pub(crate) mod checks;
 pub mod ids;
 pub mod prose;
+pub(crate) mod prose_check;
 pub mod report;
 pub(crate) mod structure;
 

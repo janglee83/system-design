@@ -38,6 +38,8 @@ pub(crate) struct Outcome {
 pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
     let mut out = Outcome::default();
     let Some(l) = &item.doc else { return out };
+    out.issues
+        .extend(crate::prose_check::check_lesson_prose(item));
     out.readiness = Some(match l.kind {
         LessonKind::Reading => Readiness::NotNeeded,
         LessonKind::Experiment => Readiness::Ready,
@@ -47,6 +49,8 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, _ctx: &Ctx) -> Outcome {
 
 pub(crate) fn check_challenge(item: &Item<Challenge>, _ctx: &Ctx) -> Outcome {
     let mut out = Outcome::default();
+    out.issues
+        .extend(crate::prose_check::check_challenge_prose(item));
     if item.doc.is_some() {
         out.readiness = Some(Readiness::Ready);
     }
