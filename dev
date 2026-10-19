@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Run any command inside the dev container, e.g. ./dev cargo test -p sim-core
+set -e
+cd "$(dirname "$0")"
+if [ -t 0 ] && [ -t 1 ]; then
+  exec docker compose run --rm dev "$@"
+else
+  exec docker compose run --rm -T dev "$@"
+fi

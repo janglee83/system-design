@@ -1,0 +1,7 @@
+target
+node_modules
+packages/*/node_modules
+packages/sim/wasm
+.playwright-mcp
+*.png
+.git

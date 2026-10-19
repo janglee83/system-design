@@ -1,0 +1,29 @@
+{
+  "id": "uniform-traffic-end-drain",
+  "description": "Uniform arrivals at 8,000 rps stop at 10 s of an 11 s run; LB x2 and 5 web servers are far below capacity, so exactly 80,000 requests are sent, none fail, and the last second only drains.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 5}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 8000, "arrivals": "uniform", "trafficEndMs": 10000},
+    "durationMs": 11000,
+    "seed": 1
+  },
+  "expect": {
+    "requestsTotal": {"==": 80000},
+    "requestsOk": {"==": 80000},
+    "requestsRejected": {"==": 0},
+    "availability": {"==": 1},
+    "p95": {"<=": 20},
+    "spofCount": {"==": 0},
+    "costPerMonth": {"==": 162.5}
+  }
+}

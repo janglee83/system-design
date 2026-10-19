@@ -1,0 +1,25 @@
+[package]
+name = "sim-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+ts = ["dep:ts-rs"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+libm = "0.2"
+ts-rs = { version = "10", optional = true }
+
+[dev-dependencies]
+serde_json = "1"
+proptest = "1"
+insta = { version = "1", features = ["json"] }
+criterion = "0.5"
+
+[[bench]]
+name = "simulate"
+harness = false

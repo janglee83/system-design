@@ -1,0 +1,26 @@
+{
+  "id": "web-tier-light",
+  "description": "LB with 2 replicas in front of 2 web servers at 2,000 rps: fast, available, no single point of failure.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 2}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 2000},
+    "seed": 1
+  },
+  "expect": {
+    "availability": {">=": 0.999},
+    "p95": {"<=": 20},
+    "spofCount": {"==": 0},
+    "exposedBackends": {"==": 0},
+    "costPerMonth": {"==": 95}
+  }
+}

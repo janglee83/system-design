@@ -1,0 +1,16 @@
+{
+  "id": "lb-without-backends",
+  "description": "A load balancer with nothing behind it: every request is unreachable.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2}
+      ],
+      "edges": [{"id": "e1", "from": "users", "to": "lb", "kind": "http"}]
+    },
+    "workload": {"baseRps": 1000},
+    "seed": 1
+  },
+  "expect": {"availability": {"==": 0}, "requestsOk": {"==": 0}}
+}

@@ -1,0 +1,22 @@
+{
+  "id": "web-instance-down-redundant",
+  "description": "Two web servers behind an LB; losing one at 3 s is absorbed.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 2}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 2000},
+    "faults": [{"kind": "instance-down", "target": "web", "atMs": 3000}],
+    "seed": 1
+  },
+  "expect": {"availability": {">=": 0.99}},
+  "expectEvents": ["instance.down"]
+}

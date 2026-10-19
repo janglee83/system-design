@@ -1,0 +1,22 @@
+{
+  "id": "traffic-surge-fault",
+  "description": "The traffic-surge-3x fault triples load from 3 s to the end of the run.",
+  "input": {
+    "graph": {
+      "nodes": [
+        {"id": "users", "kind": "client"},
+        {"id": "lb", "kind": "lb", "replicas": 2},
+        {"id": "web", "kind": "web-server", "replicas": 5}
+      ],
+      "edges": [
+        {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+        {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+      ]
+    },
+    "workload": {"baseRps": 1000},
+    "faults": [{"kind": "traffic-surge-3x", "atMs": 3000}],
+    "seed": 1
+  },
+  "expect": {"requestsTotal": {">=": 23200, "<=": 24800}, "availability": {">=": 0.999}},
+  "expectEvents": ["fault.traffic-surge"]
+}

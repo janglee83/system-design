@@ -1,0 +1,43 @@
+{
+  "run": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "engineVersion": "0.0.1",
+    "completedAt": "2026-01-02T03:04:05Z",
+    "seed": 7,
+    "scenarioId": "surge",
+    "simulation": {"id": "sim:scale-web-tier"},
+    "parameters": {"baseRps": 8000, "surgeMultiplier": 3},
+    "design": {
+      "graph": {
+        "nodes": [
+          {"id": "users", "componentId": "component:client", "replicas": 1},
+          {"id": "lb", "componentId": "component:load-balancer", "replicas": 2},
+          {"id": "web", "componentId": "component:web-server", "replicas": 5, "config": {"resources": {"cpu": 1, "memoryGb": 2}}}
+        ],
+        "edges": [
+          {"id": "e1", "from": "users", "to": "lb", "kind": "http"},
+          {"id": "e2", "from": "lb", "to": "web", "kind": "http"}
+        ]
+      }
+    }
+  },
+  "result": {
+    "metrics": [
+      {"id": "p95_latency", "value": 7},
+      {"id": "p99_latency", "value": 8},
+      {"id": "availability", "value": 0.999},
+      {"id": "cost", "value": 162.5},
+      {"id": "web_busy", "value": 0.5}
+    ],
+    "outcomes": {"ok": 1000, "rejected": 20, "timedOut": 5}
+  },
+  "score": {
+    "rules": [
+      {"ruleId": "latency-p95", "target": "<= 100 ms", "status": "passed"},
+      {"ruleId": "availability", "target": ">= 99.9%", "status": "passed"},
+      {"ruleId": "single-entry", "status": "passed"},
+      {"ruleId": "no-single-point", "target": "0", "status": "passed"},
+      {"ruleId": "budget", "target": "<= $1,200/mo", "status": "failed"}
+    ]
+  }
+}

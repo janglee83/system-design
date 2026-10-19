@@ -1,0 +1,110 @@
+{
+  "id": "scale-web-tier-surge-lb5-1cpu-2gb",
+  "source": {
+    "site": "reference",
+    "runId": "72b21962-8deb-4750-b971-1f3ef97e23a5",
+    "engineVersion": "2.2.4",
+    "capturedAt": "2026-10-18"
+  },
+  "input": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "users",
+          "kind": "client",
+          "replicas": 1,
+          "config": {}
+        },
+        {
+          "id": "web",
+          "kind": "web-server",
+          "replicas": 1,
+          "config": {
+            "cpu": 1,
+            "memoryGb": 2
+          }
+        },
+        {
+          "id": "n-98c5ed42",
+          "kind": "lb",
+          "replicas": 5,
+          "config": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-6060e7cd",
+          "from": "users",
+          "to": "n-98c5ed42",
+          "kind": "http"
+        },
+        {
+          "id": "e-b2b63dbc",
+          "from": "n-98c5ed42",
+          "to": "web",
+          "kind": "http"
+        }
+      ]
+    },
+    "workload": {
+      "baseRps": 8000,
+      "writeRatio": 0,
+      "clientTimeoutMs": 1000,
+      "surge": {
+        "factor": 3,
+        "atMs": 4000,
+        "durationMs": 2000
+      },
+      "trafficEndMs": 10000,
+      "arrivals": "uniform"
+    },
+    "durationMs": 11000,
+    "seed": 1
+  },
+  "reference": {
+    "metrics": {
+      "p95": 913.25,
+      "availability": 0.805,
+      "costPerMonth": 147.5,
+      "p99": 913.5,
+      "requestsTotal": 112000
+    },
+    "goals": [
+      {
+        "id": "latency-p95",
+        "metric": "p95",
+        "op": "<=",
+        "value": 100,
+        "passed": false
+      },
+      {
+        "id": "availability",
+        "metric": "availability",
+        "op": ">=",
+        "value": 0.999,
+        "passed": false
+      },
+      {
+        "id": "single-entry",
+        "metric": "exposedBackends",
+        "op": "==",
+        "value": 0,
+        "passed": true
+      },
+      {
+        "id": "no-single-point",
+        "metric": "spofCount",
+        "op": "==",
+        "value": 0,
+        "passed": false
+      },
+      {
+        "id": "budget",
+        "metric": "costPerMonth",
+        "op": "<=",
+        "value": 200,
+        "passed": true
+      }
+    ]
+  }
+}
