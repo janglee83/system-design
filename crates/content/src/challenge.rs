@@ -616,4 +616,48 @@ mod tests {
             it.issues
         );
     }
+
+    #[test]
+    fn a_locked_node_written_with_2_or_2_point_0_is_unchanged() {
+        let mut t = good_tree();
+        edit_json(&mut t, "c-l0-fx-shop", |c| {
+            c["lockedNodes"] = json!(["users", "web"]);
+            c["start"]["graph"]["nodes"][1]["config"] = json!({"cpu": 2});
+            c["modes"][0]["reference"]["graph"]["nodes"][1]["config"] = json!({"cpu": 77});
+        });
+        // Write the standard reference's cpu as `2.0` in the raw text.
+        let item = t
+            .challenges
+            .iter_mut()
+            .find(|i| i.folder == "c-l0-fx-shop")
+            .unwrap();
+        let text = item
+            .json
+            .text()
+            .unwrap()
+            .replacen("\"cpu\": 77", "\"cpu\": 2.0", 1);
+        let v: Value = serde_json::from_str(&text).unwrap();
+        assert!(v["modes"][0]["reference"]["graph"]["nodes"][1]["config"]["cpu"].is_f64());
+        assert!(v["start"]["graph"]["nodes"][1]["config"]["cpu"].is_u64());
+        item.json = crate::tree::FileText::Text(text);
+        let it = validate_tree(&t)
+            .items
+            .into_iter()
+            .find(|i| i.id == "c-l0-fx-shop")
+            .unwrap();
+        let locked: Vec<_> = it
+            .issues
+            .iter()
+            .filter(|i| {
+                i.code == codes::LIMITS && i.detail.as_deref() == Some("locked node changed")
+            })
+            .filter_map(|i| i.id.clone())
+            .collect();
+        // The other designs leave web's config out, so they do change it; standard/reference does not.
+        assert!(
+            !locked.contains(&"standard/reference".to_string()),
+            "{locked:?}"
+        );
+        assert!(locked.contains(&"standard/naive".to_string()), "{locked:?}");
+    }
 }
