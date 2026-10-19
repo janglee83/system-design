@@ -1,7 +1,7 @@
 # Sub-project 2: Content format and `content validate` — Design
 
 Date: 2026-10-20
-Status: Draft, awaiting review
+Status: Approved (2026-10-20)
 
 ## 1. Goal
 
