@@ -10,8 +10,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub(crate) struct NodeRt {
     pub id: String,
-    #[allow(dead_code)] // Read by fault handling (Task 7).
-    pub kind: String,
     pub role: Role,
     pub is_entry: bool,
     pub cap: Capacity,
@@ -56,7 +54,6 @@ impl NodeRt {
         let instances = model.instances(n);
         NodeRt {
             id: n.id.clone(),
-            kind: n.kind.clone(),
             role: meta.role,
             is_entry: meta.is_entry,
             cap: effective_capacity(model, n, cal),
