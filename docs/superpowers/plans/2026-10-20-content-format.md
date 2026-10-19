@@ -5308,8 +5308,8 @@ Expected: 3 passed. Two new files appear under `crates/content/tests/snapshots/`
 
 Review both snapshot files by hand before committing:
 - `golden__good.snap` is exactly the 5 lines from Task 18's `text_output` test.
-- `golden__broken.snap` has a `FAIL` or `WARN` line for each item in the table above. `PASS` appears only for `levels`, `l0-bk-extra-fail` and `l0-bk-blocked`, plus `l0-bk-key` if its only issues are the prose keys of one language (it fails, so in fact no `PASS`). The `l0-bk-blocked` line reads `WARN l0-bk-blocked content.blocked lessons/l0-bk-blocked/lesson.json missing=fault:instance-slow`.
-- Incidental issues are expected and fine. Examples: `l0-bk-folder` also yields `content.id` for the unlisted `l0-bk-other` and for the listed id with no matching folder id on `levels`, and `l0-bk-parse`/`l0-bk-version` are reported on `levels` as listed without a parsed document. Record anything surprising in the commit message.
+- `golden__broken.snap` has a `FAIL` or `WARN` line for each item in the table below. `PASS` appears only for `l0-bk-extra-fail` and `l0-bk-blocked`, whose only issues are warnings. The `l0-bk-blocked` line reads `WARN l0-bk-blocked content.blocked lessons/l0-bk-blocked/lesson.json missing=fault:instance-slow`.
+- Incidental issues are expected, and they make `levels` fail too: `l0-bk-parse`, `l0-bk-version` and `l0-bk-folder` are listed in levels.json, but no parsed document declares those ids, so `levels` gets `content.id … detail="listed but has no folder or roadmap entry"`; `l0-bk-folder` also gets `content.id` for the unlisted id `l0-bk-other`. Record anything else surprising in the commit message.
 
 Then run without `INSTA_UPDATE` to confirm that the snapshots match:
 Run: `./dev cargo test -p content --test golden`
@@ -6098,7 +6098,10 @@ import { readFileSync } from "node:fs";
 const [oldPath, newPath] = process.argv.slice(2);
 const o = JSON.parse(readFileSync(oldPath, "utf8"));
 const n = JSON.parse(readFileSync(newPath, "utf8"));
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// serde_json::Value keeps object keys sorted, so compare with sorted keys on both sides.
+const canon = (v) => JSON.stringify(v, (_k, x) =>
+  x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort()) : x);
+const eq = (a, b) => canon(a) === canon(b);
 const sorted = (a) => [...(a ?? [])].sort();
 let bad = 0;
 const fail = (what) => { bad += 1; console.error("MISMATCH", what); };
