@@ -22,5 +22,6 @@
       {"id": "no-single-point", "metric": "spofCount", "op": "==", "value": 0, "passed": false},
       {"id": "budget", "metric": "costPerMonth", "op": "<=", "value": 200, "passed": true}
     ]
-  }
+  },
+  "tolerance": {"availability": {"abs": 0.08}}
 }
