@@ -44,7 +44,9 @@ impl Default for Calibration {
             web_rps_per_vcpu: 9_000.0,
             web_service_ms: 2.0,
             // Queued requests one GB of memory holds before the process rejects work.
-            web_queue_per_gb: 2_000.0,
+            // Parity: scale-web-tier-surge-direct (one 2 GB web server, 8,000 -> 24,000 rps)
+            // reached 80.5% availability with p95 near the 1 s timeout; 4,440/GB fits both.
+            web_queue_per_gb: 4_440.0,
             // Parity: 5 x 1-vCPU web servers + 2 LB replicas cost $162.5/month.
             web_cost_per_vcpu: 22.5,
             lb_rps_per_replica: 60_000.0,
@@ -64,7 +66,9 @@ impl Default for Calibration {
             edge_delay_msg_ms: 1.0,
             // Latency uses service / (1 - utilization); capped so latency stays finite and the
             // queue itself carries the overload.
-            max_utilization_for_latency: 0.95,
+            // Parity: scale-web-tier-surge-direct; with 0.95 the saturated server adds 40 ms on
+            // top of a full queue and times out sooner than the reference (availability 0.789).
+            max_utilization_for_latency: 0.85,
         }
     }
 }
