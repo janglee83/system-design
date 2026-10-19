@@ -38,7 +38,7 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
         .extend(crate::prose_check::check_lesson_prose(item));
     let path = item.file("lesson.json");
     if let Some(e) = &l.experiment {
-        let (control_issues, resolved) = crate::controls::check_controls(&path, e);
+        let (control_issues, resolved) = crate::controls::check_controls(&path, e, &ctx.planned);
         let choice_issues = crate::choices::check_choices(&path, e);
         let structural_ok = e.base.is_object()
             && !control_issues
@@ -51,6 +51,10 @@ pub(crate) fn check_lesson(item: &Item<Lesson>, ctx: &Ctx) -> Outcome {
         let mut scan = crate::readiness::Scan::default();
         scan.input(&crate::engine_input::normalized(&e.base), ctx);
         for (_, p) in resolved.iter().flatten() {
+            if let Some(field) = crate::controls::unbuilt_field(p, &e.base) {
+                scan.field(ctx, field); // planned (resolve rejected anything else): blocked
+                continue;
+            }
             match p {
                 crate::controls::ControlPath::Calibration(f) => {
                     scan.calibration.insert(f.clone());

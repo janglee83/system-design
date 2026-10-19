@@ -68,24 +68,47 @@ fn node<'a>(base: &'a Value, id: &str) -> Option<&'a Value> {
         .find(|n| n.get("id").and_then(Value::as_str) == Some(id))
 }
 
-/// Why `path` does not address a value in `base`, if it does not.
-pub fn resolve(path: &ControlPath, base: &Value) -> Result<(), String> {
+/// The engine input field a path writes when that field is not one the engine reads
+/// (`workload.<f>`, `calibration.<f>`, `config.<kind>.<key>`), in the naming of
+/// `engine.planned.fields`. `None` for every field the engine reads.
+pub fn unbuilt_field(path: &ControlPath, base: &Value) -> Option<String> {
     use ControlPath::*;
     match path {
-        Workload(f) if !known::workload_scalar_keys().contains(f) => {
-            Err(format!("workload has no scalar field {f}"))
-        }
+        Workload(f) if !known::workload_scalar_keys().contains(f) => Some(format!("workload.{f}")),
         Calibration(f) if !known::calibration_keys().contains(f) => {
-            Err(format!("calibration has no field {f}"))
+            Some(format!("calibration.{f}"))
         }
-        NodeReplicas(id) => node(base, id).map(|_| ()).ok_or(format!("no node {id}")),
         NodeConfig(id, key) => {
-            let n = node(base, id).ok_or(format!("no node {id}"))?;
-            let kind = n.get("kind").and_then(Value::as_str).unwrap_or_default();
-            match known::config_keys(kind) {
-                Some(keys) if !keys.contains(key) => Err(format!("{kind} has no config key {key}")),
-                _ => Ok(()), // a known key, or a planned kind that readiness blocks
-            }
+            let kind = node(base, id)?
+                .get("kind")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            // An unknown or planned kind has no key list; readiness blocks or rejects the kind.
+            let keys = known::config_keys(kind)?;
+            (!keys.contains(key)).then(|| format!("config.{kind}.{key}"))
+        }
+        _ => None,
+    }
+}
+
+/// Why `path` does not address a value in `base`, if it does not. A field the engine does not
+/// read is fine when `planned` lists it: readiness then blocks the item instead.
+pub fn resolve(path: &ControlPath, base: &Value, planned: &[String]) -> Result<(), String> {
+    use ControlPath::*;
+    if let Some(field) = unbuilt_field(path, base) {
+        return if planned.contains(&field) {
+            Ok(())
+        } else {
+            Err(match path {
+                Workload(f) => format!("workload has no scalar field {f}"),
+                Calibration(f) => format!("calibration has no field {f}"),
+                _ => format!("no config key {field}"),
+            })
+        };
+    }
+    match path {
+        NodeReplicas(id) | NodeConfig(id, _) => {
+            node(base, id).map(|_| ()).ok_or(format!("no node {id}"))
         }
         FaultAt(i) => base
             .get("faults")
@@ -192,6 +215,7 @@ pub(crate) type Resolved<'a> = Vec<(&'a Control, ControlPath)>;
 pub(crate) fn check_controls<'a>(
     path: &str,
     exp: &'a Experiment,
+    planned: &PlannedFeatures,
 ) -> (Vec<ContentIssue>, Option<Resolved<'a>>) {
     let mut out = vec![];
     let mut resolved: Option<Resolved<'a>> = Some(vec![]);
@@ -217,7 +241,7 @@ pub(crate) fn check_controls<'a>(
                 out.push(issue(format!("bad path {}", c.path)).field("path"));
                 resolved = None;
             }
-            Some(p) => match resolve(&p, &exp.base) {
+            Some(p) => match resolve(&p, &exp.base, &planned.fields) {
                 Err(e) => {
                     out.push(issue(e).field("path"));
                     resolved = None;
@@ -428,7 +452,7 @@ mod tests {
     #[test]
     fn resolution_is_all_or_nothing_and_keeps_each_control_with_its_path() {
         let e = capacity_experiment(|_| {});
-        let (issues, resolved) = check_controls("x", &e);
+        let (issues, resolved) = check_controls("x", &e, &Default::default());
         assert!(issues.is_empty());
         let pairs: Vec<(&str, ControlPath)> = resolved
             .unwrap()
@@ -443,7 +467,7 @@ mod tests {
             ]
         );
         let e = capacity_experiment(|e| e["controls"][0]["path"] = "bogus".into());
-        let (issues, resolved) = check_controls("x", &e);
+        let (issues, resolved) = check_controls("x", &e, &Default::default());
         assert!(resolved.is_none());
         assert!(issues.iter().any(|i| i.id.as_deref() == Some("cpu")));
     }

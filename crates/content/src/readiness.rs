@@ -22,7 +22,7 @@ pub(crate) struct Scan {
 }
 
 impl Scan {
-    fn field(&mut self, ctx: &Ctx, name: String) {
+    pub fn field(&mut self, ctx: &Ctx, name: String) {
         if ctx.planned.fields.contains(&name) {
             self.missing.insert(format!("field:{name}"));
         } else {
@@ -331,5 +331,43 @@ mod tests {
         assert_eq!(o.needs.components, vec!["client", "web-server"]);
         assert_eq!(o.needs.node_overrides, vec!["costPerMonth"]);
         assert_eq!(o.needs.metrics, vec!["p95", "requestsRejected"]);
+    }
+
+    #[test]
+    fn a_control_on_a_planned_field_blocks_instead_of_failing() {
+        let mut t = good_tree();
+        edit_levels(&mut t, |v| {
+            v["engine"]["planned"]["fields"] =
+                json!(["config.web-server.turbo", "calibration.webBoost"]);
+        });
+        edit_json(&mut t, "l0-fx-capacity", |v| {
+            let c = v["experiment"]["controls"].as_array_mut().unwrap();
+            c.push(
+                json!({"id": "turbo", "type": "toggle", "path": "graph.nodes[web].config.turbo",
+                          "options": [false, true], "default": false}),
+            );
+            c.push(
+                json!({"id": "boost", "type": "toggle", "path": "calibration.webBoost",
+                          "options": [1, 2], "default": 1}),
+            );
+        });
+        let it = validate_tree(&t)
+            .items
+            .into_iter()
+            .find(|i| i.id == "l0-fx-capacity")
+            .unwrap();
+        assert!(
+            !it.issues.iter().any(|i| i.code == codes::CONTROL),
+            "{:#?}",
+            it.issues
+        );
+        assert_eq!(
+            blocked_with(&it),
+            vec![
+                "field:calibration.webBoost",
+                "field:config.web-server.turbo"
+            ]
+        );
+        assert_eq!(it.readiness, Some(Readiness::Blocked));
     }
 }
