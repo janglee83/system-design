@@ -3,3 +3,6 @@
 
 pub mod issue;
 pub use issue::{codes, ContentIssue};
+
+pub mod types;
+pub use types::*;
