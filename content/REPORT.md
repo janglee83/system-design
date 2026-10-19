@@ -78,19 +78,20 @@ Challenges ready on 1a (5): c-l0-first-launch, c-l0-exit-coffee-shop, c-l1-no-si
 
 | Gap | What is needed | Uses | Needed by |
 |---|---|---|---|
-| `third-party-node` | An external dependency node kind (payment/email/SMS provider) that third-party-down / third-party-slow faults target. | 12 | l3-timeouts, l3-circuit-breakers, l3-bulkheads, c-l3-flaky-payment, c-l3-exit-order-pipeline, l5-notification-system, l5-payment-system, c-l5-notifications, c-l5-exit-marketplace, l6-sagas, c-l6-payment-saga, c-l6-capstone |
+| `third-party-node` | An external dependency node kind (payment/email/SMS provider) that third-party-down / third-party-slow faults target. | 13 | l3-timeouts, l3-circuit-breakers, l3-bulkheads, c-l3-flaky-payment, c-l3-exit-order-pipeline, l5-notification-system, l5-payment-system, c-l5-notifications, c-l5-exit-marketplace, c-l5-payments, l6-sagas, c-l6-payment-saga, c-l6-capstone |
+| `static-request-share-and-cdn-hit-model` | Workload share of static/cacheable requests and how a CDN edge hit ratio is computed (TTL, object popularity). Confirm whether plan 1b already intends this. | 7 | l1-cdn-static-content, l1-object-storage-for-assets, c-l1-photo-news, c-l2-zero-to-millions, l5-video-streaming, c-l5-exit-marketplace, c-l5-video-platform |
 | `regions-and-geo-routing` | Multiple regions with cross-region edge delay, geo/latency routing of clients, and a region-down fault. | 7 | l1-dns-and-global-entry, l6-multi-region-basics, l6-geo-routing, l6-active-passive-dr, l6-multi-region-writes, c-l6-global-checkout-lite, c-l6-capstone |
-| `static-request-share-and-cdn-hit-model` | Workload share of static/cacheable requests and how a CDN edge hit ratio is computed (TTL, object popularity). Confirm whether plan 1b already intends this. | 5 | l1-cdn-static-content, l1-object-storage-for-assets, c-l1-photo-news, l5-video-streaming, c-l5-exit-marketplace |
-| `idempotency-keys` | Consumer/API deduplication by idempotency key, turning duplicate deliveries/retries into duplicateWrites = 0. | 5 | l3-idempotency, c-l3-exit-order-pipeline, l5-notification-system, l5-payment-system, c-l5-notifications |
+| `idempotency-keys` | Consumer/API deduplication by idempotency key, turning duplicate deliveries/retries into duplicateWrites = 0. | 6 | l3-idempotency, c-l3-exit-order-pipeline, l5-notification-system, l5-payment-system, c-l5-notifications, c-l5-payments |
+| `partitioning-scheme` | Key partitioning scheme for kv-store and cache clusters (modulo vs consistent hashing, virtual nodes) and a 'keys moved on resize' metric (cache misses after a node loss). | 6 | l4-consistent-hashing, l4-virtual-nodes, c-l4-exit-ring, c-l4-cache-ring, l5-kv-store-design, c-l5-kv-store |
 | `kv-quorum-config` | kv-store replication factor N and read/write quorum R/W, with staleReads and availability depending on them under kv-node-down. | 5 | l4-quorums, c-l4-kv-quorum, c-l4-exit-ring, l5-kv-store-design, c-l5-kv-store |
-| `partitioning-scheme` | Key partitioning scheme for kv-store (modulo vs consistent hashing, virtual nodes) and a 'keys moved on resize' metric. | 5 | l4-consistent-hashing, l4-virtual-nodes, c-l4-exit-ring, l5-kv-store-design, c-l5-kv-store |
-| `distributed-transactions` | Multi-service transactions: 2PC coordinator (with coordinator-down blocking) and sagas with compensation; inconsistency metric. | 4 | l6-two-phase-commit, l6-sagas, c-l6-payment-saga, c-l6-capstone |
+| `inventory-concurrency-control` | Limited inventory decremented concurrently, with an oversold metric and strategies (naive read-then-write, conditional update, row lock, Redis pre-decrement, admission queue/waiting room); for bookings, range overlap with a doubleBookings metric. | 4 | l5-flash-sale, l5-hotel-booking, c-l5-flash-sale, c-l5-exit-marketplace |
+| `distributed-transactions` | Multi-service transactions: 2PC coordinator with a coordinator-down fault leaving in-doubt participants holding locks, and sagas with compensation (orchestrated or choreographed); inconsistency metric. | 4 | l6-two-phase-commit, l6-sagas, c-l6-payment-saga, c-l6-capstone |
+| `outbox-cdc` | Dual-write inconsistency metric, transactional outbox relay (poller or log tailing) and change-data-capture stream from postgres with consumer lag and WAL retention when the connector is down. | 4 | l6-outbox-pattern, l6-change-data-capture, l6-zero-downtime-migrations, c-l6-payment-saga |
 | `sql-sharding` | Partitioned postgres (N shards) with a chosen shard key, key skew producing hot shards, and cross-shard queries. | 3 | l2-sharding-basics, l2-shard-keys, c-l2-orders-sharding |
-| `load-shedding` | Server-side shedding/adaptive concurrency limit: reject early when queue wait exceeds a budget, optionally by priority. | 3 | l3-load-shedding, c-l3-public-api, l6-adaptive-concurrency |
+| `load-shedding` | Server-side shedding and concurrency limits (none / fixed / adaptive gradient or AIMD): reject early when in-flight work or queue wait exceeds a budget, optionally by priority; goodput metric. | 3 | l3-load-shedding, c-l3-public-api, l6-adaptive-concurrency |
 | `rate-limit-algorithms` | Choice of rate-limit algorithm (token bucket, leaky bucket, fixed window, sliding window) and burst behaviour; spec only has per-client requests per minute. | 3 | l3-rate-limit-algorithms, l5-rate-limiter-design, c-l5-rate-limiter |
 | `conflict-resolution` | Concurrent writes to replicas resolved by LWW, version vectors or CRDT merge, with lostUpdates metric. | 3 | l4-conflict-resolution, c-l4-exit-ring, l6-multi-region-writes |
-| `inventory-concurrency-control` | Limited inventory decremented concurrently, with an oversold metric and strategies (row lock, atomic decrement, reservation queue). | 3 | l5-flash-sale, c-l5-flash-sale, c-l5-exit-marketplace |
-| `outbox-cdc` | Dual-write inconsistency metric, transactional outbox relay and change-data-capture stream from postgres. | 3 | l6-outbox-pattern, l6-change-data-capture, c-l6-payment-saga |
+| `event-log-stream` | Partitioned append-only log (Kafka-like) with retention, consumer groups, consumer lag metric, key skew producing hot partitions, and replication factor / min in-sync replicas deciding loss vs unavailability under broker-down. | 3 | l5-distributed-message-queue, l5-metrics-pipeline, l6-event-sourcing-cqrs |
 | `deployment-model` | Rolling / canary deployments and a 'bad deploy' fault (new version slower or erroring on a fraction of instances), with rollback. | 2 | l1-rolling-deploys, l6-safe-deployments |
 | `session-state-model` | Per-user session state: web-server sessionState local|shared, LB stickiness, and a lostSessions metric when an instance holding local sessions dies. | 2 | l1-stateless-servers, l1-session-store |
 | `autoscaling-warmup-delay` | Instance warm-up time before a newly launched instance takes traffic, so sudden spikes can outrun autoscaling. | 2 | l1-autoscaling, c-l1-day-and-night |
@@ -101,13 +102,16 @@ Challenges ready on 1a (5): c-l0-first-launch, c-l0-exit-coffee-shop, c-l1-no-si
 | `delivery-semantics` | Queue delivery settings (at-most-once / at-least-once, ack timeout, redelivery) producing lostMessages vs duplicates. | 2 | l3-delivery-semantics, c-l3-exit-order-pipeline |
 | `per-hop-timeouts` | Timeout configured per edge/dependency (not only the client timeout), freeing workers when a dependency is slow. | 2 | l3-timeouts, c-l3-flaky-payment |
 | `retry-jitter` | Jitter option on retry backoff (none/full/equal) so synchronized retries spread out. | 2 | l3-retry-storms-jitter, c-l3-retry-storm |
+| `dead-letter-queue` | Moving messages that fail N times to a dead-letter queue instead of retrying forever (poison messages). | 2 | l3-dead-letter-queues, c-l3-photo-pipeline |
 | `network-partition-fault` | Network partition between groups of nodes (both sides alive, cannot talk), needed for CAP and split-brain experiments. | 2 | l4-cap-theorem, l4-leader-election |
 | `leader-election-leases` | Leader election with leases/fencing and a splitBrain metric under partitions or pauses. | 2 | l4-leader-election, l5-job-scheduler |
 | `long-lived-connections` | Long-lived (WebSocket) connections with a per-server connection capacity, reconnect storms when a server dies. | 2 | l5-chat-system, c-l5-chat |
 | `crawler-behaviors` | Crawler-specific behaviour: URL frontier, per-host politeness rate, duplicate URL/content detection. | 2 | l5-web-crawler, c-l5-crawler |
 | `autocomplete-topk` | Precomputed top-k prefix index (trie) with an update pipeline and freshness metric. | 2 | l5-search-autocomplete, c-l5-autocomplete |
-| `event-log-stream` | Partitioned append-only log (Kafka-like) with retention, consumer groups and consumer lag metric. | 2 | l5-metrics-pipeline, l6-event-sourcing-cqrs |
 | `multi-region-writes` | Writes accepted in several regions with cross-region replication delay and conflict counting. | 2 | l6-multi-region-writes, c-l6-capstone |
+| `consumer-prefetch-partitions` | Consumer prefetch (messages buffered per worker before ack) and partition-to-consumer assignment, so a slow or crashed worker hoards messages and the partition count caps parallelism. | 2 | l3-consumer-prefetch-and-partitions, c-l3-photo-pipeline |
+| `bandwidth-egress-model` | Bytes per response and egress price per GB per tier (edge vs origin vs cross-region), so costPerMonth reflects bandwidth for video, downloads and cross-region replication. | 2 | l5-video-streaming, c-l5-video-platform |
+| `cells-and-shuffle-sharding` | Several identical stacks (cells) behind a thin router, or shuffle-sharded worker subsets per tenant, with a poison-tenant / noisy-neighbour fault and a share-of-clients-affected metric. | 2 | l6-cells-and-blast-radius, c-l6-noisy-neighbor |
 | `connection-setup-cost` | Cost of DNS lookup + TCP/TLS handshakes on new connections vs reused ones (first request vs repeat request). | 1 | l0-dns-and-network-path |
 | `lb-algorithm-effect` | LB algorithm (round-robin, least-conn, two-choices) actually reacting to per-instance queue length when instances differ (e.g. under instance-slow). In 1a the LB splits equally. | 1 | l1-lb-algorithms |
 | `health-check-detection-delay` | Delay between an instance failing and the LB noticing (check interval x unhealthy threshold); requests sent to the dead instance meanwhile fail. | 1 | l1-health-checks |
@@ -120,15 +124,19 @@ Challenges ready on 1a (5): c-l0-first-launch, c-l0-exit-coffee-shop, c-l1-no-si
 | `transaction-isolation-model` | Concurrent updates to the same rows under isolation levels / locking / optimistic concurrency producing lostUpdates or writeConflicts. | 1 | l2-transactions-isolation |
 | `bulkheads` | Separate worker pools per dependency inside a service so one slow dependency cannot take all workers. | 1 | l3-bulkheads |
 | `fallbacks` | Degraded/fallback responses (cached or default answer) when a dependency fails, counted separately from errors. | 1 | l3-graceful-degradation |
-| `dead-letter-queue` | Moving messages that fail N times to a dead-letter queue instead of retrying forever (poison messages). | 1 | l3-dead-letter-queues |
 | `clock-skew` | Per-node clock skew/drift affecting timestamp ordering and last-write-wins. | 1 | l4-clocks-and-ordering |
 | `gossip-membership` | Gossip-based membership/failure dissemination with convergence time. | 1 | l4-gossip |
-| `chunked-upload-dedupe` | Chunked uploads with content-hash deduplication and sync notifications. | 1 | l5-file-sync |
+| `chunked-upload-dedupe` | Chunked uploads with content-hash deduplication (dedupe ratio, bytes transferred, storage cost) and sync notifications fanned out to a user's other devices. | 1 | l5-file-sync |
 | `sorted-set-ops` | Cache component supporting sorted-set operations (rank/top-N) with their own cost. | 1 | l5-leaderboard |
 | `geo-index` | Geospatial index (geohash/quadtree) and query fan-out by area. | 1 | l5-proximity-service |
 | `consensus-replication` | Replicated state machine (Raft-like group of 3/5) with majority commit, leader failover time and unavailability without quorum. | 1 | l6-consensus-raft |
 | `backpressure-producer-feedback` | Producer slowing or blocking when a downstream queue is full (backpressure signal), vs unbounded queue growth. | 1 | l6-backpressure |
-| `hedged-requests` | Hedged/backup requests sent after a delay to another replica, with the extra-load cost. | 1 | l6-tail-latency-hedging |
+| `hedged-requests` | Hedged/backup requests sent after a delay to another replica, with the extra-load cost. Needs per-request latency variance (1a gives every request in a tick the same latency). | 1 | l6-tail-latency-hedging |
+| `erasure-coding-and-durability` | Object-store redundancy scheme (replicas vs erasure coding k+m) with storage overhead, tolerated node losses and a dataLoss metric under repeated object-storage node failures. | 1 | l5-object-storage-design |
+| `per-node-timeseries-and-traces` | Expose per-node time series and sampled request traces from a run, so learners diagnose 'where did it break?' from evidence instead of the fault list. | 1 | l6-observability-at-scale |
+| `cardinality-cost` | Metrics-store cost driven by series count (label choices) and trace sampling rate, to teach observability cost trade-offs. | 1 | l6-observability-at-scale |
+| `alert-evaluation` | Evaluate alert rules (static threshold vs multiwindow burn rate) over a run's per-tick error and latency series and score precision, recall and detection time. | 1 | l6-slo-alerting |
+| `background-batch-load` | A throttled background batch job (backfill, migration, reindex) sharing database capacity with live traffic, with batch size and rate controls. | 1 | l6-zero-downtime-migrations |
 
 Highest impact: `third-party-node` (the spec has third-party faults but no node kind for them to
 target), `regions-and-geo-routing`, `kv-quorum-config`, `partitioning-scheme`, `idempotency-keys`,
