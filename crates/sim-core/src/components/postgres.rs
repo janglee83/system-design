@@ -34,6 +34,7 @@ impl ComponentModel for Postgres {
             rps: cal.pg_qps_per_instance,
             service_ms: cal.pg_service_ms,
             max_queue: cal.pg_qps_per_instance * cal.pg_queue_seconds,
+            latency_knee: Some(cal.pg_max_utilization_for_latency),
         }
     }
     fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {

@@ -86,6 +86,10 @@ pub struct Capacity {
     pub service_ms: f64,
     /// Requests one instance can hold waiting before it rejects new work.
     pub max_queue: f64,
+    /// How latency responds to load. `None`: service time plus FIFO queue wait (the web tier,
+    /// fitted to the reference runs). `Some(cap)`: service / (1 - min(utilization, cap)) plus
+    /// queue wait, a knee that warns before overload (balancers and databases).
+    pub latency_knee: Option<f64>,
 }
 
 pub trait ComponentModel: Sync {

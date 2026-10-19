@@ -344,6 +344,8 @@ impl<'a> Engine<'a> {
         let cap_rps = n.cap.rps * instances;
         let per_tick = cap_rps * TICK_MS / 1000.0;
         // Requests may wait longer than the client timeout; the client books them as timed out.
+        // Every role: a server does not know its callers' timeout, so only its own queue size
+        // bounds the wait (reference evidence for the web tier; see fixtures/parity).
         let queue_limit = n.cap.max_queue * instances;
 
         let total = n.queue + arriving;
@@ -354,9 +356,17 @@ impl<'a> Engine<'a> {
         n.rejected = rejected;
         n.busy = if per_tick > 0.0 { served / per_tick } else { 0.0 };
 
-        // Fixed service time plus FIFO queue wait (parity: every fixture in fixtures/parity).
         n.wait_ms = if cap_rps > 0.0 { n.queue / cap_rps * 1000.0 } else { 0.0 };
-        n.lat_ms = n.cap.service_ms + n.wait_ms;
+        n.lat_ms = match n.cap.latency_knee {
+            // Web tier: fixed service time plus FIFO queue wait (parity: fixtures/parity).
+            None => n.cap.service_ms + n.wait_ms,
+            // Balancers and databases: service time inflated by utilization, capped so it
+            // stays finite, plus queue wait.
+            Some(cap) => {
+                let rho = if per_tick > 0.0 { (arriving / per_tick).min(cap) } else { cap };
+                n.cap.service_ms / (1.0 - rho) + n.wait_ms
+            }
+        };
 
         // Overflow rejects newly arriving requests (queued ones were already admitted), so the
         // fraction is taken over arrivals, not queue + arrivals. Capped at 1 in case the queue

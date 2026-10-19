@@ -30,7 +30,11 @@ impl ComponentModel for WebServer {
         let rps = cal.web_rps_per_vcpu * cpu;
         // Memory bounds everything in the server; requests being served occupy workers.
         let workers = rps * cal.web_service_ms / 1000.0;
-        Capacity { rps, service_ms: cal.web_service_ms, max_queue: (cal.web_queue_per_gb * mem - workers).max(0.0) }
+        Capacity {
+            rps,
+            service_ms: cal.web_service_ms, max_queue: (cal.web_queue_per_gb * mem - workers).max(0.0),
+            latency_knee: None,
+        }
     }
     fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {
         let extra = (num(node, "cpu", DEFAULT_CPU) - 1.0).max(0.0);

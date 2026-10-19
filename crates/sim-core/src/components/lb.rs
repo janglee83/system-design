@@ -23,6 +23,7 @@ impl ComponentModel for LoadBalancer {
             rps: cal.lb_rps_per_replica,
             service_ms: cal.lb_service_ms,
             max_queue: cal.lb_rps_per_replica * cal.lb_queue_seconds,
+            latency_knee: Some(cal.lb_max_utilization_for_latency),
         }
     }
     fn cost_per_month(&self, node: &Node, cal: &Calibration) -> f64 {

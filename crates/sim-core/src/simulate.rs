@@ -119,6 +119,66 @@ mod tests {
         assert_eq!(r.metrics.cost_per_month, 50.0 + 45.0 + 360.0);
     }
 
+    /// users -> web x5 -> pg (one instance, 5,000 qps) at a steady uniform rate.
+    fn web_to_pg(rps: f64) -> SimInput {
+        let g = graph(
+            vec![node("users", "client", 1, &[]), node("web", "web-server", 5, &[]), node("pg", "postgres", 1, &[])],
+            vec![edge("users", "web", EdgeKind::Http), edge("web", "pg", EdgeKind::Db)],
+        );
+        let mut i = input(g, rps);
+        i.workload.arrivals = Some(Arrivals::Uniform);
+        i
+    }
+
+    #[test]
+    fn postgres_latency_rises_near_saturation_before_overload() {
+        let p95 = |rps: f64| {
+            let m = simulate(&web_to_pg(rps)).unwrap().metrics;
+            assert_eq!(m.requests_rejected, 0.0, "{rps} rps must not overload: {m:?}");
+            assert_eq!(m.availability, 1.0, "{m:?}");
+            m.p95
+        };
+        let (light, busy, near) = (p95(2_000.0), p95(4_500.0), p95(4_900.0));
+        // 3 ms / (1 - rho): about 5 ms at rho 0.4, 30 ms at 0.9, 60 ms at the 0.95 cap.
+        assert!(busy > light + 15.0, "light {light}, busy {busy}");
+        assert!(near > busy + 15.0, "busy {busy}, near {near}");
+        // A lower knee cap flattens the curve: 3 ms / (1 - 0.5) = 6 ms at any utilization.
+        let mut capped = web_to_pg(4_900.0);
+        capped.calibration =
+            Some(CalibrationOverrides { pg_max_utilization_for_latency: Some(0.5), ..Default::default() });
+        let flat = simulate(&capped).unwrap().metrics.p95;
+        assert!(flat < light + 5.0, "light {light}, capped {flat}");
+    }
+
+    #[test]
+    fn balancer_latency_rises_near_saturation_before_overload() {
+        let p95 = |rps: f64| {
+            let mut i = input(web_tier(1, 5), rps);
+            i.workload.arrivals = Some(Arrivals::Uniform);
+            i.calibration = Some(CalibrationOverrides { lb_rps_per_replica: Some(10_000.0), ..Default::default() });
+            let m = simulate(&i).unwrap().metrics;
+            assert_eq!(m.requests_rejected, 0.0, "{m:?}");
+            m.p95
+        };
+        let (light, near) = (p95(2_000.0), p95(9_800.0));
+        // 2 ms / (1 - rho): 2.5 ms at rho 0.2, 40 ms at the 0.95 cap.
+        assert!(near > light + 20.0, "light {light}, near {near}");
+    }
+
+    #[test]
+    fn postgres_requests_wait_past_a_short_client_timeout_and_time_out() {
+        // 8,000 rps into 5,000 qps: the queue fills to pgQueueSeconds (500 ms) of wait, past
+        // the 200 ms client timeout. Those requests time out with their real latency; the
+        // database does not know the client's timeout, so it does not reject them early.
+        let mut i = web_to_pg(8_000.0);
+        i.workload.client_timeout_ms = 200.0;
+        let m = simulate(&i).unwrap().metrics;
+        assert!(m.requests_timed_out > 0.0, "{m:?}");
+        assert!(m.requests_rejected > 0.0, "a full queue still rejects: {m:?}");
+        assert!(m.p95 > 400.0, "waits up to 500 ms are recorded: {m:?}");
+        assert!(conserved(&m));
+    }
+
     #[test]
     fn timeline_has_one_frame_per_100ms() {
         let r = simulate(&input(web_tier(1, 1), 1_000.0)).unwrap();

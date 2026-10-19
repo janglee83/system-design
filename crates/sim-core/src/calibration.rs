@@ -26,11 +26,13 @@ pub struct Calibration {
     pub lb_service_ms: f64,
     pub lb_queue_seconds: f64,
     pub lb_cost_per_replica: f64,
+    pub lb_max_utilization_for_latency: f64,
     pub pg_qps_per_instance: f64,
     pub pg_service_ms: f64,
     pub pg_queue_seconds: f64,
     pub pg_cost_per_instance: f64,
     pub pg_failover_ms: f64,
+    pub pg_max_utilization_for_latency: f64,
     pub edge_delay_http_ms: f64,
     pub edge_delay_db_ms: f64,
     pub edge_delay_cache_ms: f64,
@@ -65,12 +67,19 @@ impl Default for Calibration {
             lb_service_ms: 2.0,
             lb_queue_seconds: 0.05,
             lb_cost_per_replica: 25.0,
+            // Balancer latency = lbServiceMs / (1 - min(utilization, this)) + queue wait, so a
+            // balancer near saturation slows down before it rejects. No reference evidence (the
+            // captures never load a balancer past 40%); 0.95 caps the knee at 20x service time.
+            lb_max_utilization_for_latency: 0.95,
             pg_qps_per_instance: 5_000.0,
             pg_service_ms: 3.0,
             pg_queue_seconds: 0.5,
             pg_cost_per_instance: 180.0,
             // Time from losing the primary to a replica accepting writes.
             pg_failover_ms: 600.0,
+            // Database latency = pgServiceMs / (1 - min(utilization, this)) + queue wait: the
+            // warning knee before overload. No reference evidence; 0.95 caps it at 20x service.
+            pg_max_utilization_for_latency: 0.95,
             // Same-region, same-AZ network delay per hop.
             edge_delay_http_ms: 0.5,
             edge_delay_db_ms: 0.8,
@@ -96,8 +105,9 @@ impl Calibration {
                 web_rps_per_vcpu, web_service_ms, web_queue_per_gb, web_cost_per_vcpu,
                 web_cost_per_extra_vcpu,
                 lb_rps_per_replica, lb_service_ms, lb_queue_seconds, lb_cost_per_replica,
+                lb_max_utilization_for_latency,
                 pg_qps_per_instance, pg_service_ms, pg_queue_seconds, pg_cost_per_instance,
-                pg_failover_ms, edge_delay_http_ms, edge_delay_db_ms, edge_delay_cache_ms,
+                pg_failover_ms, pg_max_utilization_for_latency, edge_delay_http_ms, edge_delay_db_ms, edge_delay_cache_ms,
                 edge_delay_msg_ms,
             );
         }
@@ -115,8 +125,8 @@ impl Calibration {
 }
 
 /// camelCase names of overrides that cannot be used: non-finite values, capacities that are
-/// not positive, times/costs/queues that are negative.
-/// Order: positive-only fields, then non-negative fields in declaration order.
+/// not positive, times/costs/queues that are negative, latency knees outside (0, 1).
+/// Order: positive-only fields, then non-negative fields, then knees, each in declaration order.
 pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
     let positive = [
         ("webRpsPerVcpu", o.web_rps_per_vcpu),
@@ -140,6 +150,10 @@ pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
         ("edgeDelayCacheMs", o.edge_delay_cache_ms),
         ("edgeDelayMsgMs", o.edge_delay_msg_ms),
     ];
+    let unit_open = [
+        ("lbMaxUtilizationForLatency", o.lb_max_utilization_for_latency),
+        ("pgMaxUtilizationForLatency", o.pg_max_utilization_for_latency),
+    ];
     let mut bad = Vec::new();
     for (name, value) in positive {
         if let Some(v) = value {
@@ -151,6 +165,13 @@ pub fn invalid_overrides(o: &CalibrationOverrides) -> Vec<&'static str> {
     for (name, value) in non_negative {
         if let Some(v) = value {
             if !(v.is_finite() && v >= 0.0) {
+                bad.push(name);
+            }
+        }
+    }
+    for (name, value) in unit_open {
+        if let Some(v) = value {
+            if !(v.is_finite() && v > 0.0 && v < 1.0) {
                 bad.push(name);
             }
         }
@@ -189,12 +210,31 @@ mod tests {
             lb_service_ms: Some(f64::NAN),
             web_cost_per_extra_vcpu: Some(f64::INFINITY),
             edge_delay_db_ms: Some(0.0), // zero delay is allowed
+            lb_max_utilization_for_latency: Some(1.0),
+            pg_max_utilization_for_latency: Some(0.0),
             ..Default::default()
         };
         assert_eq!(
             invalid_overrides(&o),
-            vec!["webRpsPerVcpu", "webCostPerExtraVcpu", "lbServiceMs", "pgCostPerInstance"]
+            vec![
+                "webRpsPerVcpu",
+                "webCostPerExtraVcpu",
+                "lbServiceMs",
+                "pgCostPerInstance",
+                "lbMaxUtilizationForLatency",
+                "pgMaxUtilizationForLatency",
+            ]
         );
+        for bad in [f64::NAN, f64::INFINITY, -0.5, 1.5] {
+            let o = CalibrationOverrides { pg_max_utilization_for_latency: Some(bad), ..Default::default() };
+            assert_eq!(invalid_overrides(&o), vec!["pgMaxUtilizationForLatency"], "{bad}");
+        }
+        let ok = CalibrationOverrides {
+            lb_max_utilization_for_latency: Some(0.5),
+            pg_max_utilization_for_latency: Some(0.99),
+            ..Default::default()
+        };
+        assert!(invalid_overrides(&ok).is_empty());
         assert!(invalid_overrides(&CalibrationOverrides::default()).is_empty());
     }
 }
