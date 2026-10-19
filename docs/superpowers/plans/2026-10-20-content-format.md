@@ -6319,3 +6319,291 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
+## Phase 6: CI and scripts
+
+### Task 24: Rust-based content CI, root scripts, retire the Python generator
+
+**Files:**
+- Modify: `.github/workflows/content.yml` (rewrite), `.github/workflows/engine.yml` (comment only), `Cargo.toml` (`[profile.ci]`), `package.json`, `content/README.md`
+- Delete: `content/tools/gen_curriculum.py`, `content/tools/split_curriculum.mjs`, `content/tools/compare_curriculum.mjs`
+
+**Interfaces:**
+- Produces: the `content` workflow (no Python) and the root scripts `test:content`, `content:validate` and `content:curriculum`. The root `pnpm test` now includes `test:content`, so the engine workflow also proves that content still validates.
+
+- [ ] **Step 1: Add the `ci` cargo profile** at the end of the root `Cargo.toml`:
+
+```toml
+# Optimized but quick to build: for CI jobs that run the engine (content validation) and are
+# not benchmarks. Release keeps LTO for the shipped wasm/CLI.
+[profile.ci]
+inherits = "release"
+lto = "off"
+codegen-units = 16
+incremental = false
+```
+
+Run: `./dev sh -c 'time cargo build -q --profile ci -p sim-cli && time ./target/ci/sim-cli content validate content'`
+Expected: builds, and validate prints `PASS levels`. Note both timings in the commit message; validation itself should take well under a second at this point.
+
+- [ ] **Step 2: Rewrite `.github/workflows/content.yml`**
+
+```yaml
+name: content
+
+# Runs when lessons, challenges or levels change, and when the validator, the CLI or the
+# engine changes (an engine change can break content), or on a dependency/toolchain bump.
+on:
+  pull_request:
+    paths:
+      - "content/**"
+      - "crates/content/**"
+      - "crates/sim-cli/**"
+      - "crates/sim-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/content.yml"
+  push:
+    branches: [main]
+    paths:
+      - "content/**"
+      - "crates/content/**"
+      - "crates/sim-cli/**"
+      - "crates/sim-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/content.yml"
+
+concurrency:
+  group: content-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: content validate and curriculum check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # rustup reads rust-toolchain.toml and installs exactly that toolchain.
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install
+          rustc --version | grep -q '^rustc 1\.85\.1 '
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: content
+
+      - name: Build sim-cli
+        run: cargo build --locked --profile ci -p sim-cli
+
+      # Every lesson and challenge behaves as written on the real engine.
+      - name: Validate lessons and challenges
+        run: ./target/ci/sim-cli content validate content
+
+      # The committed curriculum.json is what the folders and levels.json generate.
+      - name: Curriculum is up to date
+        run: ./target/ci/sim-cli content curriculum content --check
+```
+
+- [ ] **Step 3: Engine workflow.** Its `crates/**` and `packages/**` filters already cover `crates/content/**` and `packages/content/**` (spec §9), so no filter changes. Update only its comment on the full test-suite step:
+
+```yaml
+      # Rust tests, fmt, clippy (native + wasm), generated-type freshness (sim + content),
+      # wasm build + TS tests, perf budget, offline parity, content validation.
+```
+
+- [ ] **Step 4: Root scripts** in `package.json`: add these and extend `test`:
+
+```json
+    "test:content": "cargo run -q --profile ci -p sim-cli -- content validate content && cargo run -q --profile ci -p sim-cli -- content curriculum content --check",
+    "content:validate": "cargo run -q --profile ci -p sim-cli -- content validate content",
+    "content:curriculum": "cargo run -q --profile ci -p sim-cli -- content curriculum content",
+    "test": "pnpm test:rust && pnpm test:types && pnpm -r test && pnpm test:perf && pnpm test:parity && pnpm test:content",
+```
+
+Run: `./dev pnpm test`
+Expected: everything passes, ending with `curriculum.json is up to date`.
+
+- [ ] **Step 5: Retire the Python generator and the one-off scripts**
+
+```bash
+git rm content/tools/gen_curriculum.py content/tools/split_curriculum.mjs content/tools/compare_curriculum.mjs
+```
+
+Search for leftovers: `grep -rn "gen_curriculum\|split_curriculum\|compare_curriculum" --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git .`. Expected hits are only `content/REPORT.md` (a dated run report; leave it as history), `content/sources/*.md` and this plan. Change `content/sources/*.md` mentions to "`sim-cli content curriculum`".
+
+- [ ] **Step 6: Update `content/README.md`.** Replace the `## Layout`, `### curriculum.json` and `### drafts/<lesson-id>.md` sections with:
+
+````markdown
+## Layout
+
+```
+content/
+├─ README.md                         this file
+├─ levels.json                       levels, lesson/challenge order, roadmap stubs, engine catalogs and gaps
+├─ curriculum.json                   GENERATED by `sim-cli content curriculum content`; never hand-edit
+├─ lessons/<lesson-id>/lesson.json   structured part: metadata and an experiment or a check
+├─ lessons/<lesson-id>/vi.md         Vietnamese prose
+├─ lessons/<lesson-id>/en.md         English prose
+├─ challenges/<challenge-id>/…       challenge.json, vi.md, en.md
+├─ research/<topic>.md               research notes with citations (facts in our words)
+├─ drafts/<lesson>.md                old single-file drafts, removed once all are migrated
+└─ REPORT.md                         the latest content-researcher run report
+```
+
+The format is defined in `docs/superpowers/specs/2026-10-20-content-format-design.md`, with
+rulings in `docs/superpowers/plans/2026-10-20-content-format.md`. Working examples:
+`crates/content/tests/fixtures/good/`.
+
+### Checking your work
+
+- `pnpm content:validate`: every lesson and challenge, run on the real engine. `FAIL` lines
+  must be fixed in the content; `WARN … content.blocked` lists engine features an item is
+  waiting for. Add `--json` (`cargo run -q -p sim-cli -- content validate content --json`)
+  to see the measured metrics of every run under `runs`.
+- `pnpm content:curriculum`: regenerate `curriculum.json` after any change; CI fails when it
+  is stale.
+
+### levels.json
+
+- `levels[]`: L0 to L6 with score range, entry assumptions, outcomes, an `exitCheck`, and
+  the ordered `lessons` and `challenges` ids. A prerequisite must come earlier in this order.
+- `roadmap`: planning stubs for items without a folder. Remove the stub when you add the folder.
+- `engine.planned`: engine features a plan covers but the engine lacks; items using them are
+  reported as blocked, not failing. A name that is neither built nor planned is an error.
+- `engineGaps`: engine features no plan covers yet, each with `neededBy` item ids.
+````
+
+Change authoring checklist items 2 and 5 to refer to `levels.json` order and to `lesson.json` choices with numeric `expect` ranges measured by `content validate --json`, instead of `curriculum.json` and "≈" values.
+
+- [ ] **Step 7: Commit, push the branch, check the timing**
+
+```bash
+git add -A .github Cargo.toml package.json content
+git commit -m "ci(content): validate content and curriculum with sim-cli; drop Python
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+After the branch is pushed and the PR runs twice (the second run has a warm cache), open the `content` job log. The whole job must take under 3 minutes (spec §12). If it does not, report the step timings instead of changing the build further.
+
+---
+
+## Phase 7: Migration (hand-off to the content-researcher agent)
+
+### Task 25: Migrate the 13 L0 drafts and the runnable L0 challenges
+
+This task is **content work, not code**. The owner hands it to the `content-researcher` agent once Tasks 1–24 are merged. The system-builder does not do it and does not change the validator for it.
+
+**Brief for the content-researcher agent:**
+
+> Move the 13 lesson drafts in `content/drafts/` and the L0 challenges that run on today's
+> engine into the new format, one item per commit, until `pnpm content:validate` and
+> `pnpm content:curriculum` (then `--check`) pass with 0 failed.
+>
+> Read first: the spec `docs/superpowers/specs/2026-10-20-content-format-design.md`
+> (§3–§5, §10), the rulings table at the top of
+> `docs/superpowers/plans/2026-10-20-content-format.md`, and the working examples in
+> `crates/content/tests/fixtures/good/` (one experiment, one reading lesson, one challenge).
+>
+> **For each draft `content/drafts/<id>.md`:**
+> 1. Create `content/lessons/<id>/lesson.json`. `kind` is `experiment` for drafts with an
+>    experiment spec and `reading` for "reading+check" drafts. Copy minutes, difficulty,
+>    prerequisites, concepts and research (research ids are note names without the
+>    `content/research/` prefix or `.md`) from the draft and its `levels.json` roadmap stub.
+>    Set `status: "draft"`.
+> 2. Experiment: `base` = the draft's `graph` + `workload`, plus `durationMs` when it is not
+>    10000 (leave `seed` out; it defaults to 1). Rewrite control `maps` as `path`:
+>    `nodes.<n>.config.<k>` → `graph.nodes[<n>].config.<k>`, `nodes.<n>.replicas` →
+>    `graph.nodes[<n>].replicas`; `workload.*` and `calibration.*` stay the same. One control
+>    sets exactly one value. `l0-database-basics`'s `dbSize` control (it swapped a whole
+>    config object) has to be redesigned with single-value controls that still show the
+>    lesson's point on the engine. `locked` is dropped (a lesson's graph only changes through
+>    its controls). The `prediction` question and answer move into the prose, under the
+>    Experiment section.
+> 3. Choices: keep one correct choice and one wrong choice per misconception (ids `A`–`F`,
+>    misconceptions `M1`…). Old free-text expectations ("≈6.5 ms", "> 0") are **not**
+>    authoritative; they came from a scratch model. Measure on the engine instead: write the
+>    lesson without `expect`, run
+>    `./dev cargo run -q -p sim-cli -- content validate content --json`, and read
+>    `items[].runs[]` (label `choice:B`) for the metrics and event codes of each choice. Then
+>    write `expect` as numeric bounds that state the lesson's point, with a margin (measured
+>    p95 4.68 → `{"<=": 10}`; 21,391 rejected → `{">=": 1}`). Use `==` only for exact
+>    structural numbers such as `requestsRejected == 0` or `costPerMonth == 50`. Put in
+>    `failsGoals` exactly the goals a wrong choice fails on the engine. Leave no
+>    `content.wrong-extra-fail` warning unless the prose explains why that goal also fails.
+> 4. Reading check: `check.passMark` from "pass with N of M"; questions `q1`…, `single`
+>    questions with option ids `a`, `b`, …, `numeric` questions with `tolerance` and `unit`.
+>    All question and option text goes in the prose.
+> 5. Prose: `vi.md` and `en.md` with front matter `id` and `title` (the draft's lesson
+>    heading) and the `##` sections of spec §5 in that order. Extra `##` sections (for
+>    example a review section, or the reading lesson's step sections) may go between them.
+>    Keyed items are written exactly `- **M1**: …`, `- **B**: …`, `- **q1**: …`,
+>    `- **q1.a**: …`. The drafts use `- **M1.**`, so change the punctuation. Feedback has an
+>    item per wrong choice (experiment) or per question with a misconception (reading). The
+>    two languages stay written separately, never translated line by line.
+> 6. Delete the lesson's stub from `levels.json` `roadmap.lessons`, keeping its id in the
+>    level's `lessons` list and in any `engineGaps.*.neededBy`.
+> 7. `pnpm content:validate` until the item has no `FAIL`, then `pnpm content:curriculum`,
+>    then commit `content: migrate <id>`.
+>
+> **Challenges:** migrate `c-l0-first-launch`, `c-l0-exit-coffee-shop` and
+> `c-l0-size-from-estimate`. They use only client, web-server, postgres, instance-down and
+> db-primary-down. For each: a `start` (usually just `users`, locked), `limits` from the stub's
+> `allowedKinds` plus sensible `maxNodes`/`maxInstances`, the goals, and per mode a
+> `reference` design that passes every goal within `budgetPerMonth` and a `naive` design that
+> fails the goals it lists. Drop the explicit `budget` goal from `c-l0-exit-coffee-shop` (every
+> mode has an implicit one) and the "provisional" note from `c-l0-size-from-estimate`. Hints
+> `h1`… go in the prose under Hints. `c-l0-far-and-busy` stays a roadmap stub: it needs the
+> `instance-slow` fault and per-mode calibration, which format v1 does not have.
+>
+> **When all 13 drafts are migrated:** delete `content/drafts/`, update the drafts line in
+> `content/README.md`, regenerate the curriculum, and report: per item, readiness, any
+> `blocked` items with their `missing` names, and every place where the engine did not
+> support a draft's claim. Report those to the owner; do not bend the lesson or the
+> validator to hide them.
+>
+> **Rules:** all text is original and written for absolute beginners; nothing copied from
+> the reference product or books; never edit `crates/`; never weaken a check; a lesson whose
+> point the engine cannot show is reported, not forced.
+
+**Owner actions** (not done by any agent without approval):
+- Update `.claude/agents/content-researcher.md` so it describes the new format (folders, `levels.json`, `sim-cli content …`) instead of `content/drafts/` and `gen_curriculum.py`. It is agent configuration, so the owner reviews the change.
+- Decide on `l0-database-basics` if no single-value control design shows the database bottleneck clearly.
+
+**Done when (spec §12):**
+- `pnpm content:validate`: 0 failed, and every blocked item listed with its missing features.
+- `pnpm content:curriculum` followed by `--check` passes in CI.
+- `content/drafts/` is gone.
+
+---
+
+## Spec coverage
+
+| Spec | Where |
+|---|---|
+| §2 layout, id patterns, folder = id | Tasks 4, 6 |
+| §3 `lesson.json` fields and ranges | Tasks 3, 6 |
+| §3.1 controls, choices, `expect`, `expectEvents` | Tasks 9, 10, 11, 13, 14 |
+| §3.2 reading check | Task 10 |
+| §4 challenges, implicit budget goal, locked nodes, limits | Tasks 15, 16, 17 |
+| §5 prose sections and keys | Tasks 5, 8 |
+| §6 all 20 issue codes | unit tests: parse, format-version, id, duplicate-id (Task 6); prerequisite-missing, prerequisite-cycle, research-missing (Task 7); prose-section, prose-key (Task 8); control (Tasks 9, 11); choice, expect-shape (Task 10); engine-invalid (Tasks 11, 12, 16); blocked (Tasks 12, 16); correct-fails, wrong-passes, wrong-extra-fail (Task 13); expect (Task 14); limits (Tasks 15, 16); reference-fails, naive-passes (Task 17). Golden coverage of every code: Task 19 |
+| §6 output, exit codes, parallel and deterministic | Tasks 18, 20 |
+| §7 readiness computed, curriculum generator and `--check` | Tasks 12, 21, 22 |
+| §8 TS types and `packages/content` | Task 23 |
+| §9 CI | Task 24 |
+| §10 migration | Task 25 |
+| §12 done-when | Tasks 19, 22, 23, 24, 25 |
+
+## Risks
+
+1. **ts-rs dependency export.** The plan assumes ts-rs 10 writes imported sim-core types (`SimInput`, `Goal`, …) and `serde_json/JsonValue.ts` next to the content types. If it does not, Task 23 Step 1 says how to add them; `tsc --noEmit` catches it either way.
+2. **Engine numbers drift.** Fixture thresholds have wide margins (p95 4.68 vs ≤ 10 and ≤ 50; availability 0.30 vs ≥ 0.98), but a calibration change in plan 1b can still move a fixture or a migrated lesson. The validator reports it; fix content or calibration, never the check.
+3. **Roadmap stubs vs reality.** `levels.json` freezes today's planning data, including research links that used to be merged from note headers at generation time. New "Feeds lessons:" lines in research notes no longer reach the curriculum on their own; authors add research ids to `lesson.json` or the stub.
+4. **CI time.** The 3-minute budget depends on `rust-cache` and the `ci` profile; a cold cache will exceed it. It is measured on the PR (Task 24 Step 7).
+5. **`l0-database-basics` redesign** may change what the lesson can show (Task 25 owner action).
