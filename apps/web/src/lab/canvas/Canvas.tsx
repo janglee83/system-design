@@ -4,6 +4,7 @@ import {
   BackgroundVariant,
   ConnectionLineType,
   MiniMap,
+  useReactFlow,
   ReactFlow,
   type Connection,
   type FinalConnectionState,
@@ -14,7 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/base.css";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/ui/toast-store";
 import { connectNodes } from "../commands";
 import { displayLabel } from "../labels";
@@ -51,6 +52,14 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   // zoom to fit the first component added (to the max zoom), and later drops would land elsewhere.
   const [fitOnOpen] = useState(() => design.nodes.length > 0);
   const add = useAddComponent();
+  const flow = useReactFlow();
+  const loads = useDesign((s) => s.loads);
+  // A replaced design (opened, imported, started from a challenge) is fitted once it has rendered.
+  useEffect(() => {
+    if (loads === 0) return;
+    const id = requestAnimationFrame(() => void flow.fitView({ maxZoom: 1, padding: 0.15 }));
+    return () => cancelAnimationFrame(id);
+  }, [loads, flow]);
   const tAll = useTranslations();
 
   /** The translated reason a connection was refused, shown as a toast. Self-loops and duplicates stay silent (R13). */

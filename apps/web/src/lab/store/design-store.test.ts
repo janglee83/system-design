@@ -52,4 +52,13 @@ describe("design store", () => {
     s.getState().replace(emptyDesign("x"));
     expect(s.getState()).toMatchObject({ past: [], future: [], design: { name: "x" } });
   });
+
+  it("counts loads, so the canvas can fit a replaced design", () => {
+    const s = createDesignStore();
+    expect(s.getState().loads).toBe(0);
+    s.getState().apply((d) => ({ ...d, seed: 3 }));
+    expect(s.getState().loads).toBe(0);
+    s.getState().replace(emptyDesign("x"));
+    expect(s.getState().loads).toBe(1);
+  });
 });

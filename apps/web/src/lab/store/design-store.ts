@@ -18,6 +18,8 @@ export interface DesignState {
   future: Design[];
   selection: Selection;
   clipboard: Clipboard | null;
+  /** Incremented by replace() (open, import, start from a challenge): the canvas fits the view. */
+  loads: number;
   apply(fn: (d: Design) => Design): void;
   replace(d: Design): void;
   undo(): void;
@@ -48,6 +50,7 @@ export function createDesignStore(initial: Design = emptyDesign()) {
     future: [],
     selection: NONE,
     clipboard: null,
+    loads: 0,
     apply(fn) {
       const { design, past, selection } = get();
       const next = fn(design);
@@ -55,7 +58,7 @@ export function createDesignStore(initial: Design = emptyDesign()) {
       set({ design: next, past: [...past, design].slice(-HISTORY_LIMIT), future: [], selection: prune(selection, next) });
     },
     replace(d) {
-      set({ design: d, past: [], future: [], selection: NONE });
+      set({ design: d, past: [], future: [], selection: NONE, loads: get().loads + 1 });
     },
     undo() {
       const { design, past, future, selection } = get();
