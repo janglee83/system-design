@@ -13,6 +13,7 @@ import {
   pasteItems,
   setCalibration,
   setConfig,
+  setWorkload,
   ungroup,
   updateNode,
 } from "./ops";
@@ -122,5 +123,13 @@ describe("design ops", () => {
     expect(d.calibration).toEqual({ webServiceMs: 8 });
     d = setCalibration(d, "webServiceMs", 5, defaults);
     expect(d.calibration).toEqual({});
+  });
+
+  it("setWorkload removes an optional field patched to undefined", () => {
+    let d = setWorkload(emptyDesign(), { trafficEndMs: 4000 });
+    expect(d.workload.trafficEndMs).toBe(4000);
+    d = setWorkload(d, { trafficEndMs: undefined });
+    expect("trafficEndMs" in d.workload).toBe(false);
+    expect(setWorkload(d, { trafficEndMs: undefined })).toBe(d);
   });
 });

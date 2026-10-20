@@ -342,5 +342,34 @@
     "untitled": "Nhóm",
     "rename": "Đổi tên nhóm",
     "label": "Tên nhóm"
+  },
+  "workload": {
+    "traffic": "Lưu lượng",
+    "runSettings": "Thiết lập lần chạy",
+    "params": "Tham số kịch bản",
+    "paramKey": "Tên tham số",
+    "paramValue": "Giá trị",
+    "paramAdd": "Thêm tham số",
+    "paramRemove": "Xóa {name}",
+    "paramIgnored": "Bộ mô phỏng chưa đọc “{name}”; tham số vẫn được lưu cùng thiết kế.",
+    "surgeToggle": "Lưu lượng tăng vọt",
+    "percent": "%",
+    "seconds": "giây",
+    "field": {
+      "profile": "Kiểu lưu lượng",
+      "baseRps": "Tổng số yêu cầu mỗi giây",
+      "writeRatio": "Tỉ lệ yêu cầu ghi",
+      "clients": "Số người dùng khác nhau",
+      "clientTimeoutMs": "Người dùng bỏ cuộc sau (ms)",
+      "arrivals": "Cách yêu cầu đến",
+      "trafficEndMs": "Ngừng nhận yêu cầu mới lúc (giây)",
+      "durationMs": "Độ dài lần chạy (giây)",
+      "seed": "Hạt giống ngẫu nhiên",
+      "surge": {
+        "factor": "Hệ số tăng vọt",
+        "atMs": "Bắt đầu tăng lúc (giây)",
+        "durationMs": "Kéo dài (giây)"
+      }
+    }
   }
 }

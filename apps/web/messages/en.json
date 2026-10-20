@@ -342,5 +342,34 @@
     "untitled": "Group",
     "rename": "Rename group",
     "label": "Group name"
+  },
+  "workload": {
+    "traffic": "Traffic",
+    "runSettings": "Run settings",
+    "params": "Scenario parameters",
+    "paramKey": "Parameter name",
+    "paramValue": "Value",
+    "paramAdd": "Add parameter",
+    "paramRemove": "Remove {name}",
+    "paramIgnored": "This simulator does not read “{name}” yet; it is kept with the design.",
+    "surgeToggle": "Traffic surge",
+    "percent": "%",
+    "seconds": "s",
+    "field": {
+      "profile": "Traffic shape",
+      "baseRps": "Total requests per second",
+      "writeRatio": "Share of writes",
+      "clients": "Distinct clients",
+      "clientTimeoutMs": "Client gives up after (ms)",
+      "arrivals": "Arrival pattern",
+      "trafficEndMs": "Stop new traffic at (s)",
+      "durationMs": "Run length (s)",
+      "seed": "Random seed",
+      "surge": {
+        "factor": "Surge multiplier",
+        "atMs": "Surge starts at (s)",
+        "durationMs": "Surge lasts (s)"
+      }
+    }
   }
 }

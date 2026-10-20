@@ -223,10 +223,14 @@ export const setDuration = (d: Design, durationMs: number): Design =>
 export const setSeed = (d: Design, seed: number): Design => (d.seed === seed ? d : { ...d, seed });
 export const setFaults = (d: Design, faults: Fault[]): Design => ({ ...d, faults });
 
+/** Patches the workload. An optional field patched to `undefined` is removed, not kept as undefined. */
 export function setWorkload(d: Design, patch: Partial<Workload>): Design {
   const keys = Object.keys(patch) as (keyof Workload)[];
-  if (keys.every((k) => Object.is(d.workload[k], patch[k]))) return d;
-  return { ...d, workload: { ...d.workload, ...patch } };
+  const same = (k: keyof Workload) => Object.is(d.workload[k], patch[k]) && (patch[k] !== undefined || !(k in d.workload));
+  if (keys.every(same)) return d;
+  const workload: Workload = { ...d.workload, ...patch };
+  for (const k of keys) if (patch[k] === undefined) delete workload[k];
+  return { ...d, workload };
 }
 
 export function setCalibration(
