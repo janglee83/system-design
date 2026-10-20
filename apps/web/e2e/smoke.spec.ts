@@ -1,6 +1,24 @@
 import { expect, test } from "@playwright/test";
 
-test("the app answers", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByTestId("app-root")).toBeAttached();
+test.describe("Vietnamese browser", () => {
+  test.use({ locale: "vi-VN" });
+  test("a first visit lands on the Vietnamese Lab", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/vi\/lab$/);
+    await expect(page.locator("html")).toHaveAttribute("lang", "vi");
+  });
+});
+
+test.describe("English browser", () => {
+  test.use({ locale: "en-US" });
+  test("a first visit lands on the English Lab", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/en\/lab$/);
+    await expect(page.getByTestId("lab-page")).toBeVisible();
+  });
+});
+
+test("an unknown locale is a 404", async ({ page }) => {
+  const res = await page.goto("/fr/lab");
+  expect(res?.status()).toBe(404);
 });

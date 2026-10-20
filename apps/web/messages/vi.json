@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "title": "System Design Lab",
+    "description": "Dựng một hệ thống, chạy thử và xem nó gãy ở đâu."
+  },
+  "common": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "retry": "Thử lại",
+    "loading": "Đang tải…",
+    "comingSoon": "Sắp có"
+  },
+  "lab": {
+    "title": "Lab"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "title": "System Design Lab",
+    "description": "Build a system, run it, and watch where it breaks."
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "comingSoon": "Coming soon"
+  },
+  "lab": {
+    "title": "Lab"
+  }
+}
