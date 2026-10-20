@@ -51,3 +51,14 @@ describe("compose", () => {
     expect(ports).toEqual(["127.0.0.1:3000:3000"]);
   });
 });
+
+describe("workspace toolchain", () => {
+  it("@sd/sim uses the same vitest and typescript as the app", () => {
+    const sim = JSON.parse(fs.readFileSync(path.join(appRoot, "../../packages/sim/package.json"), "utf8")) as {
+      devDependencies: Record<string, string>;
+    };
+    for (const name of ["vitest", "typescript"]) {
+      expect(sim.devDependencies[name], name).toBe(pkg.devDependencies[name]);
+    }
+  });
+});
