@@ -475,6 +475,12 @@
       "neededBy": [
         "l6-zero-downtime-migrations"
       ]
+    },
+    "postgres-instance-size": {
+      "description": "A size or tier setting for postgres that changes both capacity and monthly price, instead of the separate rpsPerInstance and costPerMonth overrides.",
+      "neededBy": [
+        "l0-database-basics"
+      ]
     }
   },
   "levels": [

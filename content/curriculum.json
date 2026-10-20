@@ -392,6 +392,12 @@
         "l6-observability-at-scale"
       ]
     },
+    "postgres-instance-size": {
+      "description": "A size or tier setting for postgres that changes both capacity and monthly price, instead of the separate rpsPerInstance and costPerMonth overrides.",
+      "neededBy": [
+        "l0-database-basics"
+      ]
+    },
     "postgres-max-connections": {
       "description": "Enforced max_connections on postgres plus a connection-pool setting on web servers; peakDbConnections then causes rejections.",
       "neededBy": [
@@ -567,27 +573,30 @@
           "research": [
             "client-server-and-http"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-client-server",
           "engine": {
             "needs": {
               "components": [
                 "client",
-                "web-server",
-                "lb"
+                "lb",
+                "web-server"
               ],
-              "faults": [],
+              "faults": [
+                "instance-down"
+              ],
               "dynamic": [],
               "behaviors": [],
               "calibration": [],
               "nodeOverrides": [],
               "metrics": [
                 "availability",
+                "p95",
                 "requestsUnreachable"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -611,8 +620,8 @@
           "research": [
             "client-server-and-http"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-http-basics",
           "engine": {
             "needs": {
               "components": [],
@@ -624,7 +633,7 @@
               "metrics": []
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "not-needed"
           },
           "engineGaps": []
         },
@@ -647,8 +656,8 @@
           "research": [
             "dns-and-network-path"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-dns-and-network-path",
           "engine": {
             "needs": {
               "components": [],
@@ -660,7 +669,7 @@
               "metrics": []
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "not-needed"
           },
           "engineGaps": [
             "connection-setup-cost"
@@ -685,8 +694,8 @@
             "latency-and-distance",
             "dns-and-network-path"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-latency-and-distance",
           "engine": {
             "needs": {
               "components": [
@@ -701,11 +710,13 @@
               ],
               "nodeOverrides": [],
               "metrics": [
-                "p95"
+                "costPerMonth",
+                "p95",
+                "peakBusy"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -728,8 +739,8 @@
           "research": [
             "throughput-and-capacity"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-throughput-and-capacity",
           "engine": {
             "needs": {
               "components": [
@@ -743,19 +754,20 @@
               "nodeOverrides": [],
               "metrics": [
                 "p95",
+                "peakBusy",
                 "requestsRejected",
-                "peakBusy"
+                "requestsTimedOut"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
         {
           "id": "l0-queueing-and-utilization",
-          "titleVi": "Hàng đợi: vì sao máy chủ bận 94% đã là có chuyện",
-          "titleEn": "Queues: why a server at 94% busy is already in trouble",
+          "titleVi": "Hàng đợi: vì sao máy chủ bận 98% đã là có chuyện",
+          "titleEn": "Queues: why a server at 98% busy is already in trouble",
           "kind": "experiment",
           "minutes": 15,
           "difficulty": 2,
@@ -771,8 +783,8 @@
           "research": [
             "queueing-and-utilization"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-queueing-and-utilization",
           "engine": {
             "needs": {
               "components": [
@@ -785,12 +797,15 @@
               "calibration": [],
               "nodeOverrides": [],
               "metrics": [
+                "costPerMonth",
                 "p95",
-                "peakBusy"
+                "peakBusy",
+                "requestsRejected",
+                "requestsTimedOut"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -812,8 +827,8 @@
           "research": [
             "percentiles-and-tail-latency"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-percentiles",
           "engine": {
             "needs": {
               "components": [
@@ -827,11 +842,13 @@
               "nodeOverrides": [],
               "metrics": [
                 "p50",
-                "p99"
+                "p95",
+                "p99",
+                "requestsRejected"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -854,33 +871,33 @@
           "research": [
             "databases-basics"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-database-basics",
           "engine": {
             "needs": {
               "components": [
                 "client",
-                "web-server",
-                "postgres"
+                "postgres",
+                "web-server"
               ],
               "faults": [],
               "dynamic": [],
               "behaviors": [],
               "calibration": [],
               "nodeOverrides": [
-                "postgres.rpsPerInstance",
-                "postgres.costPerMonth"
+                "rpsPerInstance"
               ],
               "metrics": [
                 "p95",
-                "requestsRejected",
-                "peakBusy"
+                "requestsRejected"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
-          "engineGaps": []
+          "engineGaps": [
+            "postgres-instance-size"
+          ]
         },
         {
           "id": "l0-cache-basics",
@@ -902,31 +919,20 @@
           "research": [
             "caching-basics"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-cache-basics",
           "engine": {
             "needs": {
-              "components": [
-                "client",
-                "web-server",
-                "postgres",
-                "redis"
-              ],
+              "components": [],
               "faults": [],
               "dynamic": [],
               "behaviors": [],
               "calibration": [],
               "nodeOverrides": [],
-              "metrics": [
-                "p95",
-                "peakDbConnections",
-                "cacheOps"
-              ]
+              "metrics": []
             },
-            "missing": [
-              "component:redis"
-            ],
-            "readiness": "planned"
+            "missing": [],
+            "readiness": "not-needed"
           },
           "engineGaps": []
         },
@@ -948,22 +954,20 @@
           "research": [
             "availability-and-spof"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-single-point-of-failure",
           "engine": {
             "needs": {
               "components": [
                 "client",
-                "web-server",
-                "postgres"
+                "postgres",
+                "web-server"
               ],
               "faults": [
-                "instance-down",
-                "db-primary-down"
+                "db-primary-down",
+                "instance-down"
               ],
-              "dynamic": [
-                "db-failover"
-              ],
+              "dynamic": [],
               "behaviors": [],
               "calibration": [],
               "nodeOverrides": [],
@@ -973,7 +977,7 @@
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -996,8 +1000,8 @@
           "research": [
             "availability-and-spof"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-availability-nines",
           "engine": {
             "needs": {
               "components": [],
@@ -1009,7 +1013,7 @@
               "metrics": []
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "not-needed"
           },
           "engineGaps": []
         },
@@ -1032,8 +1036,8 @@
             "cost-basics",
             "throughput-and-capacity"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-cost-basics",
           "engine": {
             "needs": {
               "components": [
@@ -1046,13 +1050,14 @@
               "calibration": [],
               "nodeOverrides": [],
               "metrics": [
+                "costPerMonth",
                 "p95",
-                "requestsRejected",
-                "costPerMonth"
+                "peakBusy",
+                "requestsRejected"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -1075,8 +1080,8 @@
           "research": [
             "estimation-basics"
           ],
-          "status": null,
-          "path": null,
+          "status": "draft",
+          "path": "lessons/l0-estimation-basics",
           "engine": {
             "needs": {
               "components": [
@@ -1089,13 +1094,14 @@
               "calibration": [],
               "nodeOverrides": [],
               "metrics": [
+                "costPerMonth",
                 "p95",
                 "peakBusy",
-                "costPerMonth"
+                "requestsRejected"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         }
@@ -1167,16 +1173,16 @@
               ]
             }
           ],
-          "briefVi": "Một cửa hàng có máy chủ web và cơ sở dữ liệu; giữ cho nhanh trong ngân sách, rồi sống sót khi mất một máy và mất primary của cơ sở dữ liệu.",
-          "briefEn": "A shop with a web server and a database; keep it fast within budget, then survive losing a server and the database primary.",
-          "status": null,
-          "path": null,
+          "briefVi": null,
+          "briefEn": null,
+          "status": "draft",
+          "path": "challenges/c-l0-first-launch",
           "engine": {
             "needs": {
               "components": [
                 "client",
-                "web-server",
-                "postgres"
+                "postgres",
+                "web-server"
               ],
               "faults": [
                 "db-primary-down",
@@ -1188,12 +1194,13 @@
               "nodeOverrides": [],
               "metrics": [
                 "availability",
+                "costPerMonth",
                 "p95",
                 "requestsRejected"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -1347,12 +1354,6 @@
               "metric": "spofCount",
               "op": "==",
               "value": 0.0
-            },
-            {
-              "id": "budget",
-              "metric": "costPerMonth",
-              "op": "<=",
-              "value": 500.0
             }
           ],
           "modes": [
@@ -1389,16 +1390,16 @@
               ]
             }
           ],
-          "briefVi": "Ước lượng đỉnh tải từ đề bài, chọn cấu hình máy web và cơ sở dữ liệu, loại bỏ mọi điểm lỗi đơn và giữ trong ngân sách.",
-          "briefEn": "Estimate the peak from the brief, size the web server and database, remove every single point of failure and stay in budget.",
-          "status": null,
-          "path": null,
+          "briefVi": null,
+          "briefEn": null,
+          "status": "draft",
+          "path": "challenges/c-l0-exit-coffee-shop",
           "engine": {
             "needs": {
               "components": [
                 "client",
-                "web-server",
-                "postgres"
+                "postgres",
+                "web-server"
               ],
               "faults": [
                 "db-primary-down",
@@ -1417,7 +1418,7 @@
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         },
@@ -1461,20 +1462,20 @@
           "modes": [
             {
               "id": "peak",
-              "budgetPerMonth": 500.0,
+              "budgetPerMonth": 600.0,
               "faults": []
             }
           ],
-          "briefVi": "Đổi ước lượng số người dùng mỗi ngày thành số request mỗi giây lúc đỉnh, rồi chọn cấu hình máy web và cơ sở dữ liệu có chừa khoảng dư.",
-          "briefEn": "Turn a written estimate of daily users into peak requests per second, then size the web server and database with headroom.",
-          "status": null,
-          "path": null,
+          "briefVi": null,
+          "briefEn": null,
+          "status": "draft",
+          "path": "challenges/c-l0-size-from-estimate",
           "engine": {
             "needs": {
               "components": [
                 "client",
-                "web-server",
-                "postgres"
+                "postgres",
+                "web-server"
               ],
               "faults": [],
               "dynamic": [],
@@ -1482,13 +1483,14 @@
               "calibration": [],
               "nodeOverrides": [],
               "metrics": [
+                "costPerMonth",
                 "p95",
                 "peakBusy",
                 "requestsRejected"
               ]
             },
             "missing": [],
-            "readiness": "planned"
+            "readiness": "ready"
           },
           "engineGaps": []
         }
@@ -11841,7 +11843,7 @@
     "levels": 7,
     "lessons": 136,
     "challenges": 44,
-    "engineGaps": 59,
+    "engineGaps": 60,
     "lessonsByLevel": {
       "L0": 13,
       "L1": 18,
@@ -11862,14 +11864,14 @@
     },
     "lessonReadiness": {
       "blocked": 0,
-      "not-needed": 0,
-      "planned": 136,
-      "ready": 0
+      "not-needed": 4,
+      "planned": 123,
+      "ready": 9
     },
     "challengeReadiness": {
       "blocked": 0,
-      "planned": 44,
-      "ready": 0
+      "planned": 41,
+      "ready": 3
     }
   }
 }
