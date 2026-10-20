@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "id": "l0-http-basics",
+  "level": "L0",
+  "kind": "reading",
+  "minutes": 12,
+  "difficulty": 1,
+  "prerequisites": ["l0-client-server"],
+  "concepts": ["http", "http-method", "status-code", "stateless-protocol", "idempotent-method"],
+  "research": ["client-server-and-http"],
+  "status": "draft",
+  "check": {
+    "passMark": 4,
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "a"
+      },
+      {
+        "id": "q2",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "c"
+      },
+      {
+        "id": "q3",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "b",
+        "misconception": "M2"
+      },
+      {
+        "id": "q4",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "a",
+        "misconception": "M3"
+      },
+      {
+        "id": "q5",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "c",
+        "misconception": "M1"
+      }
+    ]
+  }
+}

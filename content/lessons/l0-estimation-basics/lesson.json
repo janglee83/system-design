@@ -1,0 +1,148 @@
+{
+  "formatVersion": 1,
+  "id": "l0-estimation-basics",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 18,
+  "difficulty": 2,
+  "prerequisites": ["l0-queueing-and-utilization", "l0-cost-basics"],
+  "concepts": ["back-of-envelope", "dau-to-rps", "peak-factor"],
+  "research": ["estimation-basics"],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "web",
+            "kind": "web-server",
+            "config": {
+              "cpu": 2
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "web",
+            "kind": "http"
+          }
+        ]
+      },
+      "workload": {
+        "profile": "mixed",
+        "baseRps": 11600,
+        "writeRatio": 0.2,
+        "surge": {
+          "factor": 2,
+          "atMs": 3000,
+          "durationMs": 3000
+        }
+      }
+    },
+    "controls": [
+      {
+        "id": "cpu",
+        "type": "stepper",
+        "path": "graph.nodes[web].config.cpu",
+        "options": [2, 3, 4, 16],
+        "default": 2
+      }
+    ],
+    "goals": [
+      {
+        "id": "fast",
+        "metric": "p95",
+        "op": "<=",
+        "value": 10
+      },
+      {
+        "id": "headroom",
+        "metric": "peakBusy",
+        "op": "<=",
+        "value": 0.85
+      },
+      {
+        "id": "budget",
+        "metric": "costPerMonth",
+        "op": "<=",
+        "value": 120
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "cpu": 4
+        },
+        "expect": {
+          "p95": {
+            "<=": 10
+          },
+          "peakBusy": {
+            ">=": 0.6,
+            "<=": 0.85
+          },
+          "costPerMonth": {
+            "==": 105
+          }
+        }
+      },
+      {
+        "id": "B",
+        "misconception": "M1",
+        "set": {
+          "cpu": 2
+        },
+        "failsGoals": ["fast", "headroom"],
+        "expect": {
+          "p95": {
+            ">=": 100
+          },
+          "requestsRejected": {
+            ">=": 1
+          }
+        },
+        "expectEvents": ["node.overloaded"]
+      },
+      {
+        "id": "C",
+        "misconception": "M2",
+        "set": {
+          "cpu": 3
+        },
+        "failsGoals": ["headroom"],
+        "expect": {
+          "peakBusy": {
+            ">=": 0.9
+          },
+          "requestsRejected": {
+            "==": 0
+          }
+        }
+      },
+      {
+        "id": "D",
+        "misconception": "M3",
+        "set": {
+          "cpu": 16
+        },
+        "failsGoals": ["budget"],
+        "expect": {
+          "costPerMonth": {
+            ">=": 400
+          },
+          "peakBusy": {
+            "<=": 0.3
+          }
+        }
+      }
+    ]
+  }
+}
