@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { createBrowserEngine, type EngineClient } from "./client";
+import { createBrowserEngine, EngineCrashError, type EngineClient } from "./client";
 import { createEngineStore, type EngineState, type EngineStore } from "./engine-store";
 
 const Ctx = createContext<EngineStore | null>(null);
@@ -19,6 +19,16 @@ export function EngineProvider({
   // stop(), not just terminate(): under StrictMode React unmounts and remounts effects, and the
   // remounted start() must create a fresh client instead of reusing the terminated one.
   useEffect(() => () => store.getState().stop(), [store]);
+  useEffect(() => {
+    // E2E hook, only under browser automation (Playwright sets navigator.webdriver): lets
+    // tests send protocol messages through the real worker and structured clone.
+    if (!navigator.webdriver) return;
+    const hook: Pick<EngineClient, "request"> = {
+      request: (r, transfer) =>
+        store.getState().client?.request(r, transfer) ?? Promise.reject(new EngineCrashError("engine not started")),
+    };
+    (window as unknown as { __sdEngine?: typeof hook }).__sdEngine = hook;
+  }, [store]);
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
 

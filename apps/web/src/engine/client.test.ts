@@ -51,4 +51,20 @@ describe("EngineClient", () => {
     await expect(client.request({ type: "engineVersion" })).rejects.toBeInstanceOf(EngineCrashError);
     expect(post).not.toHaveBeenCalled();
   });
+
+  it("a run crosses structured clone: the timeline is transferred, traces and JSON still work", async () => {
+    let worker!: FakeWorker;
+    const client = new EngineClient(() => (worker = new FakeWorker()));
+    const run = await client.request({ type: "run", input: fourTier() });
+    const { header, data } = run.timeline;
+    expect(data).toBeInstanceOf(Float32Array);
+    expect(data.length).toBe(header.frames * header.nodeIds.length * header.fields.length);
+    // The worker's buffer went with the message (transferred, not copied).
+    expect(worker.lastTransfer).toHaveLength(1);
+    expect((worker.lastTransfer[0] as ArrayBuffer).byteLength).toBe(0);
+    expect(run.traces.length).toBeGreaterThan(0);
+    const trace = await client.request({ type: "trace", runId: run.runId, index: 0 });
+    expect(trace.steps[0]?.nodeId).toBe("users");
+    expect(JSON.parse(await client.request({ type: "resultJson", runId: run.runId })).timeline.data.length).toBe(data.length);
+  });
 });

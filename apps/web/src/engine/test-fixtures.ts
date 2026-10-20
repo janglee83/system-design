@@ -40,13 +40,19 @@ export class FakeWorker implements WorkerLike {
   onmessage: ((e: MessageEvent<Reply>) => void) | null = null;
   onerror: ((e: ErrorEvent) => void) | null = null;
   terminated = false;
+  /** Transfer list of the last reply (its buffers are detached once delivered). */
+  lastTransfer: Transferable[] = [];
   private handle = createHandler(sim, () => 0);
   constructor(private readonly answer?: (msg: Envelope) => Reply) {}
-  postMessage(msg: Envelope) {
+  postMessage(msg: Envelope, transfer: Transferable[] = []) {
+    // Both directions go through structured clone, as with a real Worker.
+    const inbound = structuredClone(msg, { transfer });
     queueMicrotask(() => {
       if (this.terminated) return;
-      const reply = this.answer ? this.answer(msg) : this.handle(msg).reply;
-      this.onmessage?.({ data: reply } as MessageEvent<Reply>);
+      const { reply, transfer: out } = this.answer ? { reply: this.answer(inbound), transfer: [] } : this.handle(inbound);
+      this.lastTransfer = out;
+      const data = structuredClone(reply, { transfer: out });
+      this.onmessage?.({ data } as MessageEvent<Reply>);
     });
   }
   terminate() {
