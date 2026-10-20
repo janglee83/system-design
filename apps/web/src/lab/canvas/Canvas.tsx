@@ -111,21 +111,17 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const runIssues = useCheck((s) => s.runIssues);
   const counts = useMemo(() => issueCounts({ issues, runIssues }), [issues, runIssues]);
 
-  const ctx: AdapterContext = {
-    metas,
-    selection,
-    costs,
-    issues: counts,
-    nodeRole: t("nodeRole"),
-    aria,
-    drag,
-    ...extra,
-  };
+  const allowedKinds = design.challenge?.limits.allowedKinds ?? null;
+  const nodeRole = t("nodeRole");
+  const ctx = useMemo<AdapterContext>(
+    () => ({ metas, selection, costs, issues: counts, nodeRole, aria, drag, allowedKinds, ...extra }),
+    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, extra],
+  );
   // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
   const lastNodes = useRef<FlowNode[]>([]);
   const lastEdges = useRef<ReturnType<typeof toFlowEdges>>([]);
-  const nodes = useMemo(() => (lastNodes.current = reuseFlowNodes(toFlowNodes(design, ctx), lastNodes.current)), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas, ctx.nodeRole, ctx.aria]); // eslint-disable-line react-hooks/exhaustive-deps
-  const edges = useMemo(() => (lastEdges.current = reuseFlowEdges(toFlowEdges(design, ctx), lastEdges.current)), [design, ctx.selection, ctx.issues, ctx.path, ctx.aria]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nodes = useMemo(() => (lastNodes.current = reuseFlowNodes(toFlowNodes(design, ctx), lastNodes.current)), [design, ctx]);
+  const edges = useMemo(() => (lastEdges.current = reuseFlowEdges(toFlowEdges(design, ctx), lastEdges.current)), [design, ctx]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {

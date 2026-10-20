@@ -82,4 +82,10 @@ describe("React Flow adapter", () => {
     expect(nodes.find((n) => n.id === "g1")!.ariaLabel).toBe("frame g1");
     expect(toFlowEdges(d, { ...ctx, aria })[0]!.ariaLabel).toBe("client-1 to lb-1");
   });
+
+  it("dims kinds the challenge does not allow", () => {
+    const nodes = toFlowNodes(design(), { ...ctx, allowedKinds: ["client"] });
+    expect(nodes.find((n) => n.id === "client-1")!.data.disallowed).toBe(false);
+    expect(nodes.find((n) => n.id === "lb-1")!.data.disallowed).toBe(true);
+  });
 });
