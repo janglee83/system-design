@@ -42,4 +42,13 @@ describe("EngineClient", () => {
     expect(factory).toHaveBeenCalledTimes(2);
     await expect(client.request({ type: "engineVersion" })).resolves.toMatch(/\d/);
   });
+
+  it("rejects new requests at once after terminate, without posting to the dead worker", async () => {
+    let worker!: FakeWorker;
+    const client = new EngineClient(() => (worker = new FakeWorker()));
+    client.terminate();
+    const post = vi.spyOn(worker, "postMessage");
+    await expect(client.request({ type: "engineVersion" })).rejects.toBeInstanceOf(EngineCrashError);
+    expect(post).not.toHaveBeenCalled();
+  });
 });

@@ -62,4 +62,24 @@ describe("engine store", () => {
     worker.crash("boom");
     expect(store.getState()).toMatchObject({ status: "error", error: "boom" });
   });
+
+  it("stop() terminates the client and resets; start() works again (StrictMode remount)", async () => {
+    const clients: EngineClient[] = [];
+    const store = createEngineStore(() => {
+      const c = new EngineClient(() => new FakeWorker());
+      clients.push(c);
+      return c;
+    });
+    store.getState().start();
+    store.getState().stop(); // unmount before the first load finished
+    expect(store.getState()).toMatchObject({ status: "idle", client: null, info: null, error: null });
+    store.getState().start(); // remount
+    const s = await settled(store);
+    expect(s.status).toBe("ready");
+    expect(clients).toHaveLength(2);
+    expect(s.client).toBe(clients[1]);
+    // The first client's load was cut short; it must not have left an error behind.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.getState()).toMatchObject({ status: "ready", error: null });
+  });
 });

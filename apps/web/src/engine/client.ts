@@ -31,6 +31,8 @@ export class EngineClient {
   #next = 1;
   #pending = new Map<number, Pending>();
   #listeners = new Set<(e: EngineCrashError) => void>();
+  /** Set once terminate() ran: every later request rejects with it. */
+  #stopped: EngineCrashError | null = null;
 
   constructor(factory: () => WorkerLike) {
     this.#factory = factory;
@@ -64,6 +66,7 @@ export class EngineClient {
     request: Extract<EngineRequest, { type: K }>,
     transfer: Transferable[] = [],
   ): Promise<ResultOf[K]> {
+    if (this.#stopped) return Promise.reject(this.#stopped);
     const id = this.#next++;
     return new Promise<ResultOf[K]>((resolve, reject) => {
       this.#pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
@@ -83,9 +86,11 @@ export class EngineClient {
     this.#spawn();
   }
 
+  /** Kills the worker for good: pending and later requests reject with EngineCrashError. */
   terminate(): void {
     this.#worker.terminate();
-    this.#fail(new EngineCrashError("engine stopped"), false);
+    this.#stopped = new EngineCrashError("engine stopped");
+    this.#fail(this.#stopped, false);
   }
 }
 

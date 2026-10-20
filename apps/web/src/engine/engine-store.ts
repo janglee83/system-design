@@ -16,6 +16,8 @@ export interface EngineState {
   client: EngineClient | null;
   start(): void;
   retry(): void;
+  /** Terminates the client and returns to idle; start() works again afterwards. */
+  stop(): void;
 }
 
 export function createEngineStore(makeClient: () => EngineClient) {
@@ -29,8 +31,10 @@ export function createEngineStore(makeClient: () => EngineClient) {
           client.request({ type: "defaultCalibration" }),
           client.request({ type: "capabilities" }),
         ]);
+        if (get().client !== client) return; // stopped meanwhile
         set({ status: "ready", info: { version, components, calibration, capabilities } });
       } catch (e) {
+        if (get().client !== client) return; // stopped meanwhile: not an engine failure
         const message = e instanceof EngineRequestError ? e.error.kind : e instanceof Error ? e.message : String(e);
         set({ status: "error", error: message });
       }
@@ -43,7 +47,9 @@ export function createEngineStore(makeClient: () => EngineClient) {
       start() {
         if (get().client) return;
         const client = makeClient();
-        client.onCrash((e) => set({ status: "error", error: e.message }));
+        client.onCrash((e) => {
+          if (get().client === client) set({ status: "error", error: e.message });
+        });
         set({ client });
         void load(client);
       },
@@ -52,6 +58,11 @@ export function createEngineStore(makeClient: () => EngineClient) {
         if (!client) return get().start();
         client.restart();
         void load(client);
+      },
+      stop() {
+        const client = get().client;
+        set({ client: null, status: "idle", info: null, error: null });
+        client?.terminate();
       },
     };
   });
