@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { act, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import type { WorkerLike } from "../engine/client";
+import type { Envelope, Reply } from "../engine/protocol";
+import { FakeWorker } from "../test/engine-fixtures";
 import { meta } from "../test/metas";
 import { LabHarness, type Handles } from "../test/lab-harness";
 import { emptyDesign } from "./model/design";
-import { addNode } from "./model/ops";
+import { addNode, moveNodes, updateNode } from "./model/ops";
 import { useLiveValidation } from "./use-live-validation";
 
 function Live() {
@@ -19,10 +22,42 @@ function design() {
   return { ...d, edges: [{ id: "e1", from: "client-1", to: "web-server-1", kind: "http" as const }] };
 }
 
-async function setup() {
+/** Holds validate requests until release(), and counts them. Other requests pass through. */
+class HoldingWorker implements WorkerLike {
+  onmessage: ((e: MessageEvent<Reply>) => void) | null = null;
+  onerror: ((e: ErrorEvent) => void) | null = null;
+  onmessageerror: ((e: MessageEvent) => void) | null = null;
+  inner = new FakeWorker();
+  held: Envelope[] = [];
+  validates = 0;
+  hold = false;
+  constructor() {
+    this.inner.onmessage = (e) => this.onmessage?.(e);
+  }
+  postMessage(msg: Envelope, transfer?: Transferable[]) {
+    if (msg.request.type === "validate") {
+      this.validates++;
+      if (this.hold) {
+        this.held.push(msg);
+        return;
+      }
+    }
+    this.inner.postMessage(msg, transfer);
+  }
+  release() {
+    const all = this.held;
+    this.held = [];
+    for (const m of all) this.inner.postMessage(m);
+  }
+  terminate() {
+    this.inner.terminate();
+  }
+}
+
+async function setup(worker?: HoldingWorker) {
   const h: Partial<Handles> = {};
   render(
-    <LabHarness initial={design()} h={h}>
+    <LabHarness initial={design()} h={h} worker={worker ? () => worker : undefined}>
       <Live />
     </LabHarness>,
   );
@@ -41,5 +76,53 @@ describe("useLiveValidation", () => {
     await expect.poll(() => h.check.getState().status).toBe("done");
     expect(h.check.getState().issues.map((i) => i.code)).toContain("graph.no-client");
     expect(h.canRun()).toBe(false);
+  });
+
+  it("ignores changes the engine does not see (moving a node)", async () => {
+    const w = new HoldingWorker();
+    const h = await setup(w);
+    const before = w.validates;
+    act(() => h.design.getState().apply((d) => moveNodes(d, { "client-1": { x: 320, y: 320 } })));
+    expect(h.check.getState().status).toBe("done");
+    await new Promise((r) => setTimeout(r, 250));
+    expect(w.validates).toBe(before);
+    expect(h.canRun()).toBe(true);
+  });
+
+  it("keeps one request in flight plus one trailing request for the latest design", async () => {
+    const w = new HoldingWorker();
+    const h = await setup(w);
+    w.hold = true;
+    const before = w.validates;
+    act(() => h.design.getState().apply((d) => updateNode(d, "web-server-1", { replicas: 2 })));
+    await expect.poll(() => w.validates).toBe(before + 1); // the debounced request, held in flight
+    for (const n of [3, 4, 5]) {
+      act(() => h.design.getState().apply((d) => updateNode(d, "web-server-1", { replicas: n })));
+      await new Promise((r) => setTimeout(r, 200)); // each debounce fires while one is in flight
+    }
+    expect(w.validates).toBe(before + 1);
+    w.hold = false;
+    w.release();
+    await expect.poll(() => w.validates).toBe(before + 2); // exactly one trailing request
+    await expect.poll(() => h.check.getState().status).toBe("done");
+    // The result is for the latest design.
+    expect(h.design.getState().design.nodes.find((n) => n.id === "web-server-1")!.replicas).toBe(5);
+    expect(h.check.getState().costs["web-server-1"]).toBeGreaterThan(0);
+    await new Promise((r) => setTimeout(r, 250));
+    expect(w.validates).toBe(before + 2);
+  });
+
+  it("drops a reply for an older design that arrives after a newer one", async () => {
+    const w = new HoldingWorker();
+    const h = await setup(w);
+    w.hold = true;
+    act(() => h.design.getState().apply((d) => ({ ...d, nodes: d.nodes.filter((n) => n.id !== "client-1"), edges: [] })));
+    await expect.poll(() => w.held.length).toBe(1);
+    act(() => h.design.getState().apply((d) => updateNode(d, "web-server-1", { replicas: 2 })));
+    w.hold = false;
+    w.release(); // the old reply lands while the design has already moved on: it must not count
+    await expect.poll(() => h.check.getState().status).toBe("done");
+    expect(h.check.getState().issues.map((i) => i.code)).toContain("graph.no-client");
+    expect(h.design.getState().design.nodes.find((n) => n.id === "web-server-1")!.replicas).toBe(2);
   });
 });

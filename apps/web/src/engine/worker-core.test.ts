@@ -122,4 +122,22 @@ describe("worker-core", () => {
     // Nothing was kept under a run id.
     expect(handle({ id: 2, request: { type: "trace", runId: 1, index: 0 } }).reply).toMatchObject({ ok: false });
   });
+
+  it("prices each distinct node once: a repeated validate reuses the cached costs", () => {
+    let runs = 0;
+    const counting = { ...sim, simulate: (input: Parameters<typeof sim.simulate>[0]) => (runs++, sim.simulate(input)) };
+    const handle = createHandler(counting, () => 0);
+    const g = fourTier().graph;
+    handle({ id: 1, request: { type: "validate", graph: g, limits: null, calibration: {} } });
+    const first = runs;
+    expect(first).toBe(3); // lb, web, pg (the client is free)
+    handle({ id: 2, request: { type: "validate", graph: g, limits: null, calibration: {} } });
+    expect(runs).toBe(first);
+    // A changed config or calibration is priced again; ids do not matter.
+    g.nodes[2]!.config = { cpu: 4 };
+    handle({ id: 3, request: { type: "validate", graph: g, limits: null, calibration: {} } });
+    expect(runs).toBe(first + 1);
+    handle({ id: 4, request: { type: "validate", graph: g, limits: null, calibration: { pgCostPerInstance: 1 } } });
+    expect(runs).toBe(first + 1 + 3);
+  });
 });

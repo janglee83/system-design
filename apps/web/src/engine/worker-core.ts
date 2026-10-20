@@ -34,8 +34,23 @@ export function createHandler(sim: Sim, now: () => number = () => performance.no
   const metaByKind = new Map(metas.map((m) => [m.kind, m]));
   const clientKind = metas.find((m) => m.role === "client")?.kind ?? "client";
 
-  /** Plan ruling R10: a 100 ms, zero-traffic run of client -> node prices the node alone. */
+  /** Node prices by (kind, replicas, config, calibration); ids and labels do not change a price. */
+  const costCache = new Map<string, number | null>();
+  const COST_CACHE_LIMIT = 2000;
+  const sortedEntries = (o: object) => Object.entries(o).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
   function nodeCost(node: Node, calibration: CalibrationOverrides): number | null {
+    const key = JSON.stringify([node.kind, node.replicas, sortedEntries(node.config), sortedEntries(calibration)]);
+    const hit = costCache.get(key);
+    if (hit !== undefined || costCache.has(key)) return hit ?? null;
+    const cost = priceNode(node, calibration);
+    if (costCache.size >= COST_CACHE_LIMIT) costCache.clear();
+    costCache.set(key, cost);
+    return cost;
+  }
+
+  /** Plan ruling R10: a 100 ms, zero-traffic run of client -> node prices the node alone. */
+  function priceNode(node: Node, calibration: CalibrationOverrides): number | null {
     const meta = metaByKind.get(node.kind);
     if (!meta) return null;
     const kind = meta.accepts[0];
