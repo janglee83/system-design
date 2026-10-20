@@ -38,7 +38,10 @@
     "snap": "Bám theo lưới",
     "canvasRole": "khung vẽ thiết kế",
     "nodeRole": "thành phần",
-    "controls": "Điều khiển khung vẽ"
+    "controls": "Điều khiển khung vẽ",
+    "autoLayout": "Sắp xếp gọn",
+    "groupAction": "Gộp nhóm",
+    "ungroupAction": "Bỏ nhóm"
   },
   "nav": {
     "primary": "Chính",
@@ -334,5 +337,10 @@
     "multi": "Đã chọn {count} mục",
     "decrease": "Giảm {label}",
     "increase": "Tăng {label}"
+  },
+  "group": {
+    "untitled": "Nhóm",
+    "rename": "Đổi tên nhóm",
+    "label": "Tên nhóm"
   }
 }

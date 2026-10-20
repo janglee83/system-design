@@ -38,7 +38,10 @@
     "snap": "Snap to grid",
     "canvasRole": "design canvas",
     "nodeRole": "component",
-    "controls": "Canvas controls"
+    "controls": "Canvas controls",
+    "autoLayout": "Tidy layout",
+    "groupAction": "Group",
+    "ungroupAction": "Ungroup"
   },
   "nav": {
     "primary": "Main",
@@ -334,5 +337,10 @@
     "multi": "{count} items selected",
     "decrease": "Decrease {label}",
     "increase": "Increase {label}"
+  },
+  "group": {
+    "untitled": "Group",
+    "rename": "Rename group",
+    "label": "Group name"
   }
 }

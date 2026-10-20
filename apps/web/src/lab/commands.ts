@@ -1,5 +1,17 @@
 import type { ComponentMeta } from "@sd/sim";
-import { connect, copyItems, deleteItems, duplicateItems, pasteItems, type ConnectRefusal } from "./model/ops";
+import { layoutPositions } from "./canvas/layout";
+import {
+  connect,
+  copyItems,
+  deleteItems,
+  duplicateItems,
+  fitGroups,
+  groupNodes,
+  moveNodes,
+  pasteItems,
+  ungroup,
+  type ConnectRefusal,
+} from "./model/ops";
 import type { DesignStore } from "./store/design-store";
 import type { UiStore } from "./store/ui-store";
 
@@ -82,4 +94,24 @@ export function openConnect(api: DesignStore, ui: UiStore): void {
 export function inspectNode(api: DesignStore, ui: UiStore, id: string): void {
   api.getState().select({ nodes: [id], edges: [], groups: [] });
   ui.getState().focusInspector();
+}
+
+/** ELK layout of the whole design as one history step; frames are refitted around their members. */
+export async function autoLayout(api: DesignStore): Promise<void> {
+  const positions = await layoutPositions(api.getState().design);
+  api.getState().apply((d) => fitGroups(moveNodes(d, positions)));
+}
+
+export function groupSelection(api: DesignStore): void {
+  const r = groupNodes(api.getState().design, api.getState().selection.nodes);
+  if (!r) return;
+  api.getState().apply(() => r.design);
+  api.getState().select({ nodes: [], edges: [], groups: [r.id] });
+}
+
+/** Ungroups the selected frames and the frames of the selected nodes. */
+export function ungroupSelection(api: DesignStore): void {
+  const { selection, design } = api.getState();
+  const groups = new Set([...selection.groups, ...design.nodes.filter((n) => selection.nodes.includes(n.id)).map((n) => n.groupId)]);
+  api.getState().apply((d) => [...groups].reduce((acc, g) => (g ? ungroup(acc, g) : acc), d));
 }

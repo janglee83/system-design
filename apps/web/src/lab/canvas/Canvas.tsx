@@ -25,6 +25,7 @@ import { DRAG_MIME } from "../palette/Palette";
 import { useMetas } from "../use-metas";
 import { EdgeLegend } from "./EdgeLegend";
 import { EdgeMarkers, LabEdge } from "./LabEdge";
+import { GroupNode } from "./GroupNode";
 import { LabNode } from "./LabNode";
 import { toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
@@ -32,7 +33,7 @@ import { CanvasControls } from "./CanvasControls";
 import { formatCombo } from "../shortcuts";
 import { useIsMac } from "../use-shortcuts";
 
-const nodeTypes = { lab: LabNode };
+const nodeTypes = { lab: LabNode, group: GroupNode };
 const edgeTypes = { lab: LabEdge };
 
 export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
@@ -103,7 +104,10 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
       for (const c of changes) {
         if (c.type === "position" && c.position) {
           if (d.groups.some((g) => g.id === c.id)) {
-            if (!c.dragging) groupMoves.push([c.id, c.position]);
+            // Groups are top-level, so their position is already absolute. A drag previews
+            // through `drag` and commits in onNodeDragStop; anything else commits now.
+            if (c.dragging) dragging[c.id] = c.position;
+            else groupMoves.push([c.id, c.position]);
             continue;
           }
           const abs = toAbsolute(c.id, c.position, d);
@@ -133,8 +137,13 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
     (_e: unknown, _n: FlowNode, dragged: FlowNode[]) => {
       const d = api.getState().design;
       const commit: Record<string, XY> = {};
-      for (const n of dragged) if (n.type === "lab") commit[n.id] = toAbsolute(n.id, n.position, d);
-      api.getState().apply((x) => moveNodes(x, commit));
+      const groupMoves: [string, XY][] = [];
+      for (const n of dragged) {
+        if (n.type === "lab") commit[n.id] = toAbsolute(n.id, n.position, d);
+        else if (n.type === "group") groupMoves.push([n.id, n.position]);
+      }
+      // One history step for the whole drag, frames and loose nodes together.
+      api.getState().apply((x) => groupMoves.reduce((acc, [id, p]) => moveGroup(acc, id, p), moveNodes(x, commit)));
       setDrag({});
     },
     [api],

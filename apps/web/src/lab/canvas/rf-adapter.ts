@@ -48,7 +48,7 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
   const groups: FlowNode<GroupData>[] = d.groups.map((g) => ({
     id: g.id,
     type: "group",
-    position: g.position,
+    position: ctx.drag[g.id] ?? g.position,
     data: { group: g },
     style: { width: g.size.width, height: g.size.height },
     selected: selGroups.has(g.id),

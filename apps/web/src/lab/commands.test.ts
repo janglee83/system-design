@@ -4,14 +4,17 @@ import { addNode, connect, groupNodes } from "./model/ops";
 import type { Design } from "./model/design";
 import { META_BY_KIND, meta } from "../test/metas";
 import {
+  autoLayout,
   connectNodes,
   copySelection,
   deleteSelection,
   duplicateSelection,
+  groupSelection,
   pasteClipboard,
   redo,
   selectAll,
   undo,
+  ungroupSelection,
 } from "./commands";
 import { createDesignStore } from "./store/design-store";
 
@@ -88,5 +91,33 @@ describe("editing commands", () => {
     expect(api.getState().design.nodes).toHaveLength(3);
     redo(api);
     expect(api.getState().design.nodes).toHaveLength(2);
+  });
+});
+
+describe("layout and group commands", () => {
+  it("groups the selected nodes and selects the frame; ungrouping a member removes it", () => {
+    const api = createDesignStore(threeNodes());
+    api.getState().select({ nodes: ["lb-1", "web-server-1"] });
+    groupSelection(api);
+    expect(api.getState().selection).toEqual({ nodes: [], edges: [], groups: ["g1"] });
+    expect(api.getState().design.nodes.filter((n) => n.groupId === "g1").map((n) => n.id)).toEqual(["lb-1", "web-server-1"]);
+    api.getState().select({ nodes: ["lb-1"], groups: [] });
+    ungroupSelection(api);
+    expect(api.getState().design.groups).toEqual([]);
+  });
+
+  it("auto-layout is one history step and refits frames", async () => {
+    const api = createDesignStore(groupNodes(threeNodes(), ["lb-1", "web-server-1"])!.design);
+    const before = api.getState().design.groups[0]!;
+    await autoLayout(api);
+    expect(api.getState().past).toHaveLength(1);
+    const d = api.getState().design;
+    const xs = ["client-1", "lb-1", "web-server-1"].map((id) => d.nodes.find((n) => n.id === id)!.position.x);
+    expect(xs[0]).toBeLessThan(xs[1]!);
+    expect(xs[1]).toBeLessThan(xs[2]!);
+    const g = d.groups[0]!;
+    expect(g).not.toEqual(before);
+    const lb = d.nodes.find((n) => n.id === "lb-1")!.position;
+    expect(g.position.x).toBe(lb.x - 32);
   });
 });

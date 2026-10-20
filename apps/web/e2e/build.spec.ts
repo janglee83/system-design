@@ -41,3 +41,38 @@ test("undo, redo, delete, duplicate", async ({ page }) => {
   await page.keyboard.press("Delete");
   await expect(page.getByTestId("node-web-server-2")).toHaveCount(0);
 });
+
+test("group nodes, move the frame, ungroup, and tidy the layout", async ({ page }) => {
+  await openLab(page);
+  await addAt(page, "Users", 100, 300);
+  await addAt(page, "Web server", 600, 120);
+  await addAt(page, "PostgreSQL", 300, 420);
+  await connectByDrag(page, "client-1", "web-server-1");
+  await connectByDrag(page, "web-server-1", "postgres-1");
+
+  await page.getByTestId("node-web-server-1").click();
+  await page.getByTestId("node-postgres-1").click({ modifiers: ["Shift"] });
+  await page.keyboard.press("Control+g");
+  const frame = page.getByTestId("group-g1");
+  await expect(frame).toBeVisible();
+
+  const before = (await page.getByTestId("node-postgres-1").boundingBox())!;
+  const f = (await frame.boundingBox())!;
+  await page.mouse.move(f.x + 12, f.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(f.x + 92, f.y + 48, { steps: 8 });
+  await page.mouse.up();
+  const after = (await page.getByTestId("node-postgres-1").boundingBox())!;
+  expect(Math.round(after.x - before.x)).toBeGreaterThan(40);
+
+  await page.keyboard.press("Control+Shift+g");
+  await expect(frame).toHaveCount(0);
+
+  await page.keyboard.press("Shift+L");
+  // The layout runs asynchronously (ELK, then a fit-view animation): poll until it has landed.
+  const xs = () => Promise.all(["client-1", "web-server-1", "postgres-1"].map(async (id) => (await page.getByTestId(`node-${id}`).boundingBox())!.x));
+  await expect.poll(async () => {
+    const [a, b, c] = await xs();
+    return a! < b! && b! < c!;
+  }).toBe(true);
+});

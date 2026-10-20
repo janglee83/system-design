@@ -6,9 +6,11 @@ import { EngineStatus } from "@/engine/EngineStatus";
 import { Canvas } from "./canvas/Canvas";
 import { ConnectDialog } from "./canvas/ConnectDialog";
 import {
+  autoLayout,
   copySelection,
   deleteSelection,
   duplicateSelection,
+  groupSelection,
   inspectNode,
   openConnect,
   pasteClipboard,
@@ -16,6 +18,7 @@ import {
   selectAll,
   toggleSnap,
   undo,
+  ungroupSelection,
 } from "./commands";
 import { useAddComponent } from "./canvas/use-add-component";
 import type { Design } from "./model/design";
@@ -100,6 +103,9 @@ function LabShortcuts() {
     zoomIn: () => void flow.zoomIn({ duration: 200 }),
     zoomOut: () => void flow.zoomOut({ duration: 200 }),
     toggleSnap: () => toggleSnap(ui),
+    layout: () => void autoLayout(api).then(() => flow.fitView({ duration: 200 })),
+    group: () => groupSelection(api),
+    ungroup: () => ungroupSelection(api),
     escape: () => api.getState().clearSelection(),
   });
   return null;
