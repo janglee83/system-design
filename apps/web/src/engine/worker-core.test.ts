@@ -1,7 +1,7 @@
 import { sim } from "@sd/sim/node";
 import { describe, expect, it, vi } from "vitest";
 import type { EngineRequest, ResultOf } from "./protocol";
-import { fourTier } from "./test-fixtures";
+import { fourTier } from "../test/engine-fixtures";
 import { createHandler, MAX_RUNS } from "./worker-core";
 
 function setup() {

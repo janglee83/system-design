@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { EngineClient, EngineCrashError, EngineRequestError } from "./client";
 import type { Envelope, Reply } from "./protocol";
-import { FakeWorker, fourTier } from "./test-fixtures";
+import { FakeWorker, fourTier } from "../test/engine-fixtures";
 
 describe("EngineClient", () => {
   it("matches replies to requests", async () => {

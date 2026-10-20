@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { EngineClient } from "./client";
 import { createEngineStore, type EngineState } from "./engine-store";
 import type { Envelope, Reply } from "./protocol";
-import { FakeWorker } from "./test-fixtures";
+import { FakeWorker } from "../test/engine-fixtures";
 
 const failLoad = (msg: Envelope): Reply => ({ id: msg.id, ok: false, error: { kind: "load", message: "x" } });
 

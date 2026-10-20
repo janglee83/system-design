@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyDesign } from "../model/design";
 import { addNode, moveNodes } from "../model/ops";
-import { meta } from "../model/test-metas";
+import { meta } from "../../test/metas";
 import { createDesignStore, HISTORY_LIMIT } from "./design-store";
 
 describe("design store", () => {

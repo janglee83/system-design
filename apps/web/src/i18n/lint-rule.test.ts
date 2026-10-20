@@ -35,3 +35,22 @@ describe("no hard-coded user-facing strings", () => {
     expect(await literalStrings(`export const X = () => <p>Hello there</p>;`, "src/lab/Fixture.test.tsx")).toBe(0);
   });
 }, 60_000);
+
+describe("the Node build of the engine stays out of runtime code", () => {
+  const nodeImports = async (file: string) => {
+    const [result] = await eslint.lintText(`import { sim } from "@sd/sim/node";\nexport const v = sim.engineVersion();\n`, {
+      filePath: path.join(appRoot, file),
+    });
+    return result!.messages.filter((m) => m.ruleId === "no-restricted-imports").length;
+  };
+
+  it("refuses @sd/sim/node in app and src code", async () => {
+    expect(await nodeImports("src/lab/model/x.ts")).toBe(1);
+    expect(await nodeImports("app/[locale]/x.tsx")).toBe(1);
+  });
+
+  it("allows it in tests and test support files", async () => {
+    expect(await nodeImports("src/lab/model/x.test.ts")).toBe(0);
+    expect(await nodeImports("src/test/x.ts")).toBe(0);
+  });
+}, 60_000);

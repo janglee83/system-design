@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import en from "../../messages/en.json";
 import vi from "../../messages/vi.json";
 import { displayLabel } from "./labels";
-import { meta } from "./model/test-metas";
+import { meta } from "../test/metas";
 
 const tEn = createTranslator({ locale: "en", messages: en });
 const tVi = createTranslator({ locale: "vi", messages: vi });

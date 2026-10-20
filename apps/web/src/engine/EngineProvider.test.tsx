@@ -4,7 +4,7 @@ import { StrictMode } from "react";
 import { describe, expect, it } from "vitest";
 import { EngineClient } from "./client";
 import { EngineProvider, useEngineStart, useEngineStore } from "./EngineProvider";
-import { FakeWorker } from "./test-fixtures";
+import { FakeWorker } from "../test/engine-fixtures";
 
 function Probe() {
   useEngineStart();

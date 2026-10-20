@@ -1,8 +1,8 @@
 import type { Node, SimInput } from "@sd/sim";
 import { sim } from "@sd/sim/node";
-import type { WorkerLike } from "./client";
-import type { Envelope, Reply } from "./protocol";
-import { createHandler } from "./worker-core";
+import type { WorkerLike } from "../engine/client";
+import type { Envelope, Reply } from "../engine/protocol";
+import { createHandler } from "../engine/worker-core";
 
 const node = (id: string, kind: string, replicas = 1, config: Node["config"] = {}): Node => ({
   id,

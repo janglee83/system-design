@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyDesign } from "../model/design";
 import { addNode, groupNodes } from "../model/ops";
-import { META_BY_KIND, meta } from "../model/test-metas";
+import { META_BY_KIND, meta } from "../../test/metas";
 import { toAbsolute, toFlowEdges, toFlowNodes } from "./rf-adapter";
 
 function design() {

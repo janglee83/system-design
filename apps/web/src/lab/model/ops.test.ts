@@ -16,7 +16,7 @@ import {
   ungroup,
   updateNode,
 } from "./ops";
-import { META_BY_KIND, meta } from "./test-metas";
+import { META_BY_KIND, meta } from "../../test/metas";
 
 function build(): Design {
   let d = emptyDesign();

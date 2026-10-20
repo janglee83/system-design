@@ -40,6 +40,17 @@ const config = [
       ],
     },
   },
+  {
+    // The Node build of the engine is for tests only; the app uses @sd/sim/web in the worker.
+    files: ["**/*.{ts,tsx,mjs}"],
+    ignores: ["**/*.test.{ts,tsx}", "src/test/**", "e2e/**", "scripts/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { paths: [{ name: "@sd/sim/node", message: "Tests only. Runtime code uses @sd/sim/web inside the engine worker." }] },
+      ],
+    },
+  },
 ];
 
 export default config;

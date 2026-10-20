@@ -29,7 +29,7 @@ test("a failed wasm load shows a retry banner, and retry recovers", async ({ pag
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
 });
 
-// users -> lb -> web -> pg (same design as src/engine/test-fixtures.ts fourTier()).
+// users -> lb -> web -> pg (same design as src/test/engine-fixtures.ts fourTier()).
 const node = (id: string, kind: string, replicas = 1, config: Record<string, number> = {}) => ({ id, kind, label: "", replicas, config });
 const INPUT = {
   graph: {
