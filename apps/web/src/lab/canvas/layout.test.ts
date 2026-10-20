@@ -33,4 +33,9 @@ describe("auto-layout", () => {
   it("handles an empty design", async () => {
     expect(await layoutPositions(emptyDesign())).toEqual({});
   });
+
+  it("ignores edges that point at missing nodes instead of failing", async () => {
+    const d = { ...chain(), edges: [...chain().edges, { id: "e9", from: "lb-1", to: "gone-1", kind: "http" as const }] };
+    expect(Object.keys(await layoutPositions(d)).sort()).toEqual(["client-1", "lb-1", "postgres-1", "web-server-1"]);
+  });
 });

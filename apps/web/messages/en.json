@@ -41,7 +41,8 @@
     "controls": "Canvas controls",
     "autoLayout": "Tidy layout",
     "groupAction": "Group",
-    "ungroupAction": "Ungroup"
+    "ungroupAction": "Ungroup",
+    "layoutFailed": "The layout could not be worked out. Your design is unchanged."
   },
   "nav": {
     "primary": "Main",

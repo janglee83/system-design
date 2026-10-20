@@ -3,17 +3,18 @@ import { useReactFlow } from "@xyflow/react";
 import { Grid3x3, LayoutGrid, Maximize, Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { IconButton } from "@/ui/IconButton";
-import { autoLayout, toggleSnap } from "../commands";
+import { toggleSnap } from "../commands";
 import { formatCombo, SHORTCUTS, type ShortcutId } from "../shortcuts";
-import { useDesignApi, useUi, useUiApi } from "../store/LabStores";
+import { useUi, useUiApi } from "../store/LabStores";
 import { useIsMac } from "../use-shortcuts";
+import { useAutoLayout } from "./use-auto-layout";
 
 /** Zoom, fit and snap: the vertical pill at the canvas's bottom-left. */
 export function CanvasControls() {
   const t = useTranslations("lab");
   const flow = useReactFlow();
   const ui = useUiApi();
-  const api = useDesignApi();
+  const layout = useAutoLayout();
   const snap = useUi((s) => s.snap);
   const mac = useIsMac();
   const combo = (id: ShortcutId) => formatCombo(SHORTCUTS.find((s) => s.id === id)!.keys[0], mac);
@@ -31,7 +32,7 @@ export function CanvasControls() {
       <IconButton
         label={t("autoLayout")}
         shortcut={combo("layout")}
-        onClick={() => void autoLayout(api).then(() => flow.fitView({ duration: 200 }))}
+        onClick={layout}
         className="rounded-full"
       >
         <LayoutGrid size={16} aria-hidden />

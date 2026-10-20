@@ -96,10 +96,25 @@ export function inspectNode(api: DesignStore, ui: UiStore, id: string): void {
   ui.getState().focusInspector();
 }
 
-/** ELK layout of the whole design as one history step; frames are refitted around their members. */
-export async function autoLayout(api: DesignStore): Promise<void> {
-  const positions = await layoutPositions(api.getState().design);
-  api.getState().apply((d) => fitGroups(moveNodes(d, positions)));
+const layingOut = new WeakSet<DesignStore>();
+
+/**
+ * ELK layout of the whole design as one history step; frames are refitted around their members.
+ * One layout at a time per store, and a result for a design that changed meanwhile is dropped.
+ * Resolves true when the layout was applied; rejects if ELK fails (callers show a toast).
+ */
+export async function autoLayout(api: DesignStore): Promise<boolean> {
+  if (layingOut.has(api)) return false;
+  layingOut.add(api);
+  try {
+    const start = api.getState().design;
+    const positions = await layoutPositions(start);
+    if (api.getState().design !== start) return false;
+    api.getState().apply((d) => fitGroups(moveNodes(d, positions)));
+    return true;
+  } finally {
+    layingOut.delete(api);
+  }
 }
 
 export function groupSelection(api: DesignStore): void {

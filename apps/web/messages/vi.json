@@ -41,7 +41,8 @@
     "controls": "Điều khiển khung vẽ",
     "autoLayout": "Sắp xếp gọn",
     "groupAction": "Gộp nhóm",
-    "ungroupAction": "Bỏ nhóm"
+    "ungroupAction": "Bỏ nhóm",
+    "layoutFailed": "Không sắp xếp được bố cục. Thiết kế của bạn vẫn giữ nguyên."
   },
   "nav": {
     "primary": "Chính",

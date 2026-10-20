@@ -120,4 +120,19 @@ describe("layout and group commands", () => {
     const lb = d.nodes.find((n) => n.id === "lb-1")!.position;
     expect(g.position.x).toBe(lb.x - 32);
   });
+
+  it("drops a layout result if the design changed while it was computed", async () => {
+    const api = createDesignStore(threeNodes());
+    const pending = autoLayout(api);
+    api.getState().apply((d) => addNode(d, meta("postgres"), { x: 0, y: 0 }).design);
+    expect(await pending).toBe(false);
+    expect(api.getState().past).toHaveLength(1); // only the add
+  });
+
+  it("runs one layout at a time", async () => {
+    const api = createDesignStore(threeNodes());
+    expect(await Promise.all([autoLayout(api), autoLayout(api)])).toEqual([true, false]);
+    expect(api.getState().past).toHaveLength(1);
+    expect(await autoLayout(api)).toBe(true); // the guard is released afterwards
+  });
 });
