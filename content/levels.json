@@ -948,36 +948,6 @@
   "roadmap": {
     "lessons": [
       {
-        "id": "l0-queueing-and-utilization",
-        "titleVi": "Hàng đợi: vì sao máy chủ bận 94% đã là có chuyện",
-        "titleEn": "Queues: why a server at 94% busy is already in trouble",
-        "kind": "experiment",
-        "minutes": 15,
-        "difficulty": 2,
-        "prerequisites": [
-          "l0-throughput-and-capacity"
-        ],
-        "concepts": [
-          "utilization",
-          "queueing",
-          "littles-law",
-          "headroom"
-        ],
-        "research": [
-          "queueing-and-utilization"
-        ],
-        "needs": {
-          "components": [
-            "client",
-            "web-server"
-          ],
-          "metrics": [
-            "p95",
-            "peakBusy"
-          ]
-        }
-      },
-      {
         "id": "l0-cache-basics",
         "titleVi": "Cache: giữ bản sao gần tay",
         "titleEn": "Caches: keeping a copy within reach",
@@ -1031,37 +1001,6 @@
           "availability-and-spof"
         ],
         "needs": {}
-      },
-      {
-        "id": "l0-cost-basics",
-        "titleVi": "Chi phí cũng là một yêu cầu",
-        "titleEn": "Cost is a requirement too",
-        "kind": "experiment",
-        "minutes": 12,
-        "difficulty": 1,
-        "prerequisites": [
-          "l0-throughput-and-capacity"
-        ],
-        "concepts": [
-          "cost-per-month",
-          "right-sizing",
-          "over-provisioning"
-        ],
-        "research": [
-          "cost-basics",
-          "throughput-and-capacity"
-        ],
-        "needs": {
-          "components": [
-            "client",
-            "web-server"
-          ],
-          "metrics": [
-            "p95",
-            "requestsRejected",
-            "costPerMonth"
-          ]
-        }
       },
       {
         "id": "l1-vertical-scaling",

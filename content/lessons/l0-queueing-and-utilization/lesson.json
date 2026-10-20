@@ -1,0 +1,134 @@
+{
+  "formatVersion": 1,
+  "id": "l0-queueing-and-utilization",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 15,
+  "difficulty": 2,
+  "prerequisites": ["l0-throughput-and-capacity"],
+  "concepts": ["utilization", "queueing", "littles-law", "headroom"],
+  "research": ["queueing-and-utilization"],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "web",
+            "kind": "web-server",
+            "config": {
+              "cpu": 1
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "web",
+            "kind": "http"
+          }
+        ]
+      },
+      "workload": {
+        "profile": "mixed",
+        "baseRps": 8800,
+        "writeRatio": 0.2
+      }
+    },
+    "controls": [
+      {
+        "id": "cpu",
+        "type": "stepper",
+        "path": "graph.nodes[web].config.cpu",
+        "options": [1, 2, 4],
+        "default": 1
+      }
+    ],
+    "goals": [
+      {
+        "id": "fast",
+        "metric": "p95",
+        "op": "<=",
+        "value": 8
+      },
+      {
+        "id": "headroom",
+        "metric": "peakBusy",
+        "op": "<=",
+        "value": 0.75
+      },
+      {
+        "id": "budget",
+        "metric": "costPerMonth",
+        "op": "<=",
+        "value": 50
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "cpu": 2
+        },
+        "expect": {
+          "p95": {
+            "<=": 6
+          },
+          "peakBusy": {
+            "<=": 0.75
+          },
+          "costPerMonth": {
+            "==": 50
+          }
+        }
+      },
+      {
+        "id": "B",
+        "misconception": "M1",
+        "set": {
+          "cpu": 1
+        },
+        "failsGoals": ["fast", "headroom"],
+        "expect": {
+          "p95": {
+            ">=": 9
+          },
+          "peakBusy": {
+            ">=": 0.95
+          },
+          "requestsRejected": {
+            "==": 0
+          },
+          "requestsTimedOut": {
+            "==": 0
+          }
+        }
+      },
+      {
+        "id": "C",
+        "misconception": "M3",
+        "set": {
+          "cpu": 4
+        },
+        "failsGoals": ["budget"],
+        "expect": {
+          "p95": {
+            "<=": 6
+          },
+          "peakBusy": {
+            "<=": 0.4
+          },
+          "costPerMonth": {
+            ">=": 100
+          }
+        }
+      }
+    ]
+  }
+}
