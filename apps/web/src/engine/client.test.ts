@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { EngineClient, EngineCrashError, EngineRequestError } from "./client";
+import type { Envelope, Reply } from "./protocol";
 import { FakeWorker, fourTier } from "./test-fixtures";
 
 describe("EngineClient", () => {
@@ -66,5 +67,21 @@ describe("EngineClient", () => {
     const trace = await client.request({ type: "trace", runId: run.runId, index: 0 });
     expect(trace.steps[0]?.nodeId).toBe("users");
     expect(JSON.parse(await client.request({ type: "resultJson", runId: run.runId })).timeline.data.length).toBe(data.length);
+  });
+
+  it("a crash reply rejects that request and restarts the worker; the next request works", async () => {
+    const crash = (msg: Envelope): Reply => ({ id: msg.id, ok: false, error: { kind: "crash", message: "unreachable" } });
+    const workers: FakeWorker[] = [];
+    const client = new EngineClient(() => {
+      const w = workers.length === 0 ? new FakeWorker(crash) : new FakeWorker();
+      workers.push(w);
+      return w;
+    });
+    const err = await client.request({ type: "engineVersion" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(EngineRequestError);
+    expect((err as EngineRequestError).error.kind).toBe("crash");
+    expect(workers).toHaveLength(2);
+    expect(workers[0]!.terminated).toBe(true);
+    await expect(client.request({ type: "engineVersion" })).resolves.toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

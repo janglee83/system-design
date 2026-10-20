@@ -48,6 +48,9 @@ export class EngineClient {
       this.#pending.delete(r.id);
       if (r.ok) p.resolve(r.value);
       else p.reject(new EngineRequestError(r.error));
+      // A trapped wasm instance cannot be trusted: replace the worker. Other pending requests
+      // reject with EngineCrashError; the next request goes to the fresh worker.
+      if (!r.ok && r.error.kind === "crash" && w === this.#worker) this.restart();
     };
     w.onerror = (e) => {
       e.preventDefault?.();

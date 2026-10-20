@@ -58,7 +58,9 @@ export type EngineError =
   | { kind: "validation"; issues: ValidationIssue[] }
   | { kind: "input"; message: string }
   | { kind: "load"; message: string }
-  | { kind: "internal"; message: string };
+  | { kind: "internal"; message: string }
+  /** The wasm instance trapped (a panic or `unreachable`); the client replaces the worker. */
+  | { kind: "crash"; message: string };
 
 export interface Envelope {
   id: number;

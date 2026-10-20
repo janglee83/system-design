@@ -22,6 +22,8 @@ export interface Handled {
 function toEngineError(e: unknown): EngineError {
   if (e instanceof SimValidationError) return { kind: "validation", issues: e.issues };
   if (e instanceof SimInputError) return { kind: "input", message: e.message };
+  // After a trap the instance's memory may be inconsistent: never reuse it.
+  if (e instanceof WebAssembly.RuntimeError) return { kind: "crash", message: e.message };
   return { kind: "internal", message: e instanceof Error ? e.message : String(e) };
 }
 

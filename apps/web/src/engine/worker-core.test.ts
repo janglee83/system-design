@@ -92,4 +92,14 @@ describe("worker-core", () => {
     const nonsense = { ...fourTier(), durationMs: "soon" } as unknown as ReturnType<typeof fourTier>;
     expect(call({ type: "run", input: nonsense }).reply).toMatchObject({ ok: false, error: { kind: "input" } });
   });
+
+  it("reports a wasm trap as a crash, so the client can replace the worker", () => {
+    const trapping = { ...sim, simulate: () => { throw new WebAssembly.RuntimeError("unreachable executed"); } };
+    const handle = createHandler(trapping, () => 0);
+    expect(handle({ id: 1, request: { type: "run", input: fourTier() } }).reply).toEqual({
+      id: 1,
+      ok: false,
+      error: { kind: "crash", message: "unreachable executed" },
+    });
+  });
 });
