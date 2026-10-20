@@ -39,6 +39,7 @@ export function fourTier(baseRps = 2000): SimInput {
 export class FakeWorker implements WorkerLike {
   onmessage: ((e: MessageEvent<Reply>) => void) | null = null;
   onerror: ((e: ErrorEvent) => void) | null = null;
+  onmessageerror: ((e: MessageEvent) => void) | null = null;
   terminated = false;
   /** Transfer list of the last reply (its buffers are detached once delivered). */
   lastTransfer: Transferable[] = [];

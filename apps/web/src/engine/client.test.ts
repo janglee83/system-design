@@ -84,4 +84,51 @@ describe("EngineClient", () => {
     expect(workers[0]!.terminated).toBe(true);
     await expect(client.request({ type: "engineVersion" })).resolves.toMatch(/^\d+\.\d+\.\d+$/);
   });
+
+  it("after a crash, new requests reject at once until restart()", async () => {
+    let worker!: FakeWorker;
+    const client = new EngineClient(() => (worker = new FakeWorker()));
+    worker.crash("boom");
+    const post = vi.spyOn(worker, "postMessage");
+    await expect(client.request({ type: "engineVersion" })).rejects.toBeInstanceOf(EngineCrashError);
+    expect(post).not.toHaveBeenCalled();
+    client.restart();
+    await expect(client.request({ type: "engineVersion" })).resolves.toMatch(/\d/);
+  });
+
+  it("a reply that cannot be deserialized fails pending requests like a crash", async () => {
+    let worker!: FakeWorker;
+    const client = new EngineClient(() => (worker = new FakeWorker()));
+    const onCrash = vi.fn();
+    client.onCrash(onCrash);
+    worker.terminated = true; // never answers
+    const pending = client.request({ type: "engineVersion" });
+    worker.onmessageerror?.({} as MessageEvent);
+    await expect(pending).rejects.toBeInstanceOf(EngineCrashError);
+    expect(onCrash).toHaveBeenCalledOnce();
+  });
+
+  it("a request with no answer times out and the worker is replaced", async () => {
+    vi.useFakeTimers();
+    try {
+      const workers: FakeWorker[] = [];
+      const client = new EngineClient(() => {
+        const w = new FakeWorker();
+        if (workers.length === 0) w.terminated = true; // the first worker is stuck
+        workers.push(w);
+        return w;
+      }, { timeoutMs: 30_000 });
+      const pending = client.request({ type: "engineVersion" }).catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(30_000);
+      const err = await pending;
+      expect(err).toBeInstanceOf(EngineCrashError);
+      expect((err as Error).message).toMatch(/30 s/);
+      expect(workers).toHaveLength(2);
+      const next = client.request({ type: "engineVersion" });
+      await vi.advanceTimersByTimeAsync(0);
+      await expect(next).resolves.toMatch(/\d/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

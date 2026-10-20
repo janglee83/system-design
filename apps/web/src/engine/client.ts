@@ -3,6 +3,7 @@ import type { EngineError, EngineRequest, Envelope, Reply, ResultOf } from "./pr
 export interface WorkerLike {
   onmessage: ((e: MessageEvent<Reply>) => void) | null;
   onerror: ((e: ErrorEvent) => void) | null;
+  onmessageerror: ((e: MessageEvent) => void) | null;
   postMessage(message: Envelope, transfer?: Transferable[]): void;
   terminate(): void;
 }
@@ -23,19 +24,26 @@ export class EngineCrashError extends Error {
   }
 }
 
-type Pending = { resolve: (v: unknown) => void; reject: (e: Error) => void };
+type Pending = { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
+
+/** A request the worker has not answered by then is treated as a stuck worker. */
+export const REQUEST_TIMEOUT_MS = 30_000;
 
 export class EngineClient {
   #factory: () => WorkerLike;
+  #timeoutMs: number;
   #worker!: WorkerLike;
   #next = 1;
   #pending = new Map<number, Pending>();
   #listeners = new Set<(e: EngineCrashError) => void>();
   /** Set once terminate() ran: every later request rejects with it. */
   #stopped: EngineCrashError | null = null;
+  /** Set when the worker crashed: later requests reject with it until restart(). */
+  #crashed: EngineCrashError | null = null;
 
-  constructor(factory: () => WorkerLike) {
+  constructor(factory: () => WorkerLike, { timeoutMs = REQUEST_TIMEOUT_MS }: { timeoutMs?: number } = {}) {
     this.#factory = factory;
+    this.#timeoutMs = timeoutMs;
     this.#spawn();
   }
 
@@ -43,9 +51,8 @@ export class EngineClient {
     const w = this.#factory();
     w.onmessage = (e) => {
       const r = e.data;
-      const p = this.#pending.get(r.id);
+      const p = this.#take(r.id);
       if (!p) return;
-      this.#pending.delete(r.id);
       if (r.ok) p.resolve(r.value);
       else p.reject(new EngineRequestError(r.error));
       // A trapped wasm instance cannot be trusted: replace the worker. Other pending requests
@@ -54,25 +61,48 @@ export class EngineClient {
     };
     w.onerror = (e) => {
       e.preventDefault?.();
-      this.#fail(new EngineCrashError(e.message || "engine worker error"), true);
+      if (w === this.#worker) this.#crash(new EngineCrashError(e.message || "engine worker error"));
+    };
+    // A reply that could not be deserialized: we cannot tell which request it answered.
+    w.onmessageerror = () => {
+      if (w === this.#worker) this.#crash(new EngineCrashError("engine reply could not be read"));
     };
     this.#worker = w;
   }
 
-  #fail(err: EngineCrashError, notify: boolean): void {
-    for (const p of this.#pending.values()) p.reject(err);
-    this.#pending.clear();
-    if (notify) for (const l of this.#listeners) l(err);
+  #take(id: number): Pending | undefined {
+    const p = this.#pending.get(id);
+    if (!p) return undefined;
+    clearTimeout(p.timer);
+    this.#pending.delete(id);
+    return p;
+  }
+
+  #fail(err: EngineCrashError): void {
+    for (const id of [...this.#pending.keys()]) this.#take(id)!.reject(err);
+  }
+
+  #crash(err: EngineCrashError): void {
+    this.#crashed = err;
+    this.#fail(err);
+    for (const l of this.#listeners) l(err);
   }
 
   request<K extends EngineRequest["type"]>(
     request: Extract<EngineRequest, { type: K }>,
     transfer: Transferable[] = [],
   ): Promise<ResultOf[K]> {
-    if (this.#stopped) return Promise.reject(this.#stopped);
+    const dead = this.#stopped ?? this.#crashed;
+    if (dead) return Promise.reject(dead);
     const id = this.#next++;
     return new Promise<ResultOf[K]>((resolve, reject) => {
-      this.#pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
+      const timer = setTimeout(() => {
+        const p = this.#take(id);
+        if (!p) return;
+        p.reject(new EngineCrashError(`engine did not answer within ${Math.round(this.#timeoutMs / 1000)} s`));
+        this.restart(); // a stuck worker would hold every later request behind it
+      }, this.#timeoutMs);
+      this.#pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer });
       this.#worker.postMessage({ id, request }, transfer);
     });
   }
@@ -84,8 +114,10 @@ export class EngineClient {
 
   /** Kills the worker (pending requests reject) and starts a fresh one. */
   restart(): void {
+    if (this.#stopped) return;
     this.#worker.terminate();
-    this.#fail(new EngineCrashError("engine restarted"), false);
+    this.#fail(new EngineCrashError("engine restarted"));
+    this.#crashed = null;
     this.#spawn();
   }
 
@@ -93,7 +125,7 @@ export class EngineClient {
   terminate(): void {
     this.#worker.terminate();
     this.#stopped = new EngineCrashError("engine stopped");
-    this.#fail(this.#stopped, false);
+    this.#fail(this.#stopped);
   }
 }
 
