@@ -38,7 +38,7 @@ export function ConnectDialog({ metas }: { metas: ReadonlyMap<string, ComponentM
 
   // Arrow keys move through a list that can be longer than the dialog.
   useEffect(() => {
-    if (open) document.getElementById(`${listId}-${active}`)?.scrollIntoView({ block: "nearest" });
+    if (open) document.getElementById(`${listId}-${active}`)?.scrollIntoView?.({ block: "nearest" });
   }, [open, active, listId]);
 
   const pick = (i: number) => {
