@@ -1,6 +1,6 @@
 import type { ComponentMeta, EdgeKind } from "@sd/sim";
 import type { Edge as FlowEdge, Node as FlowNode } from "@xyflow/react";
-import type { Design, LabGroup, LabNode, XY } from "../model/design";
+import { NODE_SIZE, type Design, type LabGroup, type LabNode, type XY } from "../model/design";
 import type { Selection } from "../store/design-store";
 
 export type NodeState = "normal" | "busy" | "overloaded" | "down";
@@ -51,6 +51,7 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
     position: ctx.drag[g.id] ?? g.position,
     data: { group: g },
     style: { width: g.size.width, height: g.size.height },
+    measured: { width: g.size.width, height: g.size.height },
     selected: selGroups.has(g.id),
     zIndex: -1,
   }));
@@ -65,6 +66,8 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
       parentId: parent ? (n.groupId as string) : undefined,
       selected: sel.has(n.id),
       deletable: !locked,
+      // Node cards have a fixed size (R14); telling React Flow keeps it from hiding them to re-measure.
+      measured: { width: NODE_SIZE.width, height: NODE_SIZE.height },
       domAttributes: ctx.nodeRole ? { "aria-roledescription": ctx.nodeRole } : undefined,
       data: {
         node: n,
@@ -100,4 +103,66 @@ export function toAbsolute(id: string, pos: XY, d: Design): XY {
   const n = d.nodes.find((x) => x.id === id);
   const g = n?.groupId ? d.groups.find((x) => x.id === n.groupId) : undefined;
   return g ? { x: g.position.x + pos.x, y: g.position.y + pos.y } : { x: pos.x, y: pos.y };
+}
+
+const sameXY = (a: { x: number; y: number } | undefined, b: { x: number; y: number } | undefined) => a?.x === b?.x && a?.y === b?.y;
+
+function sameData(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    const x = a[k];
+    const y = b[k];
+    if (k === "issues" && typeof x === "object" && typeof y === "object" && x && y) {
+      const i = x as { blocking?: number; warnings?: number };
+      const j = y as { blocking?: number; warnings?: number };
+      if (i.blocking !== j.blocking || i.warnings !== j.warnings) return false;
+    } else if (!Object.is(x, y)) return false;
+  }
+  return true;
+}
+
+function sameNode(a: FlowNode, b: FlowNode): boolean {
+  return (
+    a.type === b.type &&
+    a.parentId === b.parentId &&
+    a.selected === b.selected &&
+    a.deletable === b.deletable &&
+    a.zIndex === b.zIndex &&
+    sameXY(a.position, b.position) &&
+    a.measured?.width === b.measured?.width &&
+    a.measured?.height === b.measured?.height &&
+    a.style?.width === b.style?.width &&
+    a.style?.height === b.style?.height &&
+    a.domAttributes?.["aria-roledescription"] === b.domAttributes?.["aria-roledescription"] &&
+    sameData(a.data, b.data)
+  );
+}
+
+/**
+ * Hands back the previous object for every node whose inputs did not change, so React Flow and
+ * the memoized node components skip it (a drag re-renders only the dragged node).
+ */
+export function reuseFlowNodes(next: FlowNode[], prev: readonly FlowNode[]): FlowNode[] {
+  const before = new Map(prev.map((n) => [n.id, n]));
+  return next.map((n) => {
+    const p = before.get(n.id);
+    return p && sameNode(p, n) ? p : n;
+  });
+}
+
+export function reuseFlowEdges(next: FlowEdge<LabEdgeData>[], prev: readonly FlowEdge<LabEdgeData>[]): FlowEdge<LabEdgeData>[] {
+  const before = new Map(prev.map((e) => [e.id, e]));
+  return next.map((e) => {
+    const p = before.get(e.id);
+    const same =
+      p &&
+      p.source === e.source &&
+      p.target === e.target &&
+      p.type === e.type &&
+      p.selected === e.selected &&
+      p.data?.kind === e.data?.kind &&
+      p.data?.issues === e.data?.issues &&
+      p.data?.onPath === e.data?.onPath;
+    return same ? p : e;
+  });
 }

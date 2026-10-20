@@ -14,7 +14,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/base.css";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "@/ui/toast-store";
 import { connectNodes } from "../commands";
 import { displayLabel } from "../labels";
@@ -28,7 +28,7 @@ import { EdgeLegend } from "./EdgeLegend";
 import { EdgeMarkers, LabEdge } from "./LabEdge";
 import { GroupNode } from "./GroupNode";
 import { LabNode } from "./LabNode";
-import { toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
+import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
 import { CanvasControls } from "./CanvasControls";
 import { formatCombo } from "../shortcuts";
@@ -103,8 +103,11 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
     drag,
     ...extra,
   };
-  const nodes = useMemo(() => toFlowNodes(design, ctx), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas, ctx.nodeRole]); // eslint-disable-line react-hooks/exhaustive-deps
-  const edges = useMemo(() => toFlowEdges(design, ctx), [design, ctx.selection, ctx.issues, ctx.path]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
+  const lastNodes = useRef<FlowNode[]>([]);
+  const lastEdges = useRef<ReturnType<typeof toFlowEdges>>([]);
+  const nodes = useMemo(() => (lastNodes.current = reuseFlowNodes(toFlowNodes(design, ctx), lastNodes.current)), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas, ctx.nodeRole]); // eslint-disable-line react-hooks/exhaustive-deps
+  const edges = useMemo(() => (lastEdges.current = reuseFlowEdges(toFlowEdges(design, ctx), lastEdges.current)), [design, ctx.selection, ctx.issues, ctx.path]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
