@@ -40,6 +40,10 @@ on:
       - "dev"
       - ".github/workflows/engine.yml"
 
+# The jobs only read the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: engine-${{ github.ref }}
   cancel-in-progress: true

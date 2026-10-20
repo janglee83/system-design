@@ -24,3 +24,12 @@ describe("Playwright in the dev image", () => {
     expect(match?.[1]).toBe(pkg.devDependencies["@playwright/test"]);
   });
 });
+
+const WORKFLOWS = ["web.yml", "engine.yml", "content.yml"] as const;
+const workflow = (name: string) => fs.readFileSync(path.join(appRoot, "../../.github/workflows", name), "utf8");
+
+describe("CI workflows", () => {
+  it.each(WORKFLOWS)("%s gives its token read-only repository access", (name) => {
+    expect(workflow(name)).toMatch(/^permissions:\n {2}contents: read\n/m);
+  });
+});

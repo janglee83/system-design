@@ -25,6 +25,10 @@ on:
       - "rust-toolchain.toml"
       - ".github/workflows/content.yml"
 
+# The jobs only read the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: content-${{ github.ref }}
   cancel-in-progress: true

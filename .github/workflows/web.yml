@@ -20,6 +20,10 @@ on:
     branches: [main]
     paths: *paths
 
+# The jobs only read the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: web-${{ github.ref }}
   cancel-in-progress: true
