@@ -140,4 +140,23 @@ describe("worker-core", () => {
     handle({ id: 4, request: { type: "validate", graph: g, limits: null, calibration: { pgCostPerInstance: 1 } } });
     expect(runs).toBe(first + 1 + 3);
   });
+
+  it("a wasm trap while pricing nodes in validate is a crash, not a missing price", () => {
+    const trapping = { ...sim, simulate: () => { throw new WebAssembly.RuntimeError("unreachable executed"); } };
+    const handle = createHandler(trapping, () => 0);
+    expect(handle({ id: 1, request: { type: "validate", graph: fourTier().graph, limits: null, calibration: {} } }).reply).toEqual({
+      id: 1,
+      ok: false,
+      error: { kind: "crash", message: "unreachable executed" },
+    });
+  });
+
+  it("an unexpected error while pricing is reported, not swallowed", () => {
+    const broken = { ...sim, simulate: () => { throw new TypeError("boom"); } };
+    const handle = createHandler(broken, () => 0);
+    expect(handle({ id: 1, request: { type: "validate", graph: fourTier().graph, limits: null, calibration: {} } }).reply).toMatchObject({
+      ok: false,
+      error: { kind: "internal", message: "boom" },
+    });
+  });
 });

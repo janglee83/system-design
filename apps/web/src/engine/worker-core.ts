@@ -73,8 +73,11 @@ export function createHandler(sim: Sim, now: () => number = () => performance.no
       } finally {
         run.free();
       }
-    } catch {
-      return null;
+    } catch (e) {
+      // The engine rejecting this node's config means "no price" (R10). A trap or any other
+      // error is a real failure and must reach the caller (a trap replaces the worker).
+      if (e instanceof SimValidationError || e instanceof SimInputError) return null;
+      throw e;
     }
   }
 
