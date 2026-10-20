@@ -1,7 +1,7 @@
 # Sub-project 3: App shell and Lab canvas — Design
 
 Date: 2026-10-20
-Status: Draft, awaiting review
+Status: Approved (2026-10-20)
 
 ## 1. Goal
 
