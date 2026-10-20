@@ -75,3 +75,9 @@ describe("dev image", () => {
     expect(ignore).toContain(".ci-cache");
   });
 });
+
+describe("CI concurrency", () => {
+  it.each(WORKFLOWS)("%s cancels superseded pull request runs but never a main run", (name) => {
+    expect(workflow(name)).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
+  });
+});
