@@ -2,7 +2,7 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import en from "../../../messages/en.json";
 import { META_BY_KIND, meta } from "../../test/metas";
 import { emptyDesign } from "../model/design";
@@ -66,5 +66,20 @@ describe("ConnectDialog", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Users 1 does not take incoming connections.");
     expect(ui.getState().connectOpen).toBe(true);
     expect(api.getState().design.edges).toEqual([]);
+  });
+
+  it("keeps the active option scrolled into view", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    await setup();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(scroll).toHaveBeenLastCalledWith({ block: "nearest" });
+    expect(scroll.mock.contexts.at(-1)).toHaveTextContent("Web server 1");
+  });
+
+  it("closes when the source component goes away", async () => {
+    await setup();
+    act(() => api.getState().apply((d) => ({ ...d, nodes: d.nodes.filter((n) => n.id !== "client-1") })));
+    expect(ui.getState().connectOpen).toBe(false);
   });
 });
