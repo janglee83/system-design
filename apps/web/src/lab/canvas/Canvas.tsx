@@ -6,6 +6,7 @@ import {
   MiniMap,
   ReactFlow,
   type Connection,
+  type FinalConnectionState,
   type Edge as FlowEdge,
   type Node as FlowNode,
   type NodeChange,
@@ -51,30 +52,42 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const add = useAddComponent();
   const tAll = useTranslations();
 
+  /** The translated reason a connection was refused, shown as a toast. Self-loops and duplicates stay silent (R13). */
+  const refuse = useCallback(
+    (reason: string, from: string, to: string) => {
+      if (reason === "self" || reason === "duplicate") return;
+      const d = api.getState().design;
+      const label = (id: string) => {
+        const n = d.nodes.find((x) => x.id === id);
+        return n ? displayLabel(n, metas.get(n.kind) ?? null, tAll) : id;
+      };
+      toast(tAll(`connect.refused.${reason}`, { source: label(from), target: label(to) }), "warn");
+    },
+    [api, metas, tAll],
+  );
   const onConnect = useCallback(
     (c: Connection) => {
       if (!c.source || !c.target) return;
       const r = connectNodes(api, metas, c.source, c.target);
-      if (!r.ok && r.reason !== "self" && r.reason !== "duplicate") {
-        const d = api.getState().design;
-        const label = (id: string) => {
-          const n = d.nodes.find((x) => x.id === id);
-          return n ? displayLabel(n, metas.get(n.kind) ?? null, tAll) : id;
-        };
-        toast(tAll(`connect.refused.${r.reason}`, { source: label(c.source), target: label(c.target) }), "warn");
-      }
+      if (!r.ok) refuse(r.reason, c.source, c.target);
     },
-    [api, metas, tAll],
+    [api, metas, refuse],
   );
-  const isValidConnection = useCallback(
-    (c: Connection | FlowEdge) => {
-      if (c.source === c.target) return false;
-      const target = api.getState().design.nodes.find((n) => n.id === c.target);
-      const meta = target ? metas.get(target.kind) : undefined;
-      return !meta || meta.accepts.length > 0;
+  // A drop that React Flow did not turn into a connection (for example on Users, which has no
+  // input port): say why, instead of failing silently.
+  const onConnectEnd = useCallback(
+    (e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      if (state.isValid || !state.fromNode) return;
+      const target = (e.target as Element | null)?.closest?.(".react-flow__node");
+      const to = state.toNode?.id ?? target?.getAttribute("data-id");
+      if (!to || to === state.fromNode.id) return;
+      const toNode = api.getState().design.nodes.find((n) => n.id === to);
+      const meta = toNode ? metas.get(toNode.kind) : undefined;
+      if (meta && meta.accepts.length === 0) refuse("not-accepted", state.fromNode.id, to);
     },
-    [api, metas],
+    [api, metas, refuse],
   );
+  const isValidConnection = useCallback((c: Connection | FlowEdge) => c.source !== c.target, []);
 
   const costs = useCheck((s) => s.costs);
   const issues = useCheck((s) => s.issues);
@@ -176,6 +189,7 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
         connectionLineType={ConnectionLineType.SmoothStep}
         onDragOver={(e) => {

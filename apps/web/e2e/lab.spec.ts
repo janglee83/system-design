@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addAt, connectByDrag, openLab } from "./helpers";
+import { addAt, connectByDrag, connectToCard, openLab } from "./helpers";
 
 test("the Lab shows an empty canvas with the edge legend", async ({ page }) => {
   await page.goto("/en/lab");
@@ -47,7 +47,10 @@ test("connecting into Users is refused with a message", async ({ page }) => {
   await page.goto("/en/lab");
   await addAt(page, "Users", 120, 200);
   await addAt(page, "Web server", 420, 200);
-  await connectByDrag(page, "web-server-1", "client-1");
+  // Users takes no incoming connections, so its card has no input port at all.
+  await expect(page.getByTestId("handle-in-client-1")).toHaveCount(0);
+  await connectToCard(page, "web-server-1", "client-1");
+  await expect(page.getByTestId("toast")).toHaveText("Users 1 does not take incoming connections.");
   await expect(page.getByTestId("edge-e1")).toHaveCount(0);
 });
 

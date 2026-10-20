@@ -39,3 +39,14 @@ export async function connectByDrag(page: Page, from: string, to: string) {
   await page.mouse.move(b.x, b.y, { steps: 12 });
   await page.mouse.up();
 }
+
+/** Drags a connection from a node's output port and drops it on the middle of another node's card. */
+export async function connectToCard(page: Page, from: string, to: string) {
+  await expect(page.getByTestId(`node-${from}`)).toBeVisible();
+  const a = await settledCentre(page, `handle-out-${from}`);
+  const b = await settledCentre(page, `node-${to}`);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move(b.x, b.y, { steps: 12 });
+  await page.mouse.up();
+}

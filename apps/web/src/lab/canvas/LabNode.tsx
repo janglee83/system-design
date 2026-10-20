@@ -38,7 +38,10 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
         disallowed && "opacity-50",
       )}
     >
-      <Handle id="in" type="target" position={Position.Left} data-testid={`handle-in-${node.id}`} className="!size-2.5 !border-[1.5px] !border-border-strong !bg-surface" />
+      {/* A component that accepts no connection kind (Users) has no input port (R13). */}
+      {!meta || meta.accepts.length > 0 ? (
+        <Handle id="in" type="target" position={Position.Left} isConnectableEnd data-testid={`handle-in-${node.id}`} className="!size-2.5 !border-[1.5px] !border-border-strong !bg-surface" />
+      ) : null}
       <div className="absolute top-2 -left-3 flex flex-col gap-0.5" aria-hidden>
         {meta?.accepts.map((k) => (
           <span key={k} className="size-1.5 rounded-full" style={{ background: `var(--sd-edge-${k})` }} />
