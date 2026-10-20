@@ -2,8 +2,11 @@
 import {
   Background,
   BackgroundVariant,
+  ConnectionLineType,
   MiniMap,
   ReactFlow,
+  type Connection,
+  type Edge as FlowEdge,
   type Node as FlowNode,
   type NodeChange,
   type EdgeChange,
@@ -11,6 +14,9 @@ import {
 import "@xyflow/react/dist/base.css";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "@/ui/toast-store";
+import { connectNodes } from "../commands";
+import { displayLabel } from "../labels";
 import type { XY } from "../model/design";
 import { moveGroup, moveNodes } from "../model/ops";
 import { useDesign, useDesignApi, useUi } from "../store/LabStores";
@@ -34,7 +40,36 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const snap = useUi((s) => s.snap);
   const minimap = useUi((s) => s.minimap);
   const [drag, setDrag] = useState<Record<string, XY>>({});
+  // Fit only a design that opens with nodes. On an empty canvas React Flow would otherwise
+  // zoom to fit the first component added (to the max zoom), and later drops would land elsewhere.
+  const [fitOnOpen] = useState(() => design.nodes.length > 0);
   const add = useAddComponent();
+  const tAll = useTranslations();
+
+  const onConnect = useCallback(
+    (c: Connection) => {
+      if (!c.source || !c.target) return;
+      const r = connectNodes(api, metas, c.source, c.target);
+      if (!r.ok && r.reason !== "self" && r.reason !== "duplicate") {
+        const d = api.getState().design;
+        const label = (id: string) => {
+          const n = d.nodes.find((x) => x.id === id);
+          return n ? displayLabel(n, metas.get(n.kind) ?? null, tAll) : id;
+        };
+        toast(tAll(`connect.refused.${r.reason}`, { source: label(c.source), target: label(c.target) }), "warn");
+      }
+    },
+    [api, metas, tAll],
+  );
+  const isValidConnection = useCallback(
+    (c: Connection | FlowEdge) => {
+      if (c.source === c.target) return false;
+      const target = api.getState().design.nodes.find((n) => n.id === c.target);
+      const meta = target ? metas.get(target.kind) : undefined;
+      return !meta || meta.accepts.length > 0;
+    },
+    [api, metas],
+  );
 
   const ctx: AdapterContext = {
     metas,
@@ -121,6 +156,9 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        connectionLineType={ConnectionLineType.SmoothStep}
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes(DRAG_MIME)) {
             e.preventDefault();
@@ -138,7 +176,8 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         deleteKeyCode={null}
         selectionKeyCode="Shift"
         multiSelectionKeyCode={["Meta", "Control", "Shift"]}
-        fitView
+        fitView={fitOnOpen}
+        fitViewOptions={{ maxZoom: 1 }}
         minZoom={0.25}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}

@@ -290,5 +290,16 @@
     "add": "Add {name}",
     "notAllowed": "This challenge does not allow this component.",
     "noMatch": "No component matches “{query}”."
+  },
+  "connect": {
+    "title": "Connect {source} to…",
+    "description": "Pick where requests from {source} should go. Use the arrow keys, then Enter.",
+    "none": "There is nothing else to connect to yet.",
+    "refused": {
+      "not-accepted": "{target} does not take incoming connections.",
+      "duplicate": "These two are already connected.",
+      "self": "A component cannot connect to itself.",
+      "unknown-node": "That component no longer exists."
+    }
   }
 }

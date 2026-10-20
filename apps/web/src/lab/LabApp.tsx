@@ -4,10 +4,12 @@ import { useTranslations } from "next-intl";
 import { useEngineStart, useEngineStore } from "@/engine/EngineProvider";
 import { EngineStatus } from "@/engine/EngineStatus";
 import { Canvas } from "./canvas/Canvas";
+import { ConnectDialog } from "./canvas/ConnectDialog";
 import { useAddComponent } from "./canvas/use-add-component";
 import type { Design } from "./model/design";
 import { Palette } from "./palette/Palette";
 import { LabStoresProvider, useDesign } from "./store/LabStores";
+import { useMetas } from "./use-metas";
 
 export function LabApp({ initial }: { initial?: Design }) {
   useEngineStart();
@@ -27,6 +29,7 @@ export function LabApp({ initial }: { initial?: Design }) {
           <aside aria-label={t("inspector")} className="border-l border-border bg-bg" data-tour="inspector" />
           <div className="col-span-2 border-t border-border bg-bg" data-tour="panel" />
         </div>
+        <ConnectPane />
       </ReactFlowProvider>
     </LabStoresProvider>
   );
@@ -40,4 +43,8 @@ function PalettePane() {
   const allowedKinds = useDesign((s) => s.design.challenge?.limits.allowedKinds ?? null);
   const add = useAddComponent();
   return <Palette metas={metas} onAdd={(k) => add(k)} allowedKinds={allowedKinds} />;
+}
+
+function ConnectPane() {
+  return <ConnectDialog metas={useMetas()} />;
 }

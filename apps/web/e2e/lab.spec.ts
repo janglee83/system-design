@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addAt, connectByDrag } from "./helpers";
 
 test("the Lab shows an empty canvas with the edge legend", async ({ page }) => {
   await page.goto("/en/lab");
@@ -28,4 +29,23 @@ test("searching the palette ignores accents", async ({ page }) => {
   await page.goto("/vi/lab");
   await page.getByRole("searchbox", { name: "Tìm thành phần" }).fill("can bang");
   await expect(page.getByRole("button", { name: /^Thêm / })).toHaveCount(1);
+});
+
+test("dragging from a port to a port creates a typed edge", async ({ page }) => {
+  await page.goto("/en/lab");
+  await addAt(page, "Users", 120, 200);
+  await addAt(page, "Web server", 420, 200);
+  await addAt(page, "PostgreSQL", 720, 200);
+  await connectByDrag(page, "client-1", "web-server-1");
+  await connectByDrag(page, "web-server-1", "postgres-1");
+  await expect(page.getByTestId("edge-e1")).toHaveAttribute("data-kind", "http");
+  await expect(page.getByTestId("edge-e2")).toHaveAttribute("data-kind", "db");
+});
+
+test("connecting into Users is refused with a message", async ({ page }) => {
+  await page.goto("/en/lab");
+  await addAt(page, "Users", 120, 200);
+  await addAt(page, "Web server", 420, 200);
+  await connectByDrag(page, "web-server-1", "client-1");
+  await expect(page.getByTestId("edge-e1")).toHaveCount(0);
 });

@@ -290,5 +290,16 @@
     "add": "Thêm {name}",
     "notAllowed": "Thử thách này không cho dùng thành phần này.",
     "noMatch": "Không có thành phần nào khớp “{query}”."
+  },
+  "connect": {
+    "title": "Nối {source} tới…",
+    "description": "Chọn nơi nhận yêu cầu từ {source}. Dùng phím mũi tên rồi Enter.",
+    "none": "Chưa có thành phần nào khác để nối.",
+    "refused": {
+      "not-accepted": "{target} không nhận kết nối đi vào.",
+      "duplicate": "Hai thành phần này đã được nối rồi.",
+      "self": "Một thành phần không thể tự nối với chính nó.",
+      "unknown-node": "Thành phần đó không còn nữa."
+    }
   }
 }
