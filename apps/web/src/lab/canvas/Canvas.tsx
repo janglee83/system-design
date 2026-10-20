@@ -211,6 +211,8 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         snapGrid={[16, 16]}
         deleteKeyCode={null}
         selectionKeyCode="Shift"
+        // Space is play/pause (shortcuts.ts); the background still pans by dragging.
+        panActivationKeyCode={null}
         multiSelectionKeyCode={["Meta", "Control", "Shift"]}
         fitView={fitOnOpen}
         fitViewOptions={{ maxZoom: 1 }}
