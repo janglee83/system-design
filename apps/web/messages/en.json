@@ -41,7 +41,8 @@
   "about": {
     "title": "About System Design Lab",
     "body": "A practice bench for system design: build a design, run it on a simulator in your browser, and see what holds and what breaks. Everything runs on your machine.",
-    "appVersion": "App version {version}"
+    "appVersion": "App version {version}",
+    "engineVersion": "Simulator engine {version}"
   },
   "shell": {
     "desktopNotice": "This lab is built for screens at least 1280 pixels wide. It still works here, but some panels will be cramped.",
@@ -58,5 +59,10 @@
   "leaderboard": {
     "title": "Leaderboard",
     "placeholder": "Rankings of the cheapest passing designs will appear here once accounts exist."
+  },
+  "engine": {
+    "loading": "Starting the simulator…",
+    "ready": "Simulator {version}",
+    "failed": "The simulator could not start. Check your connection, then try again."
   }
 }

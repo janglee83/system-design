@@ -1,0 +1,58 @@
+import type { Node, SimInput } from "@sd/sim";
+import { sim } from "@sd/sim/node";
+import type { WorkerLike } from "./client";
+import type { Envelope, Reply } from "./protocol";
+import { createHandler } from "./worker-core";
+
+const node = (id: string, kind: string, replicas = 1, config: Node["config"] = {}): Node => ({
+  id,
+  kind,
+  label: "",
+  replicas,
+  config,
+});
+
+/** users -> lb -> web -> pg, all valid. */
+export function fourTier(baseRps = 2000): SimInput {
+  return {
+    graph: {
+      nodes: [
+        node("users", "client"),
+        node("lb", "lb", 2),
+        node("web", "web-server", 3, { cpu: 2 }),
+        node("pg", "postgres", 1, { readReplicas: 1 }),
+      ],
+      edges: [
+        { id: "e1", from: "users", to: "lb", kind: "http" },
+        { id: "e2", from: "lb", to: "web", kind: "http" },
+        { id: "e3", from: "web", to: "pg", kind: "db" },
+      ],
+    },
+    workload: { profile: "mixed", baseRps, writeRatio: 0.2, clients: 1000, clientTimeoutMs: 1000, surge: null, params: {} },
+    faults: [],
+    durationMs: 10_000,
+    seed: 1,
+  };
+}
+
+/** An in-process stand-in for the engine worker. `answer` overrides the real handler. */
+export class FakeWorker implements WorkerLike {
+  onmessage: ((e: MessageEvent<Reply>) => void) | null = null;
+  onerror: ((e: ErrorEvent) => void) | null = null;
+  terminated = false;
+  private handle = createHandler(sim, () => 0);
+  constructor(private readonly answer?: (msg: Envelope) => Reply) {}
+  postMessage(msg: Envelope) {
+    queueMicrotask(() => {
+      if (this.terminated) return;
+      const reply = this.answer ? this.answer(msg) : this.handle(msg).reply;
+      this.onmessage?.({ data: reply } as MessageEvent<Reply>);
+    });
+  }
+  terminate() {
+    this.terminated = true;
+  }
+  crash(message: string) {
+    this.onerror?.({ message, preventDefault() {} } as ErrorEvent);
+  }
+}

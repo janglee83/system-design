@@ -41,7 +41,8 @@
   "about": {
     "title": "Về System Design Lab",
     "body": "Bàn thực hành thiết kế hệ thống: dựng một thiết kế, chạy nó trên bộ mô phỏng ngay trong trình duyệt, và xem phần nào trụ vững, phần nào gãy. Mọi thứ chạy trên máy của bạn.",
-    "appVersion": "Phiên bản ứng dụng {version}"
+    "appVersion": "Phiên bản ứng dụng {version}",
+    "engineVersion": "Lõi mô phỏng {version}"
   },
   "shell": {
     "desktopNotice": "Lab được thiết kế cho màn hình rộng từ 1280 điểm ảnh. Bạn vẫn dùng được ở đây, nhưng vài khung sẽ hơi chật.",
@@ -58,5 +59,10 @@
   "leaderboard": {
     "title": "Bảng xếp hạng",
     "placeholder": "Xếp hạng các thiết kế đạt yêu cầu với chi phí thấp nhất sẽ hiện ở đây khi có tài khoản."
+  },
+  "engine": {
+    "loading": "Đang khởi động bộ mô phỏng…",
+    "ready": "Bộ mô phỏng {version}",
+    "failed": "Không khởi động được bộ mô phỏng. Hãy kiểm tra kết nối rồi thử lại."
   }
 }
