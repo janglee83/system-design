@@ -61,3 +61,19 @@ test("problems update live and nodes show their monthly cost", async ({ page }) 
   await expect(page.getByTestId("node-web-server-1")).toContainText(/\$\d+ \/mo/);
   await page.getByTestId("problems").click();
 });
+
+test("the inspector edits a node and its cost follows", async ({ page }) => {
+  await openLab(page);
+  await addAt(page, "Users", 120, 200);
+  await addAt(page, "Web server", 420, 200);
+  await connectByDrag(page, "client-1", "web-server-1");
+  await page.getByTestId("node-web-server-1").click();
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  const before = await page.getByTestId("node-web-server-1").innerText();
+  await inspector.getByRole("spinbutton", { name: "vCPUs" }).fill("4");
+  await inspector.getByRole("spinbutton", { name: "vCPUs" }).press("Enter");
+  await expect(page.getByTestId("node-web-server-1")).not.toHaveText(before);
+  await inspector.getByRole("spinbutton", { name: "Replicas" }).fill("2");
+  await inspector.getByRole("spinbutton", { name: "Replicas" }).press("Enter");
+  await expect(page.getByTestId("node-web-server-1")).toContainText("× 2");
+});

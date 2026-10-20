@@ -312,5 +312,24 @@
     "field": {
       "replicas": "Replicas"
     }
+  },
+  "inspector": {
+    "design": "Design",
+    "name": "Name",
+    "untitled": "Untitled design",
+    "label": "Label",
+    "replicas": "Replicas",
+    "settings": "Settings",
+    "cost": "Estimated monthly cost",
+    "costValue": "${cost}",
+    "advanced": "Advanced",
+    "advancedHint": "Override this one component; leave empty to use the world parameters.",
+    "lockedNotice": "The challenge locks this component. You can move it, but not change it.",
+    "edge": "Connection",
+    "edgeKind": "Kind",
+    "edgeKindNotAccepted": "{kind} (not accepted by {target})",
+    "multi": "{count} items selected",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}"
   }
 }

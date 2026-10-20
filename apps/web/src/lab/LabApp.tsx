@@ -7,6 +7,7 @@ import { Canvas } from "./canvas/Canvas";
 import { ConnectDialog } from "./canvas/ConnectDialog";
 import { useAddComponent } from "./canvas/use-add-component";
 import type { Design } from "./model/design";
+import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
 import { Problems } from "./Problems";
 import { LabStoresProvider, useDesign } from "./store/LabStores";
@@ -31,7 +32,9 @@ export function LabApp({ initial }: { initial?: Design }) {
             </div>
             <div className="absolute right-3 bottom-3"><EngineStatus /></div>
           </section>
-          <aside aria-label={t("inspector")} className="border-l border-border bg-bg" data-tour="inspector" />
+          <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
+            <Inspector />
+          </aside>
           <div className="col-span-2 border-t border-border bg-bg" data-tour="panel" />
         </div>
         <ConnectPane />

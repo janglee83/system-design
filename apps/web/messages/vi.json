@@ -312,5 +312,24 @@
     "field": {
       "replicas": "Số bản sao"
     }
+  },
+  "inspector": {
+    "design": "Thiết kế",
+    "name": "Tên",
+    "untitled": "Thiết kế chưa đặt tên",
+    "label": "Nhãn",
+    "replicas": "Số bản sao",
+    "settings": "Cấu hình",
+    "cost": "Chi phí ước tính mỗi tháng",
+    "costValue": "{cost} $",
+    "advanced": "Nâng cao",
+    "advancedHint": "Ghi đè riêng cho thành phần này; để trống thì dùng tham số thế giới.",
+    "lockedNotice": "Thử thách đã khóa thành phần này. Bạn có thể di chuyển nhưng không sửa được.",
+    "edge": "Kết nối",
+    "edgeKind": "Kiểu",
+    "edgeKindNotAccepted": "{kind} ({target} không nhận)",
+    "multi": "Đã chọn {count} mục",
+    "decrease": "Giảm {label}",
+    "increase": "Tăng {label}"
   }
 }
