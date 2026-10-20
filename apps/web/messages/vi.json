@@ -295,7 +295,8 @@
     "search": "Tìm thành phần",
     "add": "Thêm {name}",
     "notAllowed": "Thử thách này không cho dùng thành phần này.",
-    "noMatch": "Không có thành phần nào khớp “{query}”."
+    "noMatch": "Không có thành phần nào khớp “{query}”.",
+    "added": "Đã thêm {name}"
   },
   "connect": {
     "title": "Nối {source} tới…",

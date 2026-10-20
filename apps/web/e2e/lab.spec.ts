@@ -90,3 +90,15 @@ test("the engine chip does not cover the minimap", async ({ page }) => {
   const overlap = chip.x < map.x + map.width && map.x < chip.x + chip.width && chip.y < map.y + map.height && map.y < chip.y + chip.height;
   expect(overlap).toBe(false);
 });
+
+test("clicking Add twice places the second node beside the first and announces each add", async ({ page }) => {
+  await openLab(page);
+  await page.getByRole("button", { name: "Add Web server" }).click();
+  await expect(page.getByTestId("announcer")).toHaveText("Added Web server 1");
+  await page.getByRole("button", { name: "Add Web server" }).click();
+  await expect(page.getByTestId("announcer")).toHaveText("Added Web server 2");
+  const a = (await page.getByTestId("node-web-server-1").boundingBox())!;
+  const b = (await page.getByTestId("node-web-server-2").boundingBox())!;
+  const overlap = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  expect(overlap).toBe(false);
+});

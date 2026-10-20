@@ -35,6 +35,17 @@ export function addNode(d: Design, meta: ComponentMeta, at: XY): { design: Desig
   return { design: { ...d, nodes: [...d.nodes, node] }, id };
 }
 
+const PLACE_STEP = Math.round((NODE_SIZE.width + 2 * GRID) / GRID) * GRID;
+
+/** The first grid spot at or to the right of `at` where a new card covers no other card. */
+export function freeSpot(d: Design, at: XY): XY {
+  const p = { x: snap(at.x), y: snap(at.y) };
+  const covers = (q: XY) =>
+    d.nodes.some((n) => Math.abs(n.position.x - q.x) < NODE_SIZE.width && Math.abs(n.position.y - q.y) < NODE_SIZE.height);
+  for (let i = 0; i < 100 && covers(p); i++) p.x += PLACE_STEP;
+  return p;
+}
+
 export function moveNodes(d: Design, moves: Readonly<Record<string, XY>>): Design {
   let changed = false;
   const nodes = d.nodes.map((n) => {

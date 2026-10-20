@@ -14,6 +14,7 @@ import {
   setCalibration,
   setConfig,
   setWorkload,
+  freeSpot,
   ungroup,
   updateNode,
 } from "./ops";
@@ -131,5 +132,15 @@ describe("design ops", () => {
     d = setWorkload(d, { trafficEndMs: undefined });
     expect("trafficEndMs" in d.workload).toBe(false);
     expect(setWorkload(d, { trafficEndMs: undefined })).toBe(d);
+  });
+
+  it("freeSpot steps a new node right until it covers no other card", () => {
+    let d = emptyDesign();
+    expect(freeSpot(d, { x: 100, y: 100 })).toEqual({ x: 96, y: 96 });
+    d = addNode(d, meta("web-server"), { x: 96, y: 96 }).design;
+    expect(freeSpot(d, { x: 100, y: 100 })).toEqual({ x: 320, y: 96 }); // one card width + 32 px, snapped
+    d = addNode(d, meta("web-server"), { x: 320, y: 96 }).design;
+    expect(freeSpot(d, { x: 96, y: 96 })).toEqual({ x: 544, y: 96 });
+    expect(freeSpot(d, { x: 1200, y: 600 })).toEqual({ x: 1200, y: 608 }); // already free (600 snaps to 608)
   });
 });

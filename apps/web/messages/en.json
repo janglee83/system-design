@@ -295,7 +295,8 @@
     "search": "Search components",
     "add": "Add {name}",
     "notAllowed": "This challenge does not allow this component.",
-    "noMatch": "No component matches “{query}”."
+    "noMatch": "No component matches “{query}”.",
+    "added": "Added {name}"
   },
   "connect": {
     "title": "Connect {source} to…",
