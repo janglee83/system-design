@@ -12,6 +12,15 @@ export interface Selection {
 }
 const NONE: Selection = { nodes: [], edges: [], groups: [] };
 
+/** Repeated small edits with the same key within this window are one history step (arrow-key nudges). */
+export const COALESCE_MS = 500;
+
+export interface ApplyOptions {
+  coalesce?: string;
+  /** Clock for tests; defaults to Date.now(). */
+  now?: number;
+}
+
 export interface DesignState {
   design: Design;
   past: Design[];
@@ -22,7 +31,7 @@ export interface DesignState {
   pastes: number;
   /** Incremented by replace() (open, import, start from a challenge): the canvas fits the view. */
   loads: number;
-  apply(fn: (d: Design) => Design): void;
+  apply(fn: (d: Design) => Design, opts?: ApplyOptions): void;
   replace(d: Design): void;
   undo(): void;
   redo(): void;
@@ -48,6 +57,7 @@ function prune(sel: Selection, d: Design): Selection {
 }
 
 export function createDesignStore(initial: Design = emptyDesign()) {
+  let last: { key: string; at: number } | null = null;
   return createStore<DesignState>()((set, get) => ({
     design: initial,
     past: [],
@@ -56,22 +66,35 @@ export function createDesignStore(initial: Design = emptyDesign()) {
     clipboard: null,
     pastes: 0,
     loads: 0,
-    apply(fn) {
+    apply(fn, opts) {
       const { design, past, selection } = get();
       const next = fn(design);
       if (next === design) return;
-      set({ design: next, past: [...past, design].slice(-HISTORY_LIMIT), future: [], selection: prune(selection, next) });
+      const now = opts?.now ?? Date.now();
+      const key = opts?.coalesce;
+      const merge = key !== undefined && last !== null && last.key === key && now - last.at < COALESCE_MS && past.length > 0;
+      last = key === undefined ? null : { key, at: now };
+      set({
+        design: next,
+        // A merged step keeps the snapshot from before the first nudge.
+        past: merge ? past : [...past, design].slice(-HISTORY_LIMIT),
+        future: [],
+        selection: prune(selection, next),
+      });
     },
     replace(d) {
+      last = null;
       set({ design: d, past: [], future: [], selection: NONE, loads: get().loads + 1 });
     },
     undo() {
+      last = null;
       const { design, past, future, selection } = get();
       const prev = past.at(-1);
       if (!prev) return;
       set({ design: prev, past: past.slice(0, -1), future: [design, ...future], selection: prune(selection, prev) });
     },
     redo() {
+      last = null;
       const { design, past, future, selection } = get();
       const next = future[0];
       if (!next) return;

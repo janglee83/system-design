@@ -162,7 +162,8 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
       }
       if (Object.keys(dragging).length) setDrag((prev) => ({ ...prev, ...dragging }));
       if (Object.keys(commit).length || groupMoves.length) {
-        api.getState().apply((x) => groupMoves.reduce((acc, [id, p]) => moveGroup(acc, id, p), moveNodes(x, commit)));
+        // Arrow-key nudges arrive here one by one; quick repeats are one undo step.
+        api.getState().apply((x) => groupMoves.reduce((acc, [id, p]) => moveGroup(acc, id, p), moveNodes(x, commit)), { coalesce: "nudge" });
         setDrag({});
       }
       if (selNodes || selGroups) {

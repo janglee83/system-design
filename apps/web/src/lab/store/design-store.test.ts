@@ -61,4 +61,23 @@ describe("design store", () => {
     s.getState().replace(emptyDesign("x"));
     expect(s.getState().loads).toBe(1);
   });
+
+  it("coalesces quick repeated nudges into one step, but not slow ones or other edits", () => {
+    const s = createDesignStore();
+    s.getState().apply((d) => addNode(d, meta("client"), { x: 0, y: 0 }).design);
+    const start = s.getState().design;
+    const nudge = (x: number, now: number) => s.getState().apply((d) => moveNodes(d, { "client-1": { x, y: 0 } }), { coalesce: "nudge", now });
+    nudge(16, 1000);
+    nudge(32, 1200);
+    nudge(48, 1600); // each within 500 ms of the previous
+    expect(s.getState().past).toHaveLength(2);
+    s.getState().undo();
+    expect(s.getState().design).toBe(start);
+    s.getState().redo();
+    nudge(64, 2500); // 900 ms later: a new step
+    expect(s.getState().past).toHaveLength(3);
+    s.getState().apply((d) => ({ ...d, seed: 5 }));
+    nudge(80, 2600); // an edit in between breaks the run
+    expect(s.getState().past).toHaveLength(5);
+  });
 });
