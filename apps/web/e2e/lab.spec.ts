@@ -59,11 +59,60 @@ test("problems update live and nodes show their monthly cost", async ({ page }) 
   await expect(page.getByTestId("problems")).toHaveText("1 problem"); // no client
   await addAt(page, "Users", 120, 200);
   await addAt(page, "Web server", 420, 200);
-  await expect(page.getByTestId("problems")).toContainText("problem"); // client.no-path + unreachable
+  await expect(page.getByTestId("problems")).toHaveText("2 problems"); // client.no-path + unreachable
+  await page.getByTestId("problems").click();
+  const list = page.getByRole("dialog", { name: "Problems" });
+  await expect(list.getByRole("button")).toHaveText(["Users 1 has no path to a server.", "Web server 1 gets no requests: nothing connects to it."]);
+  await list.getByRole("button", { name: /Web server 1 gets no requests/ }).click();
+  await expect(list).toBeHidden();
+  await expect(page.getByRole("complementary", { name: "Inspector" }).getByRole("heading", { name: "Web server 1" })).toBeVisible();
   await connectByDrag(page, "client-1", "web-server-1");
   await expect(page.getByTestId("problems")).toHaveText("No problems");
   await expect(page.getByTestId("node-web-server-1")).toContainText(/\$\d+ \/mo/);
-  await page.getByTestId("problems").click();
+});
+
+test("a dropped component lands where it was dropped", async ({ page }) => {
+  await openLab(page);
+  const canvas = (await page.getByTestId("lab-canvas").boundingBox())!;
+  await addAt(page, "PostgreSQL", 500, 300);
+  const pg = (await page.getByTestId("node-postgres-1").boundingBox())!;
+  // Centred on the drop point, give or take the 16 px grid.
+  expect(Math.abs(pg.x + pg.width / 2 - (canvas.x + 500))).toBeLessThanOrEqual(16);
+  expect(Math.abs(pg.y + pg.height / 2 - (canvas.y + 300))).toBeLessThanOrEqual(16);
+});
+
+test("dragging a node or a group frame is one undo step that restores the position", async ({ page }) => {
+  await openLab(page);
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await addAt(page, "Web server", 300, 200);
+  await addAt(page, "PostgreSQL", 600, 200);
+  const node = page.getByTestId("node-web-server-1");
+  const before = (await node.boundingBox())!;
+  await page.mouse.move(before.x + 40, before.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(before.x + 140, before.y + 120, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.round((await node.boundingBox())!.x - before.x)).toBeGreaterThan(80);
+  await page.keyboard.press(`${mod}+z`);
+  await expect.poll(async () => (await node.boundingBox())!).toEqual(before);
+  await page.keyboard.press(`${mod}+z`); // the next undo removes PostgreSQL: the drag was one step
+  await expect(page.getByTestId("node-postgres-1")).toHaveCount(0);
+  await page.keyboard.press(`${mod}+Shift+z`);
+
+  await page.getByTestId("node-web-server-1").click();
+  await page.getByTestId("node-postgres-1").click({ modifiers: ["Shift"] });
+  await page.keyboard.press(`${mod}+g`);
+  const frame = page.getByTestId("group-g1");
+  const f = (await frame.boundingBox())!;
+  const pgBefore = (await page.getByTestId("node-postgres-1").boundingBox())!;
+  await page.mouse.move(f.x + 12, f.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(f.x + 112, f.y + 88, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.round((await page.getByTestId("node-postgres-1").boundingBox())!.x - pgBefore.x)).toBeGreaterThan(80);
+  await page.keyboard.press(`${mod}+z`);
+  await expect.poll(async () => (await page.getByTestId("node-postgres-1").boundingBox())!).toEqual(pgBefore);
+  await expect(frame).toBeVisible(); // undoing the move kept the group
 });
 
 test("the inspector edits a node and its cost follows", async ({ page }) => {

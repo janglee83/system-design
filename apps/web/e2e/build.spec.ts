@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { addAt, connectByDrag, openLab } from "./helpers";
 
+// The Linux container runs Chromium on Linux, so Mod is Control there.
+const mod = process.platform === "darwin" ? "Meta" : "Control";
+
 test("build client → lb → 2× web → postgres with the mouse", async ({ page }) => {
   await openLab(page);
   await addAt(page, "Users", 100, 220);
@@ -27,7 +30,6 @@ test("undo, redo, delete, duplicate", async ({ page }) => {
   await addAt(page, "Users", 100, 220);
   await addAt(page, "Web server", 400, 220);
   await connectByDrag(page, "client-1", "web-server-1");
-  const mod = process.platform === "darwin" ? "Meta" : "Control";
 
   await page.keyboard.press("Escape"); // clear the selection; shortcuts listen on the window
   await page.keyboard.press(`${mod}+z`);
@@ -52,7 +54,7 @@ test("group nodes, move the frame, ungroup, and tidy the layout", async ({ page 
 
   await page.getByTestId("node-web-server-1").click();
   await page.getByTestId("node-postgres-1").click({ modifiers: ["Shift"] });
-  await page.keyboard.press("Control+g");
+  await page.keyboard.press(`${mod}+g`);
   const frame = page.getByTestId("group-g1");
   await expect(frame).toBeVisible();
 
@@ -65,7 +67,7 @@ test("group nodes, move the frame, ungroup, and tidy the layout", async ({ page 
   const after = (await page.getByTestId("node-postgres-1").boundingBox())!;
   expect(Math.round(after.x - before.x)).toBeGreaterThan(40);
 
-  await page.keyboard.press("Control+Shift+g");
+  await page.keyboard.press(`${mod}+Shift+g`);
   await expect(frame).toHaveCount(0);
 
   await page.keyboard.press("Shift+L");
