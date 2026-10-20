@@ -1,18 +1,25 @@
 "use client";
 import { createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
+import { useEngineStore } from "@/engine/EngineProvider";
 import type { Design } from "../model/design";
+import { createCheckStore, hasBlocking, type CheckState } from "./check-store";
 import { createDesignStore, type DesignState, type DesignStore } from "./design-store";
 import { createUiStore, type UiState } from "./ui-store";
 
 interface Stores {
   design: DesignStore;
   ui: ReturnType<typeof createUiStore>;
+  check: ReturnType<typeof createCheckStore>;
 }
 const Ctx = createContext<Stores | null>(null);
 
 export function LabStoresProvider({ initial, children }: { initial?: Design; children: React.ReactNode }) {
-  const [stores] = useState<Stores>(() => ({ design: createDesignStore(initial), ui: createUiStore() }));
+  const [stores] = useState<Stores>(() => ({
+    design: createDesignStore(initial),
+    ui: createUiStore(),
+    check: createCheckStore(),
+  }));
   return <Ctx.Provider value={stores}>{children}</Ctx.Provider>;
 }
 
@@ -26,3 +33,13 @@ export const useDesign = <T,>(sel: (s: DesignState) => T): T => useStore(useStor
 export const useDesignApi = (): DesignStore => useStores().design;
 export const useUi = <T,>(sel: (s: UiState) => T): T => useStore(useStores().ui, sel);
 export const useUiApi = () => useStores().ui;
+export const useCheck = <T,>(sel: (s: CheckState) => T): T => useStore(useStores().check, sel);
+export const useCheckApi = () => useStores().check;
+
+/** Run is possible once the engine is ready and the latest check found nothing blocking (R11). */
+export function useCanRun(): boolean {
+  const ready = useEngineStore((s) => s.status === "ready");
+  const blocking = useCheck(hasBlocking);
+  const checked = useCheck((s) => s.status === "done");
+  return ready && checked && !blocking;
+}

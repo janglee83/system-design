@@ -19,7 +19,8 @@ import { connectNodes } from "../commands";
 import { displayLabel } from "../labels";
 import type { XY } from "../model/design";
 import { moveGroup, moveNodes } from "../model/ops";
-import { useDesign, useDesignApi, useUi } from "../store/LabStores";
+import { issueCounts } from "../store/check-store";
+import { useCheck, useDesign, useDesignApi, useUi } from "../store/LabStores";
 import { DRAG_MIME } from "../palette/Palette";
 import { useMetas } from "../use-metas";
 import { EdgeLegend } from "./EdgeLegend";
@@ -71,11 +72,16 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
     [api, metas],
   );
 
+  const costs = useCheck((s) => s.costs);
+  const issues = useCheck((s) => s.issues);
+  const runIssues = useCheck((s) => s.runIssues);
+  const counts = useMemo(() => issueCounts({ issues, runIssues }), [issues, runIssues]);
+
   const ctx: AdapterContext = {
     metas,
     selection,
-    costs: {},
-    issues: { nodes: {}, edges: {} },
+    costs,
+    issues: counts,
     drag,
     ...extra,
   };

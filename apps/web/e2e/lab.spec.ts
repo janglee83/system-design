@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addAt, connectByDrag } from "./helpers";
+import { addAt, connectByDrag, openLab } from "./helpers";
 
 test("the Lab shows an empty canvas with the edge legend", async ({ page }) => {
   await page.goto("/en/lab");
@@ -48,4 +48,16 @@ test("connecting into Users is refused with a message", async ({ page }) => {
   await addAt(page, "Web server", 420, 200);
   await connectByDrag(page, "web-server-1", "client-1");
   await expect(page.getByTestId("edge-e1")).toHaveCount(0);
+});
+
+test("problems update live and nodes show their monthly cost", async ({ page }) => {
+  await openLab(page);
+  await expect(page.getByTestId("problems")).toHaveText("1 problem"); // no client
+  await addAt(page, "Users", 120, 200);
+  await addAt(page, "Web server", 420, 200);
+  await expect(page.getByTestId("problems")).toContainText("problem"); // client.no-path + unreachable
+  await connectByDrag(page, "client-1", "web-server-1");
+  await expect(page.getByTestId("problems")).toHaveText("No problems");
+  await expect(page.getByTestId("node-web-server-1")).toContainText(/\$\d+ \/mo/);
+  await page.getByTestId("problems").click();
 });

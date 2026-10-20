@@ -301,5 +301,16 @@
       "self": "A component cannot connect to itself.",
       "unknown-node": "That component no longer exists."
     }
+  },
+  "problems": {
+    "none": "No problems",
+    "count": "{count, plural, one {# problem} other {# problems}}",
+    "title": "Problems",
+    "blocking": "Must fix before running",
+    "warning": "Worth a look",
+    "select": "Show on canvas",
+    "field": {
+      "replicas": "Replicas"
+    }
   }
 }

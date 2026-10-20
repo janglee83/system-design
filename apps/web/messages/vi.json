@@ -301,5 +301,16 @@
       "self": "Một thành phần không thể tự nối với chính nó.",
       "unknown-node": "Thành phần đó không còn nữa."
     }
+  },
+  "problems": {
+    "none": "Không có vấn đề",
+    "count": "{count, plural, other {# vấn đề}}",
+    "title": "Vấn đề",
+    "blocking": "Cần sửa trước khi chạy",
+    "warning": "Nên xem lại",
+    "select": "Xem trên khung vẽ",
+    "field": {
+      "replicas": "Số bản sao"
+    }
   }
 }

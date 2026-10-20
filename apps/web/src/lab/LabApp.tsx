@@ -8,7 +8,9 @@ import { ConnectDialog } from "./canvas/ConnectDialog";
 import { useAddComponent } from "./canvas/use-add-component";
 import type { Design } from "./model/design";
 import { Palette } from "./palette/Palette";
+import { Problems } from "./Problems";
 import { LabStoresProvider, useDesign } from "./store/LabStores";
+import { useLiveValidation } from "./use-live-validation";
 import { useMetas } from "./use-metas";
 
 export function LabApp({ initial }: { initial?: Design }) {
@@ -24,12 +26,16 @@ export function LabApp({ initial }: { initial?: Design }) {
           </aside>
           <section className="relative min-h-0" data-tour="canvas">
             <Canvas />
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+              <Problems />
+            </div>
             <div className="absolute right-3 bottom-3"><EngineStatus /></div>
           </section>
           <aside aria-label={t("inspector")} className="border-l border-border bg-bg" data-tour="inspector" />
           <div className="col-span-2 border-t border-border bg-bg" data-tour="panel" />
         </div>
         <ConnectPane />
+        <LiveValidation />
       </ReactFlowProvider>
     </LabStoresProvider>
   );
@@ -47,4 +53,10 @@ function PalettePane() {
 
 function ConnectPane() {
   return <ConnectDialog metas={useMetas()} />;
+}
+
+/** Keeps problems and node costs in step with the design (inside the stores provider). */
+function LiveValidation() {
+  useLiveValidation();
+  return null;
 }
