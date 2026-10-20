@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build:wasm": "node scripts/build-wasm.mjs",
-    "pretest": "node scripts/build-wasm.mjs",
+    "pretest": "node scripts/build-wasm.mjs --if-stale",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
