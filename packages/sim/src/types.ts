@@ -24,3 +24,23 @@ export type { Calibration } from "./generated/Calibration";
 export type { CalibrationOverrides } from "./generated/CalibrationOverrides";
 export type { Fixture } from "./generated/Fixture";
 export type { FixtureReport } from "./generated/FixtureReport";
+
+import type { FaultKind as FaultKindT } from "./generated/FaultKind";
+
+/** What this engine build supports. Hand-written: sim-wasm serializes sim-core's struct. */
+export interface Capabilities {
+  /** Component kinds in the registry, sorted. */
+  components: string[];
+  /** Fault kinds the engine applies, in enum order. The others only emit `fault.unsupported`. */
+  faults: FaultKindT[];
+  /** Metric keys every run reports. The rest of `Metrics` stays null. */
+  metrics: string[];
+  /** `workload.params` keys the engine reads. */
+  workloadParams: string[];
+  /** `calibration` override keys. */
+  calibrationFields: string[];
+  /** Component kind -> its config keys. */
+  configKeys: Record<string, string[]>;
+  /** Config keys every node accepts as per-node overrides. */
+  nodeOverrideKeys: string[];
+}
