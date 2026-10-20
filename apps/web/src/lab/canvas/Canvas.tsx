@@ -30,6 +30,7 @@ import { GroupNode } from "./GroupNode";
 import { LabNode } from "./LabNode";
 import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
+import { flowAriaLabels } from "./aria";
 import { CanvasControls } from "./CanvasControls";
 import { formatCombo } from "../shortcuts";
 import { useIsMac } from "../use-shortcuts";
@@ -89,6 +90,22 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   );
   const isValidConnection = useCallback((c: Connection | FlowEdge) => c.source !== c.target, []);
 
+  const ariaLabelConfig = useMemo(() => flowAriaLabels(tAll), [tAll]);
+  const aria = useMemo<NonNullable<AdapterContext["aria"]>>(
+    () => ({
+      node: (n, meta) => tAll("canvasA11y.node", { label: displayLabel(n, meta, tAll), kind: meta ? tAll(meta.labelKey) : n.kind }),
+      group: (g) => tAll("canvasA11y.group", { label: g.label || tAll("group.untitled") }),
+      edge: (e) => {
+        const d = api.getState().design;
+        const name = (id: string) => {
+          const n = d.nodes.find((x) => x.id === id);
+          return n ? displayLabel(n, metas.get(n.kind) ?? null, tAll) : id;
+        };
+        return tAll("canvasA11y.edge", { kind: tAll(`edgeKind.${e.kind}`), source: name(e.from), target: name(e.to) });
+      },
+    }),
+    [tAll, api, metas],
+  );
   const costs = useCheck((s) => s.costs);
   const issues = useCheck((s) => s.issues);
   const runIssues = useCheck((s) => s.runIssues);
@@ -100,14 +117,15 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
     costs,
     issues: counts,
     nodeRole: t("nodeRole"),
+    aria,
     drag,
     ...extra,
   };
   // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
   const lastNodes = useRef<FlowNode[]>([]);
   const lastEdges = useRef<ReturnType<typeof toFlowEdges>>([]);
-  const nodes = useMemo(() => (lastNodes.current = reuseFlowNodes(toFlowNodes(design, ctx), lastNodes.current)), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas, ctx.nodeRole]); // eslint-disable-line react-hooks/exhaustive-deps
-  const edges = useMemo(() => (lastEdges.current = reuseFlowEdges(toFlowEdges(design, ctx), lastEdges.current)), [design, ctx.selection, ctx.issues, ctx.path]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nodes = useMemo(() => (lastNodes.current = reuseFlowNodes(toFlowNodes(design, ctx), lastNodes.current)), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas, ctx.nodeRole, ctx.aria]); // eslint-disable-line react-hooks/exhaustive-deps
+  const edges = useMemo(() => (lastEdges.current = reuseFlowEdges(toFlowEdges(design, ctx), lastEdges.current)), [design, ctx.selection, ctx.issues, ctx.path, ctx.aria]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -181,7 +199,7 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   );
 
   return (
-    <div data-testid="lab-canvas" aria-label={t("canvas")} className="relative h-full w-full bg-canvas">
+    <div data-testid="lab-canvas" role="region" aria-label={t("canvas")} className="relative h-full w-full bg-canvas">
       <EdgeMarkers />
       <ReactFlow
         nodes={nodes}
@@ -220,6 +238,7 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
         aria-roledescription={t("canvasRole")}
+        ariaLabelConfig={ariaLabelConfig}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--sd-grid)" />
         {minimap ? (

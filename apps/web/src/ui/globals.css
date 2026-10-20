@@ -85,9 +85,12 @@ html {
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible {
-  outline: 2px solid var(--sd-focus);
-  outline-offset: 2px;
+/* In the base layer so utilities (outline-none on an input inside a ringed control) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--sd-focus);
+    outline-offset: 2px;
+  }
 }
 
 .num {

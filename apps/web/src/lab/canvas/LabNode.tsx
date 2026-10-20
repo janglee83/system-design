@@ -55,7 +55,7 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
           <div className="truncate text-sm font-semibold">{label}</div>
           <div className="truncate text-2xs text-text-3">{meta ? t(meta.labelKey) : node.kind}</div>
         </div>
-        {locked ? <Lock size={14} className="text-text-3" aria-label={t("lab.node.locked")} /> : null}
+        {locked ? <Lock size={14} role="img" className="text-text-3" aria-label={t("lab.node.locked")} /> : null}
         {StateIcon ? <StateIcon size={14} aria-hidden className={state === "busy" ? "text-busy" : state === "overloaded" ? "text-over" : "text-down"} /> : null}
       </div>
       <div className="mx-2.5 mt-1.5 flex items-center justify-between border-t border-border pt-1">
@@ -70,6 +70,7 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
             "num absolute -top-2 -right-2 flex size-4 items-center justify-center rounded-full text-[10px] font-semibold text-on-accent",
             issues.blocking > 0 ? "bg-over" : "bg-busy",
           )}
+          role="img"
           aria-label={t("lab.node.issues", { count: issues.blocking + issues.warnings })}
         >
           {issues.blocking + issues.warnings}

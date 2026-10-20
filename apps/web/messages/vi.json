@@ -402,5 +402,27 @@
     "remove": "Xóa sự cố",
     "comingSoon": "Sắp có: bộ mô phỏng chưa mô phỏng sự cố này.",
     "noCandidate": "Chưa có sự cố được hỗ trợ nào hợp với thiết kế này."
+  },
+  "canvasA11y": {
+    "nodeDescription": "Bấm Enter hoặc phím cách để chọn thành phần. Bấm Delete để xóa, Escape để hủy.",
+    "nodeDescriptionKeyboard": "Bấm Enter hoặc phím cách để chọn thành phần, rồi dùng phím mũi tên để di chuyển. Bấm Delete để xóa, Escape để hủy.",
+    "nodeMoved": "Đã dời thành phần đang chọn {direction}. Vị trí mới: x {x}, y {y}.",
+    "direction": {
+      "up": "lên trên",
+      "down": "xuống dưới",
+      "left": "sang trái",
+      "right": "sang phải"
+    },
+    "edgeDescription": "Bấm Enter hoặc phím cách để chọn kết nối, rồi Delete để xóa hoặc Escape để hủy.",
+    "controls": "Điều khiển khung vẽ",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "fitView": "Vừa màn hình",
+    "interactive": "Khóa hoặc mở chỉnh sửa",
+    "minimap": "Bản đồ thu nhỏ",
+    "handle": "Cổng kết nối",
+    "node": "{label}, {kind}",
+    "group": "Nhóm {label}",
+    "edge": "Kết nối {kind} từ {source} tới {target}"
   }
 }

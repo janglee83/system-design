@@ -21,7 +21,9 @@ export function Inspector() {
 
   useEffect(() => {
     if (focusTick === 0) return;
-    ref.current?.querySelector<HTMLElement>("input, button, [role=combobox]")?.focus();
+    ref.current
+      ?.querySelector<HTMLElement>("input:not(:disabled), button:not(:disabled), [role=combobox]:not([data-disabled])")
+      ?.focus();
   }, [focusTick]);
 
   const { nodes, edges, groups } = selection;

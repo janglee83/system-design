@@ -69,4 +69,17 @@ describe("React Flow adapter", () => {
     const costed = reuseFlowNodes(toFlowNodes(moved, { ...ctx2, costs: { "lb-1": 10 } }), next);
     expect(costed.find((n) => n.id === "lb-1")).not.toBe(next.find((n) => n.id === "lb-1"));
   });
+
+  it("labels nodes, groups and edges for screen readers with names, not ids", () => {
+    const d = { ...design(), edges: [{ id: "e1", from: "client-1", to: "lb-1", kind: "http" as const }] };
+    const aria = {
+      node: (n: { id: string }) => `name of ${n.id}`,
+      group: (g: { id: string }) => `frame ${g.id}`,
+      edge: (e: { from: string; to: string }) => `${e.from} to ${e.to}`,
+    };
+    const nodes = toFlowNodes(d, { ...ctx, aria });
+    expect(nodes.find((n) => n.id === "lb-1")!.ariaLabel).toBe("name of lb-1");
+    expect(nodes.find((n) => n.id === "g1")!.ariaLabel).toBe("frame g1");
+    expect(toFlowEdges(d, { ...ctx, aria })[0]!.ariaLabel).toBe("client-1 to lb-1");
+  });
 });

@@ -1,6 +1,6 @@
 import type { ComponentMeta, EdgeKind } from "@sd/sim";
 import type { Edge as FlowEdge, Node as FlowNode } from "@xyflow/react";
-import { NODE_SIZE, type Design, type LabGroup, type LabNode, type XY } from "../model/design";
+import { NODE_SIZE, type Design, type LabEdge, type LabGroup, type LabNode, type XY } from "../model/design";
 import type { Selection } from "../store/design-store";
 
 export type NodeState = "normal" | "busy" | "overloaded" | "down";
@@ -37,6 +37,8 @@ export interface AdapterContext {
   allowedKinds?: readonly string[] | null;
   /** Translated aria-roledescription for node cards ("component"). */
   nodeRole?: string;
+  /** Translated accessible names, built from display labels (never raw ids). */
+  aria?: { node(n: LabNode, meta: ComponentMeta | null): string; group(g: LabGroup): string; edge(e: LabEdge): string };
 }
 
 const NO_ISSUES = { blocking: 0, warnings: 0 };
@@ -54,6 +56,7 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
     measured: { width: g.size.width, height: g.size.height },
     selected: selGroups.has(g.id),
     zIndex: -1,
+    ariaLabel: ctx.aria?.group(g),
   }));
   const nodes: FlowNode<LabNodeData>[] = d.nodes.map((n) => {
     const abs = ctx.drag[n.id] ?? n.position;
@@ -66,6 +69,7 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
       parentId: parent ? (n.groupId as string) : undefined,
       selected: sel.has(n.id),
       deletable: !locked,
+      ariaLabel: ctx.aria?.node(n, ctx.metas.get(n.kind) ?? null),
       // Node cards have a fixed size (R14); telling React Flow keeps it from hiding them to re-measure.
       measured: { width: NODE_SIZE.width, height: NODE_SIZE.height },
       domAttributes: ctx.nodeRole ? { "aria-roledescription": ctx.nodeRole } : undefined,
@@ -94,6 +98,7 @@ export function toFlowEdges(d: Design, ctx: AdapterContext): FlowEdge<LabEdgeDat
     targetHandle: "in",
     type: "lab",
     selected: sel.has(e.id),
+    ariaLabel: ctx.aria?.edge(e),
     data: { kind: e.kind, issues: ctx.issues.edges[e.id] ?? 0, onPath: ctx.path ? ctx.path.edges.has(e.id) : undefined },
   }));
 }
@@ -128,6 +133,7 @@ function sameNode(a: FlowNode, b: FlowNode): boolean {
     a.selected === b.selected &&
     a.deletable === b.deletable &&
     a.zIndex === b.zIndex &&
+    a.ariaLabel === b.ariaLabel &&
     sameXY(a.position, b.position) &&
     a.measured?.width === b.measured?.width &&
     a.measured?.height === b.measured?.height &&
@@ -160,6 +166,7 @@ export function reuseFlowEdges(next: FlowEdge<LabEdgeData>[], prev: readonly Flo
       p.target === e.target &&
       p.type === e.type &&
       p.selected === e.selected &&
+      p.ariaLabel === e.ariaLabel &&
       p.data?.kind === e.data?.kind &&
       p.data?.issues === e.data?.issues &&
       p.data?.onPath === e.data?.onPath;

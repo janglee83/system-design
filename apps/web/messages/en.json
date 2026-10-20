@@ -402,5 +402,27 @@
     "remove": "Remove fault",
     "comingSoon": "Coming soon: the simulator does not model this fault yet.",
     "noCandidate": "No supported fault matches this design yet."
+  },
+  "canvasA11y": {
+    "nodeDescription": "Press Enter or Space to select a component. Press Delete to remove it and Escape to cancel.",
+    "nodeDescriptionKeyboard": "Press Enter or Space to select a component, then move it with the arrow keys. Press Delete to remove it and Escape to cancel.",
+    "nodeMoved": "Moved the selected component {direction}. New position: x {x}, y {y}.",
+    "direction": {
+      "up": "up",
+      "down": "down",
+      "left": "left",
+      "right": "right"
+    },
+    "edgeDescription": "Press Enter or Space to select a connection, then Delete to remove it or Escape to cancel.",
+    "controls": "Canvas controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "interactive": "Lock or unlock editing",
+    "minimap": "Overview map",
+    "handle": "Connection port",
+    "node": "{label}, {kind}",
+    "group": "Group {label}",
+    "edge": "{kind} connection from {source} to {target}"
   }
 }

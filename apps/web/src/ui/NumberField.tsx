@@ -51,7 +51,14 @@ export function NumberField({ label, value, onChange, min, max, step, integer, u
   const bump = (dir: 1 | -1) => commit(String((value ?? min ?? 0) + dir * s));
 
   return (
-    <div className={cn("flex h-8 items-center rounded-sm border border-border-strong bg-surface", disabled && "opacity-50")}>
+    <div
+      className={cn(
+        "flex h-8 items-center rounded-sm border border-border-strong bg-surface",
+        // The ring sits on the whole stepper; the input itself draws none (globals.css :focus-visible is in @layer base).
+        "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus",
+        disabled && "opacity-50",
+      )}
+    >
       <button type="button" aria-label={t("decrease", { label })} disabled={disabled} onClick={() => bump(-1)} className="flex h-full w-7 items-center justify-center text-text-2 hover:text-text">
         <Minus size={12} aria-hidden />
       </button>
@@ -75,7 +82,7 @@ export function NumberField({ label, value, onChange, min, max, step, integer, u
             bump(e.key === "ArrowUp" ? 1 : -1);
           }
         }}
-        className="num h-full w-full min-w-0 bg-transparent text-center text-sm outline-none"
+        className="num h-full w-full min-w-0 bg-transparent text-center text-sm outline-none focus-visible:outline-none"
       />
       {unit ? <span className="pr-1 text-2xs text-text-3">{unit}</span> : null}
       <button type="button" aria-label={t("increase", { label })} disabled={disabled} onClick={() => bump(1)} className="flex h-full w-7 items-center justify-center text-text-2 hover:text-text">
