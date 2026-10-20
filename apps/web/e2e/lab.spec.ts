@@ -28,7 +28,8 @@ test("components are added by click (centre) and by drag (drop point)", async ({
 test("searching the palette ignores accents", async ({ page }) => {
   await page.goto("/vi/lab");
   await page.getByRole("searchbox", { name: "Tìm thành phần" }).fill("can bang");
-  await expect(page.getByRole("button", { name: /^Thêm / })).toHaveCount(1);
+  const palette = page.getByRole("complementary", { name: "Thành phần" });
+  await expect(palette.getByRole("button", { name: /^Thêm / })).toHaveCount(1);
 });
 
 test("dragging from a port to a port creates a typed edge", async ({ page }) => {
