@@ -49,25 +49,24 @@ export function duplicateSelection(api: DesignStore): void {
   if (ids.length) api.getState().select({ nodes: ids, edges: [], groups: [] });
 }
 
-/** How many times the current clipboard was pasted; each paste lands 32 px further away. */
-let pasteCount = 0;
-
+/**
+ * Copies the selected nodes (and the edges between them) to this Lab's clipboard. The system
+ * clipboard is left alone: nothing reads a design back from it.
+ */
 export function copySelection(api: DesignStore): void {
   const { design, selection } = api.getState();
   if (selection.nodes.length === 0) return;
-  const clip = copyItems(design, selection.nodes);
-  api.getState().setClipboard(clip);
-  pasteCount = 0;
-  void navigator.clipboard?.writeText(JSON.stringify({ sdLabClipboard: 1, ...clip })).catch(() => {});
+  api.getState().setClipboard(copyItems(design, selection.nodes));
 }
 
+/** Pastes the clipboard; each paste of the same copy lands 32 px further away. */
 export function pasteClipboard(api: DesignStore): void {
   const clip = api.getState().clipboard;
   if (!clip) return;
-  pasteCount += 1;
+  const n = api.getState().countPaste();
   let ids: string[] = [];
   api.getState().apply((d) => {
-    const r = pasteItems(d, clip, { x: 32 * pasteCount, y: 32 * pasteCount });
+    const r = pasteItems(d, clip, { x: 32 * n, y: 32 * n });
     ids = r.ids;
     return r.design;
   });

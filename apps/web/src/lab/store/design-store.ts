@@ -18,6 +18,8 @@ export interface DesignState {
   future: Design[];
   selection: Selection;
   clipboard: Clipboard | null;
+  /** Pastes of the current clipboard; each lands 32 px further away. */
+  pastes: number;
   /** Incremented by replace() (open, import, start from a challenge): the canvas fits the view. */
   loads: number;
   apply(fn: (d: Design) => Design): void;
@@ -27,6 +29,8 @@ export interface DesignState {
   select(sel: Partial<Selection>): void;
   clearSelection(): void;
   setClipboard(clip: Clipboard | null): void;
+  /** Counts a paste and returns how many there have been for this clipboard. */
+  countPaste(): number;
 }
 
 function prune(sel: Selection, d: Design): Selection {
@@ -50,6 +54,7 @@ export function createDesignStore(initial: Design = emptyDesign()) {
     future: [],
     selection: NONE,
     clipboard: null,
+    pastes: 0,
     loads: 0,
     apply(fn) {
       const { design, past, selection } = get();
@@ -79,7 +84,12 @@ export function createDesignStore(initial: Design = emptyDesign()) {
       set({ selection: NONE });
     },
     setClipboard(clip) {
-      set({ clipboard: clip });
+      set({ clipboard: clip, pastes: 0 });
+    },
+    countPaste() {
+      const pastes = get().pastes + 1;
+      set({ pastes });
+      return pastes;
     },
   }));
 }

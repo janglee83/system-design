@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { emptyDesign } from "./model/design";
 import { addNode, connect, groupNodes } from "./model/ops";
 import type { Design } from "./model/design";
@@ -134,5 +134,21 @@ describe("layout and group commands", () => {
     expect(await Promise.all([autoLayout(api), autoLayout(api)])).toEqual([true, false]);
     expect(api.getState().past).toHaveLength(1);
     expect(await autoLayout(api)).toBe(true); // the guard is released afterwards
+  });
+
+  it("counts pastes per design store, and copying leaves the system clipboard alone", () => {
+    const write = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("navigator", { clipboard: { writeText: write } });
+    const a = createDesignStore(threeNodes());
+    const b = createDesignStore(threeNodes());
+    a.getState().select({ nodes: ["lb-1"] });
+    b.getState().select({ nodes: ["lb-1"] });
+    copySelection(a);
+    pasteClipboard(a);
+    copySelection(b); // another Lab tab's copy must not reset A's paste offset
+    pasteClipboard(a);
+    expect(pos(a, "lb-3")).toEqual({ x: 240 + 64, y: 64 });
+    expect(write).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
