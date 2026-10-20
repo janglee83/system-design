@@ -11,6 +11,8 @@ services:
       - node-modules-root:/work/node_modules
       - node-modules-sim:/work/packages/sim/node_modules
       - node-modules-content:/work/packages/content/node_modules
+      - node-modules-web:/work/apps/web/node_modules
+      - web-next:/work/apps/web/.next
       - pnpm-store:/pnpm-store
 
 volumes:
@@ -20,4 +22,6 @@ volumes:
   node-modules-root:
   node-modules-sim:
   node-modules-content:
+  node-modules-web:
+  web-next:
   pnpm-store:

@@ -6,7 +6,7 @@ import { repoRoot } from "./helpers";
 
 // Runtime code must never reach the reference site. Tools and fixtures are excluded on purpose.
 const RUNTIME_DIRS = ["crates", "packages", "apps"];
-const SKIP = new Set(["node_modules", "wasm", "target", "generated", "snapshots"]);
+const SKIP = new Set(["node_modules", "wasm", "target", "generated", "snapshots", ".next", "test-results", "playwright-report", "blob-report", "__screenshots__"]);
 const BINARY = /\.(png|jpe?g|gif|webp|avif|ico|bmp|wasm|woff2?|ttf|otf|eot|pdf|zip|gz|tgz|tar|br|mp3|mp4|webm|ogg|wav|bin|so|dylib|dll|exe|rlib|a|o)$/i;
 // Any URL to the site, or its bare domain (e.g. in a fetch target built from parts).
 const FORBIDDEN = [/https?:\/\/[^\s"'`]*syscraft/i, /syscraft\./i];

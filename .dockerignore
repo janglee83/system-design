@@ -5,3 +5,7 @@ packages/sim/wasm
 .playwright-mcp
 *.png
 .git
+apps/*/node_modules
+apps/web/.next
+apps/web/test-results
+apps/web/playwright-report
