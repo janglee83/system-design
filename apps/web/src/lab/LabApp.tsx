@@ -46,7 +46,10 @@ export function LabApp({ initial }: { initial?: Design }) {
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
               <Problems />
             </div>
-            <div className="absolute right-3 bottom-3"><EngineStatus /></div>
+            {/* Top-right: the minimap is bottom-right, controls bottom-left, the legend top-left. */}
+            <div className="absolute top-3 right-3">
+              <EngineStatus />
+            </div>
           </section>
           <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
             <Inspector />

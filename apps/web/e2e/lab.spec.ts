@@ -77,3 +77,12 @@ test("the inspector edits a node and its cost follows", async ({ page }) => {
   await inspector.getByRole("spinbutton", { name: "Replicas" }).press("Enter");
   await expect(page.getByTestId("node-web-server-1")).toContainText("× 2");
 });
+
+test("the engine chip does not cover the minimap", async ({ page }) => {
+  await openLab(page);
+  await addAt(page, "Users", 120, 200); // the minimap shows once there is something to map
+  const chip = (await page.getByTestId("engine-status").boundingBox())!;
+  const map = (await page.getByRole("img", { name: "Overview map" }).boundingBox())!;
+  const overlap = chip.x < map.x + map.width && map.x < chip.x + chip.width && chip.y < map.y + map.height && map.y < chip.y + chip.height;
+  expect(overlap).toBe(false);
+});
