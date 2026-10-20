@@ -948,61 +948,6 @@
   "roadmap": {
     "lessons": [
       {
-        "id": "l0-cache-basics",
-        "titleVi": "Cache: giữ bản sao gần tay",
-        "titleEn": "Caches: keeping a copy within reach",
-        "kind": "reading",
-        "minutes": 12,
-        "difficulty": 1,
-        "prerequisites": [
-          "l0-database-basics",
-          "l0-latency-and-distance"
-        ],
-        "concepts": [
-          "cache",
-          "hit-ratio",
-          "ttl",
-          "eviction"
-        ],
-        "research": [
-          "caching-basics"
-        ],
-        "needs": {
-          "components": [
-            "client",
-            "web-server",
-            "postgres",
-            "redis"
-          ],
-          "metrics": [
-            "p95",
-            "peakDbConnections",
-            "cacheOps"
-          ]
-        }
-      },
-      {
-        "id": "l0-availability-nines",
-        "titleVi": "Tính sẵn sàng và những con số 9",
-        "titleEn": "Availability and the nines",
-        "kind": "reading",
-        "minutes": 12,
-        "difficulty": 2,
-        "prerequisites": [
-          "l0-single-point-of-failure"
-        ],
-        "concepts": [
-          "availability",
-          "nines",
-          "serial-dependency",
-          "mtbf-mttr"
-        ],
-        "research": [
-          "availability-and-spof"
-        ],
-        "needs": {}
-      },
-      {
         "id": "l1-vertical-scaling",
         "titleVi": "Nâng cấp máy: mở rộng theo chiều dọc",
         "titleEn": "A bigger machine: scaling up",
