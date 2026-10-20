@@ -3,7 +3,8 @@ import i18next from "eslint-plugin-i18next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const compat = new FlatCompat({ baseDirectory: path.dirname(fileURLToPath(import.meta.url)) });
+const root = path.dirname(fileURLToPath(import.meta.url));
+const compat = new FlatCompat({ baseDirectory: root });
 
 // User-facing attributes; every other attribute is technical (class names, ids, roles…).
 // The plugin anchors string patterns itself (^…$) and uses RegExp objects as given.
@@ -39,6 +40,27 @@ const config = [
         },
       ],
     },
+  },
+  {
+    // Type-aware rules. An unhandled promise hides engine and storage failures.
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: {
+          // Virtual files linted by src/i18n/lint-rule.test.ts (they do not exist on disk).
+          allowDefaultProject: [
+            "src/lab/Fixture.tsx",
+            "src/lab/Fixture.test.tsx",
+            "src/lab/model/x.ts",
+            "src/lab/model/x.test.ts",
+            "src/test/x.ts",
+            "app/x.tsx",
+          ],
+        },
+        tsconfigRootDir: root,
+      },
+    },
+    rules: { "@typescript-eslint/no-floating-promises": "error" },
   },
   {
     // The Node build of the engine is for tests only; the app uses @sd/sim/web in the worker.

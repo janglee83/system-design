@@ -46,11 +46,26 @@ describe("the Node build of the engine stays out of runtime code", () => {
 
   it("refuses @sd/sim/node in app and src code", async () => {
     expect(await nodeImports("src/lab/model/x.ts")).toBe(1);
-    expect(await nodeImports("app/[locale]/x.tsx")).toBe(1);
+    expect(await nodeImports("app/x.tsx")).toBe(1);
   });
 
   it("allows it in tests and test support files", async () => {
     expect(await nodeImports("src/lab/model/x.test.ts")).toBe(0);
     expect(await nodeImports("src/test/x.ts")).toBe(0);
+  });
+}, 60_000);
+
+describe("promises are handled", () => {
+  const floating = async (code: string) => {
+    const [result] = await eslint.lintText(code, { filePath: path.join(appRoot, "src/lab/model/x.ts") });
+    return result!.messages.filter((m) => m.ruleId === "@typescript-eslint/no-floating-promises").length;
+  };
+
+  it("flags a promise that is neither awaited, returned, caught nor voided", async () => {
+    expect(await floating(`export function f(p: Promise<number>) { p.then((x) => x); }`)).toBe(1);
+  });
+
+  it("accepts void, await and catch", async () => {
+    expect(await floating(`export async function f(p: Promise<number>) { void p; await p; p.catch(() => 0); }`)).toBe(0);
   });
 }, 60_000);
