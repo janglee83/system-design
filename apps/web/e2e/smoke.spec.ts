@@ -19,6 +19,11 @@ test.describe("English browser", () => {
 });
 
 test("an unknown locale is a 404", async ({ page }) => {
+  // "fr" is not a locale, so the middleware treats it as a path under the browser's locale
+  // (en here): /fr/lab -> 307 -> /en/fr/lab, which does not exist.
   const res = await page.goto("/fr/lab");
+  expect(res?.url()).toMatch(/\/en\/fr\/lab$/);
   expect(res?.status()).toBe(404);
+  expect(res?.request().redirectedFrom()?.url()).toMatch(/\/fr\/lab$/);
+  await expect(page).toHaveURL(/\/en\/fr\/lab$/);
 });
