@@ -13,5 +13,50 @@
   },
   "lab": {
     "title": "Lab"
+  },
+  "nav": {
+    "primary": "Main",
+    "wordmark": "SD Lab",
+    "lab": "Lab",
+    "learn": "Learn",
+    "challenges": "Challenges",
+    "leaderboard": "Leaderboard",
+    "home": "System Design Lab home"
+  },
+  "language": {
+    "label": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Follow the system"
+  },
+  "help": {
+    "label": "Help",
+    "about": "About this lab"
+  },
+  "about": {
+    "title": "About System Design Lab",
+    "body": "A practice bench for system design: build a design, run it on a simulator in your browser, and see what holds and what breaks. Everything runs on your machine.",
+    "appVersion": "App version {version}"
+  },
+  "shell": {
+    "desktopNotice": "This lab is built for screens at least 1280 pixels wide. It still works here, but some panels will be cramped.",
+    "dismiss": "Dismiss"
+  },
+  "learn": {
+    "title": "Learn",
+    "placeholder": "Lessons arrive in the next update. Here is the path they will follow."
+  },
+  "challenges": {
+    "title": "Challenges",
+    "placeholder": "Challenge play arrives soon. You can already open any challenge's starting design in the Lab."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "placeholder": "Rankings of the cheapest passing designs will appear here once accounts exist."
   }
 }
