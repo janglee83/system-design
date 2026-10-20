@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { applyTheme, readPref, THEME_KEY, type ThemePref } from "./theme";
+import { applyTheme, THEME_KEY, type ThemePref } from "./theme";
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
@@ -9,12 +9,10 @@ function subscribe(l: () => void) {
   listeners.add(l);
   return () => listeners.delete(l);
 }
+/** What the head script (and applyTheme) put on <html>: always in step with the page. */
 function getPref(): ThemePref {
-  try {
-    return readPref(localStorage);
-  } catch {
-    return "system";
-  }
+  const p = document.documentElement.dataset.themePref;
+  return p === "light" || p === "dark" || p === "system" ? p : "system";
 }
 
 /** Current preference; follows OS changes live while the preference is "system". */

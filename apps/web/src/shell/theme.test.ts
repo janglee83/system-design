@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readPref, resolveTheme, THEME_KEY, themeScript } from "./theme";
 
 describe("theme", () => {
@@ -21,5 +21,18 @@ describe("theme", () => {
     new Function(themeScript)();
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(document.documentElement.dataset.themePref).toBe("dark");
+  });
+});
+
+describe("theme script fallback", () => {
+  it("follows the OS setting when storage is unavailable", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("denied", "SecurityError");
+    });
+    window.matchMedia = () => ({ matches: true }) as MediaQueryList;
+    delete document.documentElement.dataset.theme;
+    new Function(themeScript)();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    getItem.mockRestore();
   });
 });

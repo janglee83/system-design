@@ -6,23 +6,35 @@ import { Button } from "@/ui/Button";
 
 const KEY = "sd-desktop-notice-dismissed";
 
+/**
+ * "Best on a desktop" notice (R31). Whether it shows is decided by a CSS media query, so the
+ * first paint is already right on every screen width and nothing shifts after hydration.
+ */
 export function DesktopNotice() {
   const t = useTranslations("shell");
-  const [show, setShow] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1279px)");
-    const update = () => setShow(mq.matches && sessionStorage.getItem(KEY) !== "1");
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    try {
+      if (sessionStorage.getItem(KEY) === "1") setDismissed(true);
+    } catch {
+      /* storage unavailable: keep showing it */
+    }
   }, []);
-  if (!show) return null;
+  if (dismissed) return null;
+  const dismiss = () => {
+    try {
+      sessionStorage.setItem(KEY, "1");
+    } catch {
+      /* storage unavailable: hide it for this page only */
+    }
+    setDismissed(true);
+  };
   return (
-    <div className="px-3 pt-2">
+    <div data-testid="desktop-notice" className="px-3 pt-2 min-[1280px]:hidden">
       <Banner
         tone="info"
         action={
-          <Button size="sm" variant="ghost" onClick={() => (sessionStorage.setItem(KEY, "1"), setShow(false))}>
+          <Button size="sm" variant="ghost" onClick={dismiss}>
             {t("dismiss")}
           </Button>
         }

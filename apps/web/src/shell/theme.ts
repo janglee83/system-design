@@ -13,7 +13,7 @@ export function readPref(storage: Pick<Storage, "getItem">): ThemePref {
 }
 
 /** Runs in <head> before first paint (plan ruling R26). Keep it dependency-free. */
-export const themeScript = `(function(){try{var p=localStorage.getItem("${THEME_KEY}");if(p!=="light"&&p!=="dark")p="system";var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.dataset.themePref=p;}catch(e){document.documentElement.dataset.theme="light";}})();`;
+export const themeScript = `(function(){try{var p=localStorage.getItem("${THEME_KEY}");if(p!=="light"&&p!=="dark")p="system";var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.dataset.themePref=p;}catch(e){var s=false;try{s=window.matchMedia("(prefers-color-scheme: dark)").matches;}catch(_){}document.documentElement.dataset.theme=s?"dark":"light";document.documentElement.dataset.themePref="system";}})();`;
 
 export function applyTheme(pref: ThemePref): void {
   const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
