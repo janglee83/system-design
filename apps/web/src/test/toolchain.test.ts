@@ -62,3 +62,16 @@ describe("workspace toolchain", () => {
     }
   });
 });
+
+describe("dev image", () => {
+  it("has one tag across compose and both cached CI builds", () => {
+    const tag = compose().match(/image: (system-design-dev:\d+)/)?.[1];
+    expect(tag).toBeDefined();
+    for (const name of ["web.yml", "engine.yml"]) expect(workflow(name), name).toContain(`tags: ${tag}`);
+  });
+
+  it("keeps the CI cache out of the build context", () => {
+    const ignore = fs.readFileSync(path.join(appRoot, "../../.dockerignore"), "utf8").split("\n");
+    expect(ignore).toContain(".ci-cache");
+  });
+});

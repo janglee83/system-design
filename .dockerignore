@@ -9,3 +9,4 @@ apps/*/node_modules
 apps/web/.next
 apps/web/test-results
 apps/web/playwright-report
+.ci-cache
