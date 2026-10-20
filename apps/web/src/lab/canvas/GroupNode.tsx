@@ -1,7 +1,7 @@
 "use client";
 import type { Node, NodeProps } from "@xyflow/react";
 import { useTranslations } from "next-intl";
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/ui/cn";
 import { renameGroup } from "../model/ops";
 import { useDesignApi } from "../store/LabStores";
@@ -14,12 +14,17 @@ function GroupNodeView({ id, data, selected }: NodeProps<Node<GroupData>>) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(data.group.label);
 
-  const startEditing = () => {
-    setText(data.group.label);
+  /** Set by Escape, so a blur while the input unmounts cannot commit the cancelled text. */
+  const cancelled = useRef(false);
+  const label = data.group.label;
+  const startEditing = useCallback(() => {
+    cancelled.current = false;
+    setText(label);
     setEditing(true);
-  };
+  }, [label]);
   const commit = () => {
     setEditing(false);
+    if (cancelled.current) return;
     api.getState().apply((d) => renameGroup(d, id, text.trim()));
   };
 
@@ -36,7 +41,7 @@ function GroupNodeView({ id, data, selected }: NodeProps<Node<GroupData>>) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, [selected, id, startEditing]);
 
   return (
     <div
@@ -58,7 +63,10 @@ function GroupNodeView({ id, data, selected }: NodeProps<Node<GroupData>>) {
           onKeyDown={(e) => {
             e.stopPropagation();
             if (e.key === "Enter") commit();
-            if (e.key === "Escape") setEditing(false);
+            if (e.key === "Escape") {
+              cancelled.current = true;
+              setEditing(false);
+            }
           }}
           className="nodrag absolute top-1 left-2 h-6 w-48 rounded-xs border border-border-strong bg-surface px-1.5 text-xs font-semibold"
         />
