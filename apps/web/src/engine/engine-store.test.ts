@@ -82,4 +82,17 @@ describe("engine store", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(store.getState()).toMatchObject({ status: "ready", error: null });
   });
+
+  it("a retry while a load is in flight is not overturned by the old load's failure", async () => {
+    const store = createEngineStore(() => new EngineClient(() => new FakeWorker()));
+    store.getState().start();
+    const seen: string[] = [];
+    store.subscribe((s) => seen.push(s.status));
+    store.getState().retry(); // the first load's requests reject with "engine restarted"
+    const s = await settled(store);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(s.status).toBe("ready");
+    expect(seen).not.toContain("error");
+    expect(store.getState()).toMatchObject({ status: "ready", error: null });
+  });
 });

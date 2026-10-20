@@ -22,7 +22,10 @@ export interface EngineState {
 
 export function createEngineStore(makeClient: () => EngineClient) {
   return createStore<EngineState>()((set, get) => {
+    /** Bumped by every load and by stop(): only the latest load may write the result. */
+    let generation = 0;
     async function load(client: EngineClient) {
+      const gen = ++generation;
       set({ status: "loading", error: null });
       try {
         const [version, components, calibration, capabilities] = await Promise.all([
@@ -31,10 +34,10 @@ export function createEngineStore(makeClient: () => EngineClient) {
           client.request({ type: "defaultCalibration" }),
           client.request({ type: "capabilities" }),
         ]);
-        if (get().client !== client) return; // stopped meanwhile
+        if (gen !== generation) return; // superseded by a retry, or stopped
         set({ status: "ready", info: { version, components, calibration, capabilities } });
       } catch (e) {
-        if (get().client !== client) return; // stopped meanwhile: not an engine failure
+        if (gen !== generation) return; // superseded or stopped: not an engine failure
         const message = e instanceof EngineRequestError ? e.error.kind : e instanceof Error ? e.message : String(e);
         set({ status: "error", error: message });
       }
@@ -60,6 +63,7 @@ export function createEngineStore(makeClient: () => EngineClient) {
         void load(client);
       },
       stop() {
+        generation++;
         const client = get().client;
         set({ client: null, status: "idle", info: null, error: null });
         client?.terminate();
