@@ -1,7 +1,7 @@
 "use client";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { routing, type Locale } from "@/i18n/routing";
+import { LOCALE_COOKIE, routing, type Locale } from "@/i18n/routing";
 import { Segmented } from "@/ui/Segmented";
 
 export function LanguageSwitch() {
@@ -14,10 +14,11 @@ export function LanguageSwitch() {
       label={t("label")}
       value={locale}
       onChange={(next: Locale) => {
-        // Remember the choice explicitly (R6); the middleware reads this cookie on "/".
-        document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-        const query = window.location.search;
-        router.replace(`${pathname}${query}`, { locale: next });
+        // Remember the choice explicitly (R6), with the same cookie settings the middleware uses.
+        const { name, maxAge, sameSite } = LOCALE_COOKIE;
+        document.cookie = `${name}=${next}; path=/; max-age=${maxAge}; samesite=${sameSite}`;
+        const { search, hash } = window.location;
+        router.replace(`${pathname}${search}${hash}`, { locale: next });
       }}
       items={routing.locales.map((l) => ({ value: l, label: l.toUpperCase(), title: t(l) }))}
     />
