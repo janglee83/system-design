@@ -33,3 +33,12 @@ describe("CI workflows", () => {
     expect(workflow(name)).toMatch(/^permissions:\n {2}contents: read\n/m);
   });
 });
+
+describe("web workflow triggers", () => {
+  it("runs when the toolchain or the dev container changes", () => {
+    const paths = [...workflow("web.yml").matchAll(/^ {6}- "([^"]+)"$/gm)].map((m) => m[1]);
+    for (const p of ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "dev", ".dockerignore", "Dockerfile", "compose.yaml"]) {
+      expect(paths, p).toContain(p);
+    }
+  });
+});

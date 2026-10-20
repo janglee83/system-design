@@ -15,6 +15,11 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "dev"
+      - ".dockerignore"
       - ".github/workflows/web.yml"
   push:
     branches: [main]
