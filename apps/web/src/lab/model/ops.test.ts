@@ -14,6 +14,7 @@ import {
   setCalibration,
   setConfig,
   setWorkload,
+  setFaults,
   freeSpot,
   ungroup,
   updateNode,
@@ -142,5 +143,12 @@ describe("design ops", () => {
     d = addNode(d, meta("web-server"), { x: 320, y: 96 }).design;
     expect(freeSpot(d, { x: 96, y: 96 })).toEqual({ x: 544, y: 96 });
     expect(freeSpot(d, { x: 1200, y: 600 })).toEqual({ x: 1200, y: 608 }); // already free (600 snaps to 608)
+  });
+
+  it("setFaults returns the same design when the faults did not change", () => {
+    const d = { ...emptyDesign(), faults: [{ kind: "instance-down" as const, target: null, atMs: 3000 }] };
+    expect(setFaults(d, [{ kind: "instance-down", target: null, atMs: 3000 }])).toBe(d);
+    expect(setFaults(d, [{ kind: "instance-down", target: null, atMs: 4000 }])).not.toBe(d);
+    expect(setFaults(d, [])).not.toBe(d);
   });
 });

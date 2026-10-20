@@ -232,7 +232,9 @@ export const setName = (d: Design, name: string): Design => (d.name === name ? d
 export const setDuration = (d: Design, durationMs: number): Design =>
   d.durationMs === durationMs ? d : { ...d, durationMs };
 export const setSeed = (d: Design, seed: number): Design => (d.seed === seed ? d : { ...d, seed });
-export const setFaults = (d: Design, faults: Fault[]): Design => ({ ...d, faults });
+const sameFault = (a: Fault, b: Fault) => a.kind === b.kind && a.target === b.target && a.atMs === b.atMs;
+export const setFaults = (d: Design, faults: Fault[]): Design =>
+  faults.length === d.faults.length && faults.every((f, i) => sameFault(f, d.faults[i]!)) ? d : { ...d, faults };
 
 /** Patches the workload. An optional field patched to `undefined` is removed, not kept as undefined. */
 export function setWorkload(d: Design, patch: Partial<Workload>): Design {
