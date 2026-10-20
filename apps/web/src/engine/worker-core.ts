@@ -129,3 +129,35 @@ export function createHandler(sim: Sim, now: () => number = () => performance.no
     }
   };
 }
+
+/** The parts of a worker's global scope the serve loop uses. */
+export interface WorkerScope {
+  onmessage: ((e: MessageEvent<Envelope>) => void | Promise<void>) | null;
+  postMessage(message: Reply, transfer: Transferable[]): void;
+}
+
+/** Answers every message with `ready`'s handler; never throws and never leaves a rejection unhandled. */
+export function serve(scope: WorkerScope, ready: Promise<(envelope: Envelope) => Handled>): void {
+  // Observed here so a failed load is not an unhandled rejection; each request reports it below.
+  ready.catch(() => {});
+  const post = (reply: Reply, transfer: Transferable[]) => {
+    try {
+      scope.postMessage(reply, transfer);
+    } catch (e) {
+      // For example a value structured clone cannot copy. The caller must still get an answer.
+      const message = e instanceof Error ? e.message : String(e);
+      scope.postMessage({ id: reply.id, ok: false, error: { kind: "internal", message } }, []);
+    }
+  };
+  scope.onmessage = async (e) => {
+    let handle: (envelope: Envelope) => Handled;
+    try {
+      handle = await ready;
+    } catch (err) {
+      post({ id: e.data.id, ok: false, error: { kind: "load", message: String(err) } }, []);
+      return;
+    }
+    const { reply, transfer } = handle(e.data);
+    post(reply, transfer);
+  };
+}
