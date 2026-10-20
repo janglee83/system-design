@@ -371,5 +371,20 @@
         "durationMs": "Surge lasts (s)"
       }
     }
+  },
+  "presets": {
+    "label": "Preset",
+    "choose": "Apply a preset…",
+    "save": "Save current traffic as a preset",
+    "saveTitle": "Save traffic preset",
+    "name": "Preset name",
+    "delete": "Delete preset {name}",
+    "builtIn": "Built in",
+    "yours": "Yours",
+    "quiet": "Quiet hours",
+    "lunch": "Lunch peak",
+    "flashSale": "Flash sale",
+    "writeStorm": "Write storm",
+    "unavailable": "Saving presets needs browser storage, which this window does not allow."
   }
 }

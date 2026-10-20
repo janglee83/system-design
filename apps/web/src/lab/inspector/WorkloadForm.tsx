@@ -13,6 +13,7 @@ import { Switch } from "@/ui/Switch";
 import type { Design } from "../model/design";
 import { setDuration, setSeed, setWorkload } from "../model/ops";
 import { useDesign, useDesignApi } from "../store/LabStores";
+import { PresetPicker } from "./PresetPicker";
 
 const DEFAULT_SURGE = { factor: 3, atMs: 3000, durationMs: 2000 };
 const MAX_SEED = 4_294_967_295;
@@ -34,6 +35,7 @@ export function WorkloadForm({ workloadParams }: { workloadParams: readonly stri
   return (
     <div className="flex flex-col">
       <Section title={t("workload.traffic")} defaultOpen>
+        <PresetPicker />
         <Field label={t("workload.field.profile")}>
           <Select<Profile>
             label={t("workload.field.profile")}

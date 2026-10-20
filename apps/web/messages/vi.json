@@ -371,5 +371,20 @@
         "durationMs": "Kéo dài (giây)"
       }
     }
+  },
+  "presets": {
+    "label": "Mẫu",
+    "choose": "Áp dụng một mẫu…",
+    "save": "Lưu lưu lượng hiện tại thành mẫu",
+    "saveTitle": "Lưu mẫu lưu lượng",
+    "name": "Tên mẫu",
+    "delete": "Xóa mẫu {name}",
+    "builtIn": "Có sẵn",
+    "yours": "Của bạn",
+    "quiet": "Giờ vắng",
+    "lunch": "Cao điểm trưa",
+    "flashSale": "Đợt giảm giá chớp nhoáng",
+    "writeStorm": "Cơn bão ghi",
+    "unavailable": "Muốn lưu mẫu cần bộ nhớ trình duyệt, nhưng cửa sổ này không cho dùng."
   }
 }
