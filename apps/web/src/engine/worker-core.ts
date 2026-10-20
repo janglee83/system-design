@@ -88,19 +88,28 @@ export function createHandler(sim: Sim, now: () => number = () => performance.no
       case "run": {
         const t0 = now();
         const run = sim.simulate(r.input);
-        const tl = run.timeline;
-        const result: RunResult = {
-          runId: nextRunId++,
-          metrics: run.metrics,
-          events: run.events,
-          timeline: {
-            header: { frameMs: tl.frameMs, frames: tl.frames, nodeIds: [...tl.nodeIds], fields: [...tl.fields] },
-            // A JS-owned copy (sim-wasm copies it out of wasm memory); transferred, never read again here.
-            data: tl.data,
-          },
-          traces: run.traceSummaries(),
-          elapsedMs: 0,
-        };
+        let result: RunResult;
+        try {
+          const tl = run.timeline;
+          result = {
+            runId: nextRunId,
+            metrics: run.metrics,
+            events: run.events,
+            timeline: {
+              header: { frameMs: tl.frameMs, frames: tl.frames, nodeIds: [...tl.nodeIds], fields: [...tl.fields] },
+              // A JS-owned copy (sim-wasm copies it out of wasm memory). Its buffer is transferred
+              // with the reply, which detaches it: this run's `timeline` must not be read again in
+              // the worker. trace() and resultJson() read wasm memory, so they keep working.
+              data: tl.data,
+            },
+            traces: run.traceSummaries(),
+            elapsedMs: 0,
+          };
+        } catch (e) {
+          run.free(); // never kept, so nothing else would free it
+          throw e;
+        }
+        nextRunId++;
         result.elapsedMs = now() - t0;
         runs.set(result.runId, run);
         while (runs.size > MAX_RUNS) {

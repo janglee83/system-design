@@ -1,5 +1,5 @@
 import { sim } from "@sd/sim/node";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EngineRequest, ResultOf } from "./protocol";
 import { fourTier } from "./test-fixtures";
 import { createHandler, MAX_RUNS } from "./worker-core";
@@ -101,5 +101,25 @@ describe("worker-core", () => {
       ok: false,
       error: { kind: "crash", message: "unreachable executed" },
     });
+  });
+
+  it("frees the run when building its result fails", () => {
+    let free: ReturnType<typeof vi.spyOn> | undefined;
+    const failing = {
+      ...sim,
+      simulate: (input: Parameters<typeof sim.simulate>[0]) => {
+        const run = sim.simulate(input);
+        vi.spyOn(run, "traceSummaries").mockImplementation(() => {
+          throw new Error("boom");
+        });
+        free = vi.spyOn(run, "free");
+        return run;
+      },
+    };
+    const handle = createHandler(failing, () => 0);
+    expect(handle({ id: 1, request: { type: "run", input: fourTier() } }).reply).toMatchObject({ ok: false, error: { kind: "internal", message: "boom" } });
+    expect(free).toHaveBeenCalledOnce();
+    // Nothing was kept under a run id.
+    expect(handle({ id: 2, request: { type: "trace", runId: 1, index: 0 } }).reply).toMatchObject({ ok: false });
   });
 });
