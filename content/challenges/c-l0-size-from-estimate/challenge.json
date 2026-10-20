@@ -1,0 +1,161 @@
+{
+  "formatVersion": 1,
+  "id": "c-l0-size-from-estimate",
+  "level": "L0",
+  "prerequisites": ["l0-estimation-basics"],
+  "status": "draft",
+  "start": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "users",
+          "kind": "client"
+        },
+        {
+          "id": "web",
+          "kind": "web-server",
+          "config": {
+            "cpu": 1
+          }
+        },
+        {
+          "id": "pg",
+          "kind": "postgres",
+          "config": {
+            "readReplicas": 0
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "users",
+          "to": "web",
+          "kind": "http"
+        },
+        {
+          "id": "e2",
+          "from": "web",
+          "to": "pg",
+          "kind": "db"
+        }
+      ]
+    },
+    "workload": {
+      "profile": "mixed",
+      "baseRps": 6000,
+      "writeRatio": 0.2
+    }
+  },
+  "lockedNodes": ["users"],
+  "limits": {
+    "maxNodes": 5,
+    "maxInstances": 8,
+    "allowedKinds": ["client", "web-server", "postgres"]
+  },
+  "goals": [
+    {
+      "id": "fast",
+      "metric": "p95",
+      "op": "<=",
+      "value": 50
+    },
+    {
+      "id": "headroom",
+      "metric": "peakBusy",
+      "op": "<=",
+      "value": 0.7
+    },
+    {
+      "id": "no-drops",
+      "metric": "requestsRejected",
+      "op": "<=",
+      "value": 0
+    }
+  ],
+  "modes": [
+    {
+      "id": "peak",
+      "budgetPerMonth": 600,
+      "reference": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 1
+              },
+              "replicas": 2
+            },
+            {
+              "id": "pg",
+              "kind": "postgres",
+              "config": {
+                "readReplicas": 2
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "web",
+              "to": "pg",
+              "kind": "db"
+            }
+          ]
+        }
+      },
+      "naive": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 2
+              }
+            },
+            {
+              "id": "pg",
+              "kind": "postgres",
+              "config": {
+                "readReplicas": 1
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "web",
+              "to": "pg",
+              "kind": "db"
+            }
+          ]
+        },
+        "failsGoals": ["headroom"]
+      }
+    }
+  ],
+  "hints": ["h1", "h2", "h3"]
+}
