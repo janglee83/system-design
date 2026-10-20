@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { repoRoot } from "../test/paths";
-import { EVENT_CODES, VALIDATION_CODES } from "./engine-codes";
+import { EVENT_CODES, TIMELINE_FIELDS, VALIDATION_CODES } from "./engine-codes";
 
 /** Non-test Rust source under crates/sim-core/src (everything before #[cfg(test)]). */
 function engineSource(): string {
@@ -38,5 +38,12 @@ describe("engine code registry", () => {
     const found = [...body.matchAll(/pub const [A-Z_]+: &str = "([^"]+)";/g)].map((m) => m[1]!);
     expect(found.length).toBeGreaterThan(0);
     expect(sorted(VALIDATION_CODES)).toEqual(sorted(found));
+  });
+
+  it("lists sim-core's timeline fields, in order", () => {
+    const decl = src.match(/pub const TIMELINE_FIELDS: \[&str; \d+\] = \[([^\]]*)\];/);
+    expect(decl).not.toBeNull();
+    const found = [...decl![1]!.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect([...TIMELINE_FIELDS]).toEqual(found);
   });
 });
