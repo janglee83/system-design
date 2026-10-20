@@ -26,6 +26,14 @@ export type { Calibration } from "./generated/Calibration";
 export type { CalibrationOverrides } from "./generated/CalibrationOverrides";
 export type { Fixture } from "./generated/Fixture";
 export type { FixtureReport } from "./generated/FixtureReport";
+export type { ConfigField } from "./generated/ConfigField";
+export type { ConfigValue } from "./generated/ConfigValue";
+export type { FieldKind } from "./generated/FieldKind";
+export type { FixtureFailure } from "./generated/FixtureFailure";
+export type { GoalResult } from "./generated/GoalResult";
+export type { Role } from "./generated/Role";
+export type { Surge } from "./generated/Surge";
+export type { Timeline } from "./generated/Timeline";
 
 import type { FaultKind as FaultKindT } from "./generated/FaultKind";
 
