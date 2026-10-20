@@ -386,5 +386,19 @@
     "flashSale": "Đợt giảm giá chớp nhoáng",
     "writeStorm": "Cơn bão ghi",
     "unavailable": "Muốn lưu mẫu cần bộ nhớ trình duyệt, nhưng cửa sổ này không cho dùng."
+  },
+  "faults": {
+    "title": "Sự cố",
+    "empty": "Chưa có sự cố nào. Lần chạy sẽ yên ổn.",
+    "add": "Thêm sự cố",
+    "random": "Sự cố ngẫu nhiên",
+    "kind": "Sự cố",
+    "target": "Nhắm vào",
+    "anyTarget": "Bất kỳ thành phần phù hợp (bộ mô phỏng tự chọn)",
+    "noTarget": "Ảnh hưởng toàn bộ lưu lượng",
+    "at": "Lúc (giây)",
+    "remove": "Xóa sự cố",
+    "comingSoon": "Sắp có: bộ mô phỏng chưa mô phỏng sự cố này.",
+    "noCandidate": "Chưa có sự cố được hỗ trợ nào hợp với thiết kế này."
   }
 }

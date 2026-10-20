@@ -386,5 +386,19 @@
     "flashSale": "Flash sale",
     "writeStorm": "Write storm",
     "unavailable": "Saving presets needs browser storage, which this window does not allow."
+  },
+  "faults": {
+    "title": "Faults",
+    "empty": "No faults. The run will be calm.",
+    "add": "Add fault",
+    "random": "Random fault",
+    "kind": "Fault",
+    "target": "Target",
+    "anyTarget": "Any matching (the simulator picks)",
+    "noTarget": "Affects all traffic",
+    "at": "At (s)",
+    "remove": "Remove fault",
+    "comingSoon": "Coming soon: the simulator does not model this fault yet.",
+    "noCandidate": "No supported fault matches this design yet."
   }
 }
