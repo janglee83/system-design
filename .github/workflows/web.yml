@@ -94,8 +94,8 @@ jobs:
       - name: Unit tests
         run: ./dev pnpm --filter @sd/web test
 
-      - name: Next build
-        run: ./dev pnpm --filter @sd/web build
+      - name: Next build (with the e2e engine hook)
+        run: ./dev env NEXT_PUBLIC_E2E=1 pnpm --filter @sd/web build
 
       - name: E2E and accessibility (Playwright)
         run: ./dev pnpm --filter @sd/web test:e2e

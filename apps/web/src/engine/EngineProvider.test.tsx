@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { EngineClient } from "./client";
 import { EngineProvider, useEngineStart, useEngineStore } from "./EngineProvider";
 import { FakeWorker } from "../test/engine-fixtures";
@@ -27,5 +27,30 @@ describe("EngineProvider", () => {
     expect(workers.length).toBeGreaterThanOrEqual(2);
     expect(workers.slice(0, -1).every((w) => w.terminated)).toBe(true);
     expect(workers.at(-1)!.terminated).toBe(false);
+  });
+
+  describe("the e2e engine hook", () => {
+    afterEach(() => vi.unstubAllEnvs());
+    const hook = () => (window as unknown as { __sdEngine?: unknown }).__sdEngine;
+    const mount = () =>
+      render(
+        <EngineProvider makeClient={() => new EngineClient(() => new FakeWorker())}>
+          <Probe />
+        </EngineProvider>,
+      );
+
+    it("is absent from normal builds, even under automation", () => {
+      Object.defineProperty(navigator, "webdriver", { value: true, configurable: true });
+      mount();
+      expect(hook()).toBeUndefined();
+    });
+
+    it("exists only in e2e builds and is removed on unmount", () => {
+      vi.stubEnv("NEXT_PUBLIC_E2E", "1");
+      const { unmount } = mount();
+      expect(hook()).toBeDefined();
+      unmount();
+      expect(hook()).toBeUndefined();
+    });
   });
 });

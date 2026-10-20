@@ -20,14 +20,17 @@ export function EngineProvider({
   // remounted start() must create a fresh client instead of reusing the terminated one.
   useEffect(() => () => store.getState().stop(), [store]);
   useEffect(() => {
-    // E2E hook, only under browser automation (Playwright sets navigator.webdriver): lets
-    // tests send protocol messages through the real worker and structured clone.
-    if (!navigator.webdriver) return;
-    const hook: Pick<EngineClient, "request"> = {
+    // E2E hook, only in builds made for the e2e run (NEXT_PUBLIC_E2E=1, inlined at build time):
+    // lets tests send protocol messages through the real worker and structured clone.
+    if (process.env.NEXT_PUBLIC_E2E !== "1") return;
+    const w = window as unknown as { __sdEngine?: Pick<EngineClient, "request"> };
+    w.__sdEngine = {
       request: (r, transfer) =>
         store.getState().client?.request(r, transfer) ?? Promise.reject(new EngineCrashError("engine not started")),
     };
-    (window as unknown as { __sdEngine?: typeof hook }).__sdEngine = hook;
+    return () => {
+      delete w.__sdEngine;
+    };
   }, [store]);
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
