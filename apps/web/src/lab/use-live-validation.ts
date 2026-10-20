@@ -25,6 +25,7 @@ export function useLiveValidation(): void {
     run();
     const unsub = design.subscribe((s, prev) => {
       if (s.design === prev.design) return;
+      check.getState().markStale(); // synchronously, so Run cannot use the old result (R11)
       clearTimeout(timer);
       timer = setTimeout(run, DEBOUNCE_MS);
     });

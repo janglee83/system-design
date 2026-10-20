@@ -10,6 +10,8 @@ export interface CheckState {
   runIssues: ValidationIssue[];
   costs: Record<string, number | null>;
   begin(): number;
+  /** The design changed: the current result no longer applies (blocks Run until the next check). */
+  markStale(): void;
   finish(seq: number, r: ValidateResult): void;
   fail(seq: number): void;
   setRunIssues(issues: ValidationIssue[]): void;
@@ -26,6 +28,10 @@ export function createCheckStore() {
       const seq = get().seq + 1;
       set({ seq, status: "checking", runIssues: [] });
       return seq;
+    },
+    markStale() {
+      // Bumping seq also drops a reply still in flight for the old design.
+      set({ seq: get().seq + 1, status: "checking" });
     },
     finish(seq, r) {
       if (seq !== get().seq) return; // a newer request is in flight (Review Focus 5)

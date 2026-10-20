@@ -22,4 +22,14 @@ describe("check store", () => {
     expect(issueCounts(s.getState())).toEqual({ nodes: { pg: { blocking: 0, warnings: 1 } }, edges: { e2: 1 } });
     expect(hasBlocking(s.getState())).toBe(true);
   });
+
+  it("markStale blocks until the next check and drops the reply in flight", () => {
+    const s = createCheckStore();
+    const a = s.getState().begin();
+    s.getState().markStale();
+    expect(s.getState().status).toBe("checking");
+    s.getState().finish(a, { issues: [], costs: { x: 1 } });
+    expect(s.getState().status).toBe("checking");
+    expect(s.getState().costs).toEqual({});
+  });
 });
