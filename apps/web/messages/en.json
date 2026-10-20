@@ -35,7 +35,10 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitView": "Fit to screen",
-    "snap": "Snap to grid"
+    "snap": "Snap to grid",
+    "canvasRole": "design canvas",
+    "nodeRole": "component",
+    "controls": "Canvas controls"
   },
   "nav": {
     "primary": "Main",

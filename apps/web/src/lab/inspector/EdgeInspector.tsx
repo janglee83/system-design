@@ -22,7 +22,7 @@ export function EdgeInspector({ edgeId, metas }: { edgeId: string; metas: Readon
   const target = nodes.find((n) => n.id === edge.to);
   const accepts = target ? metas.get(target.kind)?.accepts : undefined;
   return (
-    <div data-testid="edge-inspector" className="flex flex-col gap-2">
+    <div data-testid="inspector-edge" className="flex flex-col gap-2">
       <header className="pb-1">
         <h2 className="text-sm font-semibold">{t("inspector.edge")}</h2>
         <p className="truncate text-xs text-text-2">

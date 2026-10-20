@@ -35,6 +35,8 @@ export interface AdapterContext {
   states?: Readonly<Record<string, NodeState>>;
   path?: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null;
   allowedKinds?: readonly string[] | null;
+  /** Translated aria-roledescription for node cards ("component"). */
+  nodeRole?: string;
 }
 
 const NO_ISSUES = { blocking: 0, warnings: 0 };
@@ -63,6 +65,7 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
       parentId: parent ? (n.groupId as string) : undefined,
       selected: sel.has(n.id),
       deletable: !locked,
+      domAttributes: ctx.nodeRole ? { "aria-roledescription": ctx.nodeRole } : undefined,
       data: {
         node: n,
         meta: ctx.metas.get(n.kind) ?? null,

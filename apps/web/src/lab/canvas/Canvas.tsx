@@ -28,6 +28,9 @@ import { EdgeMarkers, LabEdge } from "./LabEdge";
 import { LabNode } from "./LabNode";
 import { toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
+import { CanvasControls } from "./CanvasControls";
+import { formatCombo } from "../shortcuts";
+import { useIsMac } from "../use-shortcuts";
 
 const nodeTypes = { lab: LabNode };
 const edgeTypes = { lab: LabEdge };
@@ -82,10 +85,11 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
     selection,
     costs,
     issues: counts,
+    nodeRole: t("nodeRole"),
     drag,
     ...extra,
   };
-  const nodes = useMemo(() => toFlowNodes(design, ctx), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nodes = useMemo(() => toFlowNodes(design, ctx), [design, ctx.selection, ctx.costs, ctx.issues, ctx.drag, ctx.states, ctx.path, ctx.metas, ctx.nodeRole]); // eslint-disable-line react-hooks/exhaustive-deps
   const edges = useMemo(() => toFlowEdges(design, ctx), [design, ctx.selection, ctx.issues, ctx.path]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodesChange = useCallback(
@@ -187,6 +191,7 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         minZoom={0.25}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
+        aria-roledescription={t("canvasRole")}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--sd-grid)" />
         {minimap ? (
@@ -204,6 +209,9 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
           <EdgeLegend />
         </div>
       </div>
+      <div className="absolute bottom-3 left-3">
+        <CanvasControls />
+      </div>
       {design.nodes.length === 0 ? <EmptyState /> : null}
     </div>
   );
@@ -211,10 +219,11 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
 
 function EmptyState() {
   const t = useTranslations("lab.empty");
+  const mac = useIsMac();
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
       <p className="text-md font-semibold">{t("title")}</p>
-      <p className="text-sm text-text-2">{t("body", { shortcut: "⌘K" })}</p>
+      <p className="text-sm text-text-2">{t("body", { shortcut: formatCombo("Mod+K", mac) })}</p>
     </div>
   );
 }

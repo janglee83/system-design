@@ -35,7 +35,10 @@
     "zoomIn": "Phóng to",
     "zoomOut": "Thu nhỏ",
     "fitView": "Vừa màn hình",
-    "snap": "Bám theo lưới"
+    "snap": "Bám theo lưới",
+    "canvasRole": "khung vẽ thiết kế",
+    "nodeRole": "thành phần",
+    "controls": "Điều khiển khung vẽ"
   },
   "nav": {
     "primary": "Chính",

@@ -39,7 +39,7 @@ function setup(d = design()) {
       </LabStoresProvider>
     </NextIntlClientProvider>,
   );
-  return screen.getByTestId("node-inspector");
+  return screen.getByTestId("inspector-node");
 }
 const node = () => api.getState().design.nodes.find((n) => n.id === "web-server-1")!;
 
@@ -55,7 +55,7 @@ describe("NodeInspector", () => {
   it("shows the node's monthly cost from the check store", () => {
     const panel = setup();
     act(() => check.getState().finish(check.getState().begin(), { issues: [], costs: { "web-server-1": 140 } }));
-    expect(within(panel).getByTestId("node-cost")).toHaveTextContent("$140");
+    expect(within(panel).getByTestId("inspector-node-cost")).toHaveTextContent("$140");
   });
 
   it("sets and clears a per-node override under Advanced", async () => {

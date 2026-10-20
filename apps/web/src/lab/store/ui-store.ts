@@ -26,3 +26,5 @@ export function createUiStore() {
     focusInspector: () => set({ inspectorFocusTick: get().inspectorFocusTick + 1 }),
   }));
 }
+
+export type UiStore = ReturnType<typeof createUiStore>;

@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { emptyDesign } from "./model/design";
-import { addNode } from "./model/ops";
+import { addNode, connect, groupNodes } from "./model/ops";
+import type { Design } from "./model/design";
 import { META_BY_KIND, meta } from "../test/metas";
-import { connectNodes } from "./commands";
+import {
+  connectNodes,
+  copySelection,
+  deleteSelection,
+  duplicateSelection,
+  pasteClipboard,
+  redo,
+  selectAll,
+  undo,
+} from "./commands";
 import { createDesignStore } from "./store/design-store";
 
 describe("connectNodes", () => {
@@ -23,5 +33,60 @@ describe("connectNodes", () => {
     const api = createDesignStore(d);
     expect(connectNodes(api, META_BY_KIND, "web-server-1", "client-1")).toEqual({ ok: false, reason: "not-accepted" });
     expect(api.getState().past).toHaveLength(0);
+  });
+});
+
+function threeNodes(): Design {
+  let d = emptyDesign();
+  for (const [kind, x] of [["client", 0], ["lb", 240], ["web-server", 480]] as const) d = addNode(d, meta(kind), { x, y: 0 }).design;
+  d = (connect(d, "client-1", "lb-1", META_BY_KIND) as { design: Design }).design;
+  return (connect(d, "lb-1", "web-server-1", META_BY_KIND) as { design: Design }).design;
+}
+const pos = (api: ReturnType<typeof createDesignStore>, id: string) => api.getState().design.nodes.find((n) => n.id === id)!.position;
+
+describe("editing commands", () => {
+  it("deleteSelection removes the selection but keeps a locked node", () => {
+    const api = createDesignStore({ ...threeNodes(), locked: ["client-1"] });
+    api.getState().select({ nodes: ["client-1", "web-server-1"], edges: ["e1"] });
+    deleteSelection(api);
+    const d = api.getState().design;
+    expect(d.nodes.map((n) => n.id)).toEqual(["client-1", "lb-1"]);
+    expect(d.edges).toEqual([]);
+    expect(api.getState().past).toHaveLength(1);
+  });
+
+  it("duplicateSelection selects the copies", () => {
+    const api = createDesignStore(threeNodes());
+    api.getState().select({ nodes: ["lb-1", "web-server-1"] });
+    duplicateSelection(api);
+    expect(api.getState().selection.nodes).toEqual(["lb-2", "web-server-2"]);
+    expect(api.getState().design.edges.at(-1)).toMatchObject({ from: "lb-2", to: "web-server-2" });
+  });
+
+  it("each paste of a copy lands 32 px further away", () => {
+    const api = createDesignStore(threeNodes());
+    api.getState().select({ nodes: ["lb-1"] });
+    copySelection(api);
+    pasteClipboard(api);
+    pasteClipboard(api);
+    expect(pos(api, "lb-2")).toEqual({ x: 240 + 32, y: 32 });
+    expect(pos(api, "lb-3")).toEqual({ x: 240 + 64, y: 64 });
+    expect(api.getState().selection.nodes).toEqual(["lb-3"]);
+  });
+
+  it("selectAll selects every node, edge and group", () => {
+    const api = createDesignStore(groupNodes(threeNodes(), ["lb-1"])!.design);
+    selectAll(api);
+    expect(api.getState().selection).toEqual({ nodes: ["client-1", "lb-1", "web-server-1"], edges: ["e1", "e2"], groups: ["g1"] });
+  });
+
+  it("undo and redo move through history", () => {
+    const api = createDesignStore(threeNodes());
+    api.getState().select({ nodes: ["web-server-1"] });
+    deleteSelection(api);
+    undo(api);
+    expect(api.getState().design.nodes).toHaveLength(3);
+    redo(api);
+    expect(api.getState().design.nodes).toHaveLength(2);
   });
 });
