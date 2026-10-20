@@ -10,6 +10,8 @@
     "test:content": "cargo run -q --profile ci -p sim-cli -- content validate content && cargo run -q --profile ci -p sim-cli -- content curriculum content --check",
     "content:validate": "cargo run -q --profile ci -p sim-cli -- content validate content",
     "content:curriculum": "cargo run -q --profile ci -p sim-cli -- content curriculum content",
-    "test:parity": "cargo run -q -p sim-cli -- parity fixtures/parity"
+    "test:parity": "cargo run -q -p sim-cli -- parity fixtures/parity",
+    "dev:web": "pnpm --filter @sd/web dev",
+    "test:web": "pnpm --filter @sd/web lint && pnpm --filter @sd/web typecheck && pnpm --filter @sd/web build && pnpm --filter @sd/web test:e2e"
   }
 }
