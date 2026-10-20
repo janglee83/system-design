@@ -63,6 +63,203 @@
   "engine": {
     "loading": "Đang khởi động bộ mô phỏng…",
     "ready": "Bộ mô phỏng {version}",
-    "failed": "Không khởi động được bộ mô phỏng. Hãy kiểm tra kết nối rồi thử lại."
+    "failed": "Không khởi động được bộ mô phỏng. Hãy kiểm tra kết nối rồi thử lại.",
+    "event": {
+      "db": {
+        "no-replica": "{node}: máy chính hỏng và không còn bản sao nào thay thế.",
+        "primary-down": "{node}: máy chính hỏng; còn {replicas, plural, other {# bản sao}}.",
+        "promoted": "{node}: một bản sao đã được nâng lên làm máy chính."
+      },
+      "fault": {
+        "no-target": "Một sự cố không tìm thấy thành phần phù hợp nên bị bỏ qua.",
+        "traffic-surge": "Lưu lượng vọt lên gấp {factor} lần.",
+        "unsupported": "Bộ mô phỏng chưa hỗ trợ sự cố này nên bỏ qua."
+      },
+      "instance": {
+        "down": "{node}: một máy ngừng chạy; còn {remaining} máy hoạt động."
+      },
+      "lb": {
+        "node-down": "{node}: một nút cân bằng tải hỏng; còn {remaining} nút."
+      },
+      "node": {
+        "overloaded": "{node} quá tải và bắt đầu từ chối yêu cầu."
+      }
+    },
+    "validation": {
+      "calibration": {
+        "invalid": "Tham số thế giới “{field}” có giá trị không hợp lệ."
+      },
+      "client": {
+        "no-path": "{node} không có đường nào tới máy chủ."
+      },
+      "config": {
+        "invalid": "{node}: “{field}” nằm ngoài khoảng cho phép."
+      },
+      "edge": {
+        "not-accepted": "{target} không nhận kết nối kiểu {kind}.",
+        "unknown-node": "Có một kết nối trỏ tới thành phần không còn tồn tại."
+      },
+      "graph": {
+        "cycle": "Thiết kế vòng ngược qua {node}; yêu cầu sẽ chạy vòng mãi.",
+        "no-client": "Hãy thêm thành phần Người dùng để có nơi gửi yêu cầu."
+      },
+      "limits": {
+        "kind-not-allowed": "Thử thách này không cho dùng {node}.",
+        "too-many-instances": "Tổng số máy vượt giới hạn của thử thách.",
+        "too-many-nodes": "Số thành phần nhiều hơn mức thử thách cho phép."
+      },
+      "node": {
+        "duplicate-id": "Có hai thành phần trùng mã {node}.",
+        "unknown-kind": "{node} là loại thành phần mà bộ mô phỏng không biết.",
+        "unreachable": "{node} không nhận được yêu cầu nào vì không có gì nối tới nó."
+      },
+      "workload": {
+        "invalid": "Thiết lập lưu lượng “{field}” không hợp lệ."
+      }
+    }
+  },
+  "component": {
+    "client": "Người dùng",
+    "lb": "Cân bằng tải",
+    "web-server": "Máy chủ web",
+    "postgres": "PostgreSQL"
+  },
+  "componentDescription": {
+    "client": "Nơi yêu cầu xuất phát: những người đang dùng hệ thống của bạn.",
+    "lb": "Chia yêu cầu đến cho các máy chủ phía sau để không máy nào bị dồn quá sức.",
+    "web-server": "Chạy mã ứng dụng và trả lời yêu cầu HTTP. Thêm CPU hoặc thêm bản sao để phục vụ được nhiều hơn.",
+    "postgres": "Cơ sở dữ liệu quan hệ giữ dữ liệu an toàn. Bản sao đọc gánh bớt phần đọc."
+  },
+  "category": {
+    "general": "Chung",
+    "compute": "Tính toán",
+    "data": "Dữ liệu"
+  },
+  "role": {
+    "client": "Phía người dùng",
+    "balancer": "Cân bằng tải",
+    "service": "Dịch vụ",
+    "database": "Cơ sở dữ liệu"
+  },
+  "edgeKind": {
+    "http": "HTTP",
+    "db": "Cơ sở dữ liệu",
+    "cache": "Bộ nhớ đệm",
+    "msg": "Tin nhắn"
+  },
+  "configField": {
+    "cpu": "Số vCPU",
+    "memoryGb": "Bộ nhớ (GB)",
+    "readReplicas": "Bản sao đọc",
+    "algorithm": "Cách chia tải"
+  },
+  "configOption": {
+    "algorithm": {
+      "round-robin": "Lần lượt từng máy",
+      "least-conn": "Máy đang ít việc nhất"
+    }
+  },
+  "override": {
+    "rpsPerInstance": "Yêu cầu/giây mỗi máy",
+    "serviceMs": "Thời gian xử lý (ms)",
+    "costPerMonth": "Chi phí mỗi tháng ($)"
+  },
+  "calibration": {
+    "webRpsPerVcpu": "Web: số yêu cầu/giây mỗi vCPU",
+    "webServiceMs": "Web: thời gian xử lý một yêu cầu (ms)",
+    "webQueuePerGb": "Web: số yêu cầu chờ được trên mỗi GB bộ nhớ",
+    "webCostPerVcpu": "Web: chi phí tháng cho vCPU đầu tiên ($)",
+    "webCostPerExtraVcpu": "Web: chi phí tháng cho mỗi vCPU thêm ($)",
+    "lbRpsPerReplica": "Cân bằng tải: số yêu cầu/giây mỗi nút",
+    "lbServiceMs": "Cân bằng tải: thời gian mỗi yêu cầu (ms)",
+    "lbQueueSeconds": "Cân bằng tải: giữ được bao nhiêu giây lưu lượng",
+    "lbCostPerReplica": "Cân bằng tải: chi phí tháng mỗi nút ($)",
+    "lbMaxUtilizationForLatency": "Cân bằng tải: mức bận bắt đầu gây chậm",
+    "pgQpsPerInstance": "PostgreSQL: số truy vấn/giây mỗi máy",
+    "pgServiceMs": "PostgreSQL: thời gian mỗi truy vấn (ms)",
+    "pgQueueSeconds": "PostgreSQL: giữ được bao nhiêu giây truy vấn",
+    "pgCostPerInstance": "PostgreSQL: chi phí tháng mỗi máy ($)",
+    "pgFailoverMs": "PostgreSQL: thời gian nâng bản sao lên (ms)",
+    "pgMaxUtilizationForLatency": "PostgreSQL: mức bận bắt đầu gây chậm",
+    "edgeDelayHttpMs": "Độ trễ mạng trên kết nối HTTP (ms)",
+    "edgeDelayDbMs": "Độ trễ mạng trên kết nối cơ sở dữ liệu (ms)",
+    "edgeDelayCacheMs": "Độ trễ mạng trên kết nối bộ nhớ đệm (ms)",
+    "edgeDelayMsgMs": "Độ trễ mạng trên kết nối tin nhắn (ms)"
+  },
+  "profile": {
+    "read-heavy": "Chủ yếu đọc",
+    "write-heavy": "Chủ yếu ghi",
+    "mixed": "Đọc ghi xen kẽ",
+    "chat": "Nhắn tin",
+    "feed": "Bảng tin",
+    "jobs": "Tác vụ nền"
+  },
+  "arrivals": {
+    "poisson": "Ngẫu nhiên (Poisson)",
+    "uniform": "Đều đặn"
+  },
+  "fault": {
+    "traffic-surge-3x": "Lưu lượng tăng gấp ba",
+    "instance-down": "Một máy chủ ngừng chạy",
+    "instance-slow": "Một máy chủ chạy chậm",
+    "lb-node-down": "Một nút cân bằng tải hỏng",
+    "cache-down": "Bộ nhớ đệm ngừng chạy",
+    "db-overloaded": "Cơ sở dữ liệu quá tải",
+    "db-primary-down": "Máy chính của cơ sở dữ liệu hỏng",
+    "db-replica-down": "Một bản sao cơ sở dữ liệu hỏng",
+    "db-stalled": "Cơ sở dữ liệu bị treo",
+    "broker-down": "Hệ thống tin nhắn ngừng chạy",
+    "object-storage-down": "Kho lưu trữ tệp ngừng chạy",
+    "kv-node-down": "Một nút kho khóa–giá trị hỏng",
+    "third-party-down": "Dịch vụ bên ngoài ngừng trả lời",
+    "third-party-slow": "Dịch vụ bên ngoài phản hồi chậm"
+  },
+  "metric": {
+    "p50": "p50",
+    "p95": "p95",
+    "p99": "p99",
+    "availability": "Tỉ lệ trả lời được",
+    "throughputRps": "Thông lượng",
+    "costPerMonth": "Chi phí mỗi tháng",
+    "spofCount": "Điểm hỏng là sập",
+    "exposedBackends": "Máy chủ lộ ra ngoài",
+    "peakBusy": "Mức bận cao nhất",
+    "peakDbConnections": "Kết nối cơ sở dữ liệu cao nhất",
+    "cacheOps": "Thao tác bộ nhớ đệm",
+    "requestsTotal": "Tổng số yêu cầu",
+    "requestsOk": "Đã trả lời",
+    "requestsRejected": "Bị từ chối",
+    "requestsTimedOut": "Quá hạn",
+    "requestsUnreachable": "Không tới đích",
+    "duplicateIds": "Mã bị trùng",
+    "outOfOrderIds": "Mã sai thứ tự",
+    "lostUpdates": "Cập nhật bị mất",
+    "writeConflicts": "Xung đột khi ghi",
+    "duplicateWrites": "Ghi hai lần",
+    "staleReads": "Đọc phải dữ liệu cũ",
+    "peakQueueDepth": "Hàng đợi dài nhất",
+    "lostMessages": "Tin nhắn bị mất",
+    "statusFlaps": "Trạng thái chập chờn",
+    "staleOnline": "Trạng thái trực tuyến bị cũ",
+    "inboxWritesPerSec": "Số lần ghi hộp thư mỗi giây"
+  },
+  "timelineField": {
+    "inFlight": "Đang xử lý",
+    "queued": "Đang chờ",
+    "busy": "Độ bận",
+    "rejected": "Bị từ chối",
+    "up": "Đang chạy"
+  },
+  "traceOutcome": {
+    "delivered": "Đã trả lời",
+    "rejected": "Bị từ chối",
+    "timeout": "Quá hạn",
+    "unreachable": "Không tới đích"
+  },
+  "traceAction": {
+    "send": "Gửi đi",
+    "serve": "Được xử lý",
+    "reject": "Bị từ chối",
+    "down": "Gặp máy đã ngừng"
   }
 }

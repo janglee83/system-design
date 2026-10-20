@@ -63,6 +63,203 @@
   "engine": {
     "loading": "Starting the simulator…",
     "ready": "Simulator {version}",
-    "failed": "The simulator could not start. Check your connection, then try again."
+    "failed": "The simulator could not start. Check your connection, then try again.",
+    "event": {
+      "db": {
+        "no-replica": "{node}: the primary failed and there is no replica to take over.",
+        "primary-down": "{node}: the primary failed; {replicas, plural, one {# replica} other {# replicas}} left.",
+        "promoted": "{node}: a replica was promoted to primary."
+      },
+      "fault": {
+        "no-target": "A fault found no matching component and was skipped.",
+        "traffic-surge": "Traffic jumped to {factor}×.",
+        "unsupported": "This fault is not simulated yet, so it was skipped."
+      },
+      "instance": {
+        "down": "{node}: one instance stopped; {remaining} still running."
+      },
+      "lb": {
+        "node-down": "{node}: a balancer node failed; {remaining} left."
+      },
+      "node": {
+        "overloaded": "{node} is overloaded and has started rejecting requests."
+      }
+    },
+    "validation": {
+      "calibration": {
+        "invalid": "World parameter “{field}” has an invalid value."
+      },
+      "client": {
+        "no-path": "{node} has no path to a server."
+      },
+      "config": {
+        "invalid": "{node}: “{field}” is outside the allowed range."
+      },
+      "edge": {
+        "not-accepted": "{target} does not accept {kind} connections.",
+        "unknown-node": "A connection points to a component that no longer exists."
+      },
+      "graph": {
+        "cycle": "The design loops back through {node}; requests would go round forever.",
+        "no-client": "Add a Users component so something sends requests."
+      },
+      "limits": {
+        "kind-not-allowed": "This challenge does not allow {node}.",
+        "too-many-instances": "The total number of instances is over the challenge limit.",
+        "too-many-nodes": "There are more components than the challenge allows."
+      },
+      "node": {
+        "duplicate-id": "Two components share the id {node}.",
+        "unknown-kind": "{node} is a component type the simulator does not know.",
+        "unreachable": "{node} gets no requests: nothing connects to it."
+      },
+      "workload": {
+        "invalid": "Traffic setting “{field}” is invalid."
+      }
+    }
+  },
+  "component": {
+    "client": "Users",
+    "lb": "Load balancer",
+    "web-server": "Web server",
+    "postgres": "PostgreSQL"
+  },
+  "componentDescription": {
+    "client": "Where requests come from: the people using your system.",
+    "lb": "Spreads incoming requests across the servers behind it so no single one is swamped.",
+    "web-server": "Runs your application code and answers HTTP requests. Add CPUs or copies to serve more.",
+    "postgres": "A relational database that keeps data safe. Read replicas share the reading load."
+  },
+  "category": {
+    "general": "General",
+    "compute": "Compute",
+    "data": "Data"
+  },
+  "role": {
+    "client": "Client",
+    "balancer": "Balancer",
+    "service": "Service",
+    "database": "Database"
+  },
+  "edgeKind": {
+    "http": "HTTP",
+    "db": "Database",
+    "cache": "Cache",
+    "msg": "Messaging"
+  },
+  "configField": {
+    "cpu": "vCPUs",
+    "memoryGb": "Memory (GB)",
+    "readReplicas": "Read replicas",
+    "algorithm": "Balancing method"
+  },
+  "configOption": {
+    "algorithm": {
+      "round-robin": "Take turns",
+      "least-conn": "Fewest open requests"
+    }
+  },
+  "override": {
+    "rpsPerInstance": "Requests/s per instance",
+    "serviceMs": "Service time (ms)",
+    "costPerMonth": "Cost per month ($)"
+  },
+  "calibration": {
+    "webRpsPerVcpu": "Web: requests/s per vCPU",
+    "webServiceMs": "Web: time to serve a request (ms)",
+    "webQueuePerGb": "Web: waiting requests per GB of memory",
+    "webCostPerVcpu": "Web: monthly cost of the first vCPU ($)",
+    "webCostPerExtraVcpu": "Web: monthly cost per extra vCPU ($)",
+    "lbRpsPerReplica": "Load balancer: requests/s per node",
+    "lbServiceMs": "Load balancer: time per request (ms)",
+    "lbQueueSeconds": "Load balancer: seconds of traffic it can hold",
+    "lbCostPerReplica": "Load balancer: monthly cost per node ($)",
+    "lbMaxUtilizationForLatency": "Load balancer: busy level where delays start",
+    "pgQpsPerInstance": "PostgreSQL: queries/s per instance",
+    "pgServiceMs": "PostgreSQL: time per query (ms)",
+    "pgQueueSeconds": "PostgreSQL: seconds of queries it can hold",
+    "pgCostPerInstance": "PostgreSQL: monthly cost per instance ($)",
+    "pgFailoverMs": "PostgreSQL: time to promote a replica (ms)",
+    "pgMaxUtilizationForLatency": "PostgreSQL: busy level where delays start",
+    "edgeDelayHttpMs": "Network delay on HTTP links (ms)",
+    "edgeDelayDbMs": "Network delay on database links (ms)",
+    "edgeDelayCacheMs": "Network delay on cache links (ms)",
+    "edgeDelayMsgMs": "Network delay on messaging links (ms)"
+  },
+  "profile": {
+    "read-heavy": "Mostly reads",
+    "write-heavy": "Mostly writes",
+    "mixed": "Mixed",
+    "chat": "Chat",
+    "feed": "Feed",
+    "jobs": "Background jobs"
+  },
+  "arrivals": {
+    "poisson": "Random (Poisson)",
+    "uniform": "Steady"
+  },
+  "fault": {
+    "traffic-surge-3x": "Traffic triples",
+    "instance-down": "A server goes down",
+    "instance-slow": "A server slows down",
+    "lb-node-down": "A load balancer node fails",
+    "cache-down": "The cache goes down",
+    "db-overloaded": "The database is overloaded",
+    "db-primary-down": "The database primary fails",
+    "db-replica-down": "A database replica fails",
+    "db-stalled": "The database stalls",
+    "broker-down": "The message broker goes down",
+    "object-storage-down": "Object storage goes down",
+    "kv-node-down": "A key-value node fails",
+    "third-party-down": "A third-party service goes down",
+    "third-party-slow": "A third-party service slows down"
+  },
+  "metric": {
+    "p50": "p50",
+    "p95": "p95",
+    "p99": "p99",
+    "availability": "Availability",
+    "throughputRps": "Throughput",
+    "costPerMonth": "Cost per month",
+    "spofCount": "Single points of failure",
+    "exposedBackends": "Exposed backends",
+    "peakBusy": "Peak busy",
+    "peakDbConnections": "Peak database connections",
+    "cacheOps": "Cache operations",
+    "requestsTotal": "Total requests",
+    "requestsOk": "Answered",
+    "requestsRejected": "Rejected",
+    "requestsTimedOut": "Timed out",
+    "requestsUnreachable": "Unreachable",
+    "duplicateIds": "Duplicate IDs",
+    "outOfOrderIds": "Out-of-order IDs",
+    "lostUpdates": "Lost updates",
+    "writeConflicts": "Write conflicts",
+    "duplicateWrites": "Duplicate writes",
+    "staleReads": "Stale reads",
+    "peakQueueDepth": "Longest queue",
+    "lostMessages": "Lost messages",
+    "statusFlaps": "Status flaps",
+    "staleOnline": "Stale online status",
+    "inboxWritesPerSec": "Inbox writes per second"
+  },
+  "timelineField": {
+    "inFlight": "In flight",
+    "queued": "Waiting",
+    "busy": "Busy",
+    "rejected": "Rejected",
+    "up": "Running"
+  },
+  "traceOutcome": {
+    "delivered": "Answered",
+    "rejected": "Rejected",
+    "timeout": "Timed out",
+    "unreachable": "Unreachable"
+  },
+  "traceAction": {
+    "send": "Sent",
+    "serve": "Served",
+    "reject": "Rejected",
+    "down": "Hit a stopped server"
   }
 }
