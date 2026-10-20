@@ -19,7 +19,7 @@ services:
       service: dev
     command: ["pnpm", "--filter", "@sd/web", "dev"]
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   cargo-target:

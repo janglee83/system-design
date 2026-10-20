@@ -42,3 +42,12 @@ describe("web workflow triggers", () => {
     }
   });
 });
+
+const compose = () => fs.readFileSync(path.join(appRoot, "../../compose.yaml"), "utf8");
+
+describe("compose", () => {
+  it("publishes the web dev server on localhost only", () => {
+    const ports = [...compose().matchAll(/^ {6}- "([^"]+)"$/gm)].map((m) => m[1]);
+    expect(ports).toEqual(["127.0.0.1:3000:3000"]);
+  });
+});
