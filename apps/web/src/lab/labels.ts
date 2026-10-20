@@ -4,10 +4,10 @@ import { nodeNumber } from "./model/ids";
 
 // Any next-intl translator. Method syntax keeps `key` bivariant, so a translator typed with
 // the catalog's exact keys (createTranslator in tests) fits as well as useTranslations().
-type T = { translate(key: string, values?: Record<string, string | number>): string }["translate"];
+export type Translate = { translate(key: string, values?: Record<string, string | number>): string }["translate"];
 
 /** R12: the user's label, else the translated component name plus the node's number. */
-export function displayLabel(node: Pick<LabNode, "id" | "kind" | "label">, meta: ComponentMeta | null, t: T): string {
+export function displayLabel(node: Pick<LabNode, "id" | "kind" | "label">, meta: ComponentMeta | null, t: Translate): string {
   if (node.label.trim() !== "") return node.label;
   if (!meta) return node.id;
   const name = t(meta.labelKey);

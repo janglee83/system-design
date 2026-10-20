@@ -284,5 +284,11 @@
     "serve": "Được xử lý",
     "reject": "Bị từ chối",
     "down": "Gặp máy đã ngừng"
+  },
+  "palette": {
+    "search": "Tìm thành phần",
+    "add": "Thêm {name}",
+    "notAllowed": "Thử thách này không cho dùng thành phần này.",
+    "noMatch": "Không có thành phần nào khớp “{query}”."
   }
 }

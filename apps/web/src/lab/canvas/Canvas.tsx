@@ -14,11 +14,13 @@ import { useCallback, useMemo, useState } from "react";
 import type { XY } from "../model/design";
 import { moveGroup, moveNodes } from "../model/ops";
 import { useDesign, useDesignApi, useUi } from "../store/LabStores";
+import { DRAG_MIME } from "../palette/Palette";
 import { useMetas } from "../use-metas";
 import { EdgeLegend } from "./EdgeLegend";
 import { EdgeMarkers, LabEdge } from "./LabEdge";
 import { LabNode } from "./LabNode";
 import { toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
+import { useAddComponent } from "./use-add-component";
 
 const nodeTypes = { lab: LabNode };
 const edgeTypes = { lab: LabEdge };
@@ -32,6 +34,7 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const snap = useUi((s) => s.snap);
   const minimap = useUi((s) => s.minimap);
   const [drag, setDrag] = useState<Record<string, XY>>({});
+  const add = useAddComponent();
 
   const ctx: AdapterContext = {
     metas,
@@ -118,6 +121,18 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(DRAG_MIME)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+          }
+        }}
+        onDrop={(e) => {
+          const kind = e.dataTransfer.getData(DRAG_MIME);
+          if (!kind) return;
+          e.preventDefault();
+          add(kind, { x: e.clientX, y: e.clientY });
+        }}
         snapToGrid={snap}
         snapGrid={[16, 16]}
         deleteKeyCode={null}

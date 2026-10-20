@@ -284,5 +284,11 @@
     "serve": "Served",
     "reject": "Rejected",
     "down": "Hit a stopped server"
+  },
+  "palette": {
+    "search": "Search components",
+    "add": "Add {name}",
+    "notAllowed": "This challenge does not allow this component.",
+    "noMatch": "No component matches “{query}”."
   }
 }
