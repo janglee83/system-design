@@ -17,7 +17,6 @@ content/
 ├─ lessons/<lesson-id>/en.md         English prose
 ├─ challenges/<challenge-id>/…       challenge.json, vi.md, en.md
 ├─ research/<topic>.md               research notes with citations (facts in our words)
-├─ drafts/<lesson>.md                old single-file drafts, removed once all are migrated
 └─ REPORT.md                         the latest content-researcher run report
 ```
 

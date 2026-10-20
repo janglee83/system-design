@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "id": "l0-cache-basics",
+  "level": "L0",
+  "kind": "reading",
+  "minutes": 12,
+  "difficulty": 1,
+  "prerequisites": ["l0-database-basics", "l0-latency-and-distance"],
+  "concepts": ["cache", "hit-ratio", "ttl", "eviction"],
+  "research": ["caching-basics"],
+  "status": "draft",
+  "check": {
+    "passMark": 4,
+    "questions": [
+      {
+        "id": "q1",
+        "type": "numeric",
+        "answer": 1000,
+        "tolerance": 0,
+        "unit": "queries/s"
+      },
+      {
+        "id": "q2",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "b",
+        "misconception": "M3"
+      },
+      {
+        "id": "q3",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "a",
+        "misconception": "M1"
+      },
+      {
+        "id": "q4",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "c"
+      },
+      {
+        "id": "q5",
+        "type": "single",
+        "options": ["a", "b"],
+        "answer": "b",
+        "misconception": "M2"
+      }
+    ]
+  }
+}

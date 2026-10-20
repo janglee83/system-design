@@ -1,0 +1,279 @@
+{
+  "formatVersion": 1,
+  "id": "c-l0-exit-coffee-shop",
+  "level": "L0",
+  "prerequisites": ["l0-client-server", "l0-latency-and-distance", "l0-throughput-and-capacity", "l0-queueing-and-utilization", "l0-percentiles", "l0-database-basics", "l0-single-point-of-failure", "l0-cost-basics", "l0-estimation-basics"],
+  "status": "draft",
+  "start": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "users",
+          "kind": "client"
+        },
+        {
+          "id": "web",
+          "kind": "web-server",
+          "config": {
+            "cpu": 1
+          }
+        },
+        {
+          "id": "pg",
+          "kind": "postgres",
+          "config": {
+            "readReplicas": 0
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "users",
+          "to": "web",
+          "kind": "http"
+        },
+        {
+          "id": "e2",
+          "from": "web",
+          "to": "pg",
+          "kind": "db"
+        }
+      ]
+    },
+    "workload": {
+      "profile": "mixed",
+      "baseRps": 4000,
+      "writeRatio": 0.2,
+      "surge": {
+        "factor": 2,
+        "atMs": 1500,
+        "durationMs": 2000
+      }
+    }
+  },
+  "lockedNodes": ["users"],
+  "limits": {
+    "maxNodes": 5,
+    "maxInstances": 8,
+    "allowedKinds": ["client", "web-server", "postgres"]
+  },
+  "goals": [
+    {
+      "id": "fast",
+      "metric": "p95",
+      "op": "<=",
+      "value": 50
+    },
+    {
+      "id": "tail",
+      "metric": "p99",
+      "op": "<=",
+      "value": 100
+    },
+    {
+      "id": "up",
+      "metric": "availability",
+      "op": ">=",
+      "value": 0.98
+    },
+    {
+      "id": "no-spof",
+      "metric": "spofCount",
+      "op": "==",
+      "value": 0
+    }
+  ],
+  "modes": [
+    {
+      "id": "standard",
+      "budgetPerMonth": 500,
+      "faults": [
+        {
+          "kind": "instance-down",
+          "target": "web",
+          "atMs": 5000
+        },
+        {
+          "kind": "db-primary-down",
+          "target": "pg",
+          "atMs": 7000
+        }
+      ],
+      "reference": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 1
+              },
+              "replicas": 2
+            },
+            {
+              "id": "pg",
+              "kind": "postgres",
+              "config": {
+                "readReplicas": 1
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "web",
+              "to": "pg",
+              "kind": "db"
+            }
+          ]
+        }
+      },
+      "naive": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 4
+              }
+            },
+            {
+              "id": "pg",
+              "kind": "postgres",
+              "config": {
+                "readReplicas": 1
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "web",
+              "to": "pg",
+              "kind": "db"
+            }
+          ]
+        },
+        "failsGoals": ["up", "no-spof"]
+      }
+    },
+    {
+      "id": "tight-budget",
+      "budgetPerMonth": 420,
+      "faults": [
+        {
+          "kind": "instance-down",
+          "target": "web",
+          "atMs": 5000
+        },
+        {
+          "kind": "db-primary-down",
+          "target": "pg",
+          "atMs": 7000
+        }
+      ],
+      "reference": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 1
+              },
+              "replicas": 2
+            },
+            {
+              "id": "pg",
+              "kind": "postgres",
+              "config": {
+                "readReplicas": 1
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "web",
+              "to": "pg",
+              "kind": "db"
+            }
+          ]
+        }
+      },
+      "naive": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "users",
+              "kind": "client"
+            },
+            {
+              "id": "web",
+              "kind": "web-server",
+              "config": {
+                "cpu": 1
+              },
+              "replicas": 2
+            },
+            {
+              "id": "pg",
+              "kind": "postgres",
+              "config": {
+                "readReplicas": 2
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "e1",
+              "from": "users",
+              "to": "web",
+              "kind": "http"
+            },
+            {
+              "id": "e2",
+              "from": "web",
+              "to": "pg",
+              "kind": "db"
+            }
+          ]
+        },
+        "failsGoals": ["budget"]
+      }
+    }
+  ],
+  "hints": ["h1", "h2", "h3"]
+}

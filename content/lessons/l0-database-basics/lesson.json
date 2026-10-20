@@ -1,0 +1,152 @@
+{
+  "formatVersion": 1,
+  "id": "l0-database-basics",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 18,
+  "difficulty": 2,
+  "prerequisites": ["l0-throughput-and-capacity"],
+  "concepts": ["database", "table", "transaction", "bottleneck"],
+  "research": ["databases-basics"],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "web",
+            "kind": "web-server",
+            "config": {
+              "cpu": 2
+            }
+          },
+          {
+            "id": "pg",
+            "kind": "postgres",
+            "config": {
+              "readReplicas": 0,
+              "rpsPerInstance": 5000
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "web",
+            "kind": "http"
+          },
+          {
+            "id": "e2",
+            "from": "web",
+            "to": "pg",
+            "kind": "db"
+          }
+        ]
+      },
+      "workload": {
+        "profile": "mixed",
+        "baseRps": 6000,
+        "writeRatio": 0.2
+      }
+    },
+    "controls": [
+      {
+        "id": "webCpu",
+        "type": "stepper",
+        "path": "graph.nodes[web].config.cpu",
+        "options": [2, 4],
+        "default": 2
+      },
+      {
+        "id": "dbSize",
+        "type": "select",
+        "path": "graph.nodes[pg].config.rpsPerInstance",
+        "options": [5000, 10000],
+        "default": 5000
+      },
+      {
+        "id": "timeout",
+        "type": "select",
+        "path": "workload.clientTimeoutMs",
+        "options": [1000, 5000],
+        "default": 1000
+      }
+    ],
+    "goals": [
+      {
+        "id": "fast",
+        "metric": "p95",
+        "op": "<=",
+        "value": 50
+      },
+      {
+        "id": "no-drops",
+        "metric": "requestsRejected",
+        "op": "<=",
+        "value": 0
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "webCpu": 2,
+          "dbSize": 10000,
+          "timeout": 1000
+        },
+        "expect": {
+          "p95": {
+            "<=": 30
+          },
+          "requestsRejected": {
+            "==": 0
+          }
+        }
+      },
+      {
+        "id": "B",
+        "misconception": "M2",
+        "set": {
+          "webCpu": 4,
+          "dbSize": 5000,
+          "timeout": 1000
+        },
+        "failsGoals": ["fast", "no-drops"],
+        "expect": {
+          "p95": {
+            ">=": 300
+          },
+          "requestsRejected": {
+            ">=": 1
+          }
+        },
+        "expectEvents": ["node.overloaded"]
+      },
+      {
+        "id": "C",
+        "misconception": "M3",
+        "set": {
+          "webCpu": 2,
+          "dbSize": 5000,
+          "timeout": 5000
+        },
+        "failsGoals": ["fast", "no-drops"],
+        "expect": {
+          "p95": {
+            ">=": 300
+          },
+          "requestsRejected": {
+            ">=": 1
+          }
+        },
+        "expectEvents": ["node.overloaded"]
+      }
+    ]
+  }
+}

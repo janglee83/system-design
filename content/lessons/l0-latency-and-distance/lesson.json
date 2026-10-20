@@ -1,0 +1,124 @@
+{
+  "formatVersion": 1,
+  "id": "l0-latency-and-distance",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 15,
+  "difficulty": 1,
+  "prerequisites": ["l0-client-server"],
+  "concepts": ["latency", "round-trip-time", "propagation-delay"],
+  "research": ["latency-and-distance", "dns-and-network-path"],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "web",
+            "kind": "web-server",
+            "config": {
+              "cpu": 1
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "web",
+            "kind": "http"
+          }
+        ]
+      },
+      "workload": {
+        "profile": "read-heavy",
+        "baseRps": 2000,
+        "writeRatio": 0.1
+      },
+      "calibration": {
+        "edgeDelayHttpMs": 160
+      }
+    },
+    "controls": [
+      {
+        "id": "location",
+        "type": "select",
+        "path": "calibration.edgeDelayHttpMs",
+        "options": [2, 40, 160],
+        "default": 160
+      },
+      {
+        "id": "cpu",
+        "type": "select",
+        "path": "graph.nodes[web].config.cpu",
+        "options": [1, 8],
+        "default": 1
+      }
+    ],
+    "goals": [
+      {
+        "id": "snappy",
+        "metric": "p95",
+        "op": "<=",
+        "value": 100
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "location": 40,
+          "cpu": 1
+        },
+        "expect": {
+          "p95": {
+            ">=": 30,
+            "<=": 60
+          },
+          "costPerMonth": {
+            "==": 22.5
+          }
+        }
+      },
+      {
+        "id": "B",
+        "misconception": "M1",
+        "set": {
+          "location": 160,
+          "cpu": 8
+        },
+        "failsGoals": ["snappy"],
+        "expect": {
+          "p95": {
+            ">=": 150
+          },
+          "costPerMonth": {
+            ">=": 200
+          }
+        }
+      },
+      {
+        "id": "C",
+        "misconception": "M2",
+        "set": {
+          "location": 160,
+          "cpu": 1
+        },
+        "failsGoals": ["snappy"],
+        "expect": {
+          "p95": {
+            ">=": 150
+          },
+          "peakBusy": {
+            "<=": 0.6
+          }
+        }
+      }
+    ]
+  }
+}

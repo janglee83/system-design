@@ -1,0 +1,146 @@
+{
+  "formatVersion": 1,
+  "id": "l0-client-server",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 12,
+  "difficulty": 1,
+  "prerequisites": [],
+  "concepts": ["client", "server", "request", "response"],
+  "research": ["client-server-and-http"],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "lb",
+            "kind": "lb",
+            "replicas": 1
+          },
+          {
+            "id": "web",
+            "kind": "web-server"
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "lb",
+            "kind": "http"
+          },
+          {
+            "id": "e2",
+            "from": "lb",
+            "to": "web",
+            "kind": "http"
+          }
+        ]
+      },
+      "workload": {
+        "profile": "mixed",
+        "baseRps": 500,
+        "writeRatio": 0.2
+      },
+      "faults": [
+        {
+          "kind": "instance-down",
+          "target": "web",
+          "atMs": 600000
+        }
+      ]
+    },
+    "controls": [
+      {
+        "id": "webOffAt",
+        "type": "toggle",
+        "path": "faults[0].atMs",
+        "options": [600000, 0],
+        "default": 600000
+      },
+      {
+        "id": "lbCopies",
+        "type": "stepper",
+        "path": "graph.nodes[lb].replicas",
+        "options": [1, 2],
+        "default": 1
+      }
+    ],
+    "goals": [
+      {
+        "id": "answered",
+        "metric": "availability",
+        "op": ">=",
+        "value": 0.99
+      },
+      {
+        "id": "reachable",
+        "metric": "requestsUnreachable",
+        "op": "<=",
+        "value": 0
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "webOffAt": 600000,
+          "lbCopies": 1
+        },
+        "expect": {
+          "availability": {
+            ">=": 0.99
+          },
+          "requestsUnreachable": {
+            "==": 0
+          },
+          "p95": {
+            "<=": 20
+          }
+        }
+      },
+      {
+        "id": "B",
+        "misconception": "M1",
+        "set": {
+          "webOffAt": 0,
+          "lbCopies": 2
+        },
+        "failsGoals": ["answered", "reachable"],
+        "expect": {
+          "availability": {
+            "==": 0
+          },
+          "requestsUnreachable": {
+            ">=": 1
+          }
+        },
+        "expectEvents": ["instance.down"]
+      },
+      {
+        "id": "C",
+        "misconception": "M3",
+        "set": {
+          "webOffAt": 0,
+          "lbCopies": 1
+        },
+        "failsGoals": ["answered", "reachable"],
+        "expect": {
+          "availability": {
+            "==": 0
+          },
+          "requestsUnreachable": {
+            ">=": 1
+          }
+        },
+        "expectEvents": ["instance.down"]
+      }
+    ]
+  }
+}

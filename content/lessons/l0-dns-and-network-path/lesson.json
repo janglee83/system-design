@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "id": "l0-dns-and-network-path",
+  "level": "L0",
+  "kind": "reading",
+  "minutes": 10,
+  "difficulty": 1,
+  "prerequisites": ["l0-http-basics"],
+  "concepts": ["dns", "ip-address", "ttl", "tcp-handshake"],
+  "research": ["dns-and-network-path"],
+  "status": "draft",
+  "check": {
+    "passMark": 4,
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "b"
+      },
+      {
+        "id": "q2",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "c"
+      },
+      {
+        "id": "q3",
+        "type": "numeric",
+        "answer": 5,
+        "tolerance": 0,
+        "unit": "min",
+        "misconception": "M2"
+      },
+      {
+        "id": "q4",
+        "type": "single",
+        "options": ["a", "b", "c"],
+        "answer": "b",
+        "misconception": "M1"
+      },
+      {
+        "id": "q5",
+        "type": "single",
+        "options": ["a", "b"],
+        "answer": "b",
+        "misconception": "M3"
+      }
+    ]
+  }
+}

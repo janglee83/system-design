@@ -1,0 +1,185 @@
+{
+  "formatVersion": 1,
+  "id": "l0-single-point-of-failure",
+  "level": "L0",
+  "kind": "experiment",
+  "minutes": 18,
+  "difficulty": 2,
+  "prerequisites": ["l0-database-basics"],
+  "concepts": ["single-point-of-failure", "redundancy", "failover"],
+  "research": ["availability-and-spof"],
+  "status": "draft",
+  "experiment": {
+    "base": {
+      "graph": {
+        "nodes": [
+          {
+            "id": "users",
+            "kind": "client"
+          },
+          {
+            "id": "web",
+            "kind": "web-server",
+            "replicas": 1,
+            "config": {
+              "cpu": 2
+            }
+          },
+          {
+            "id": "pg",
+            "kind": "postgres",
+            "config": {
+              "readReplicas": 0
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "users",
+            "to": "web",
+            "kind": "http"
+          },
+          {
+            "id": "e2",
+            "from": "web",
+            "to": "pg",
+            "kind": "db"
+          }
+        ]
+      },
+      "workload": {
+        "profile": "mixed",
+        "baseRps": 2000,
+        "writeRatio": 0.2
+      },
+      "faults": [
+        {
+          "kind": "instance-down",
+          "target": "web",
+          "atMs": 3000
+        },
+        {
+          "kind": "db-primary-down",
+          "target": "pg",
+          "atMs": 6000
+        }
+      ]
+    },
+    "controls": [
+      {
+        "id": "webCopies",
+        "type": "stepper",
+        "path": "graph.nodes[web].replicas",
+        "options": [1, 2],
+        "default": 1
+      },
+      {
+        "id": "webCpu",
+        "type": "select",
+        "path": "graph.nodes[web].config.cpu",
+        "options": [2, 8],
+        "default": 2
+      },
+      {
+        "id": "dbReplicas",
+        "type": "stepper",
+        "path": "graph.nodes[pg].config.readReplicas",
+        "options": [0, 1],
+        "default": 0
+      }
+    ],
+    "goals": [
+      {
+        "id": "up",
+        "metric": "availability",
+        "op": ">=",
+        "value": 0.95
+      },
+      {
+        "id": "no-spof",
+        "metric": "spofCount",
+        "op": "==",
+        "value": 0
+      }
+    ],
+    "choices": [
+      {
+        "id": "A",
+        "correct": true,
+        "set": {
+          "webCopies": 2,
+          "webCpu": 2,
+          "dbReplicas": 1
+        },
+        "expect": {
+          "availability": {
+            ">=": 0.97
+          },
+          "spofCount": {
+            "==": 0
+          }
+        },
+        "expectEvents": ["instance.down", "db.primary-down", "db.promoted"]
+      },
+      {
+        "id": "B",
+        "misconception": "M1",
+        "set": {
+          "webCopies": 1,
+          "webCpu": 8,
+          "dbReplicas": 0
+        },
+        "failsGoals": ["up", "no-spof"],
+        "expect": {
+          "availability": {
+            "<=": 0.4
+          },
+          "spofCount": {
+            "==": 2
+          }
+        },
+        "expectEvents": ["db.no-replica"]
+      },
+      {
+        "id": "C",
+        "misconception": "M2",
+        "set": {
+          "webCopies": 2,
+          "webCpu": 2,
+          "dbReplicas": 0
+        },
+        "failsGoals": ["up", "no-spof"],
+        "expect": {
+          "availability": {
+            ">=": 0.5,
+            "<=": 0.7
+          },
+          "spofCount": {
+            "==": 1
+          }
+        },
+        "expectEvents": ["db.no-replica"]
+      },
+      {
+        "id": "D",
+        "misconception": "M2",
+        "set": {
+          "webCopies": 1,
+          "webCpu": 2,
+          "dbReplicas": 1
+        },
+        "failsGoals": ["up", "no-spof"],
+        "expect": {
+          "availability": {
+            "<=": 0.4
+          },
+          "spofCount": {
+            "==": 1
+          }
+        },
+        "expectEvents": ["db.promoted"]
+      }
+    ]
+  }
+}
