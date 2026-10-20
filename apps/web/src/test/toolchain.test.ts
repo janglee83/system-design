@@ -16,3 +16,11 @@ describe("toolchain", () => {
     expect(loose).toEqual([]);
   });
 });
+
+describe("Playwright in the dev image", () => {
+  it("installs the same browser build as @playwright/test", () => {
+    const dockerfile = fs.readFileSync(path.join(appRoot, "../../Dockerfile"), "utf8");
+    const match = dockerfile.match(/playwright@(\d+\.\d+\.\d+) install/);
+    expect(match?.[1]).toBe(pkg.devDependencies["@playwright/test"]);
+  });
+});
