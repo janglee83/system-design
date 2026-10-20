@@ -12,7 +12,30 @@
     "comingSoon": "Sắp có"
   },
   "lab": {
-    "title": "Lab"
+    "title": "Lab",
+    "heading": "Bàn thiết kế",
+    "palette": "Thành phần",
+    "inspector": "Thuộc tính",
+    "canvas": "Khung vẽ thiết kế",
+    "empty": {
+      "title": "Chưa có gì ở đây",
+      "body": "Kéo một thành phần vào khung vẽ, hoặc bấm {shortcut} để tìm."
+    },
+    "legend": {
+      "title": "Kiểu kết nối"
+    },
+    "node": {
+      "replicas": "× {count}",
+      "costPerMonth": "{cost} $/tháng",
+      "costUnknown": "—",
+      "locked": "Thử thách đã khóa thành phần này",
+      "issues": "{count, plural, other {# vấn đề}}"
+    },
+    "minimap": "Bản đồ thu nhỏ",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "fitView": "Vừa màn hình",
+    "snap": "Bám theo lưới"
   },
   "nav": {
     "primary": "Chính",

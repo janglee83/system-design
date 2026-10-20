@@ -112,3 +112,9 @@ html {
     animation-duration: 0s !important;
   }
 }
+
+@keyframes sd-pulse {
+  50% {
+    border-color: color-mix(in srgb, var(--sd-over) 45%, transparent);
+  }
+}

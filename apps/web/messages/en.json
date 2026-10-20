@@ -12,7 +12,30 @@
     "comingSoon": "Coming soon"
   },
   "lab": {
-    "title": "Lab"
+    "title": "Lab",
+    "heading": "Lab workspace",
+    "palette": "Components",
+    "inspector": "Inspector",
+    "canvas": "Design canvas",
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "Drag a component onto the canvas, or press {shortcut} to search."
+    },
+    "legend": {
+      "title": "Connections"
+    },
+    "node": {
+      "replicas": "× {count}",
+      "costPerMonth": "${cost} /mo",
+      "costUnknown": "—",
+      "locked": "Locked by the challenge",
+      "issues": "{count, plural, one {# problem} other {# problems}}"
+    },
+    "minimap": "Overview map",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "snap": "Snap to grid"
   },
   "nav": {
     "primary": "Main",
