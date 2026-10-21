@@ -424,5 +424,19 @@
     "node": "{label}, {kind}",
     "group": "Group {label}",
     "edge": "{kind} connection from {source} to {target}"
+  },
+  "world": {
+    "title": "World parameters",
+    "intro": "How fast and how expensive the simulated machines and network are. Changes apply to this design only.",
+    "changed": "{count, plural, one {# changed} other {# changed}}",
+    "reset": "Reset to default",
+    "resetAll": "Reset all",
+    "default": "Default {value}",
+    "group": {
+      "web": "Web servers",
+      "lb": "Load balancers",
+      "pg": "PostgreSQL",
+      "network": "Network"
+    }
   }
 }

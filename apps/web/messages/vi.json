@@ -424,5 +424,19 @@
     "node": "{label}, {kind}",
     "group": "Nhóm {label}",
     "edge": "Kết nối {kind} từ {source} tới {target}"
+  },
+  "world": {
+    "title": "Tham số thế giới",
+    "intro": "Máy và mạng trong mô phỏng nhanh và đắt đến đâu. Thay đổi chỉ áp dụng cho thiết kế này.",
+    "changed": "{count, plural, other {Đã đổi #}}",
+    "reset": "Về mặc định",
+    "resetAll": "Đặt lại tất cả",
+    "default": "Mặc định {value}",
+    "group": {
+      "web": "Máy chủ web",
+      "lb": "Cân bằng tải",
+      "pg": "PostgreSQL",
+      "network": "Mạng"
+    }
   }
 }

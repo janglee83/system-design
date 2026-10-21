@@ -10,6 +10,7 @@ import { TextField } from "./TextField";
 import { useMetas } from "../use-metas";
 import { FaultList } from "./FaultList";
 import { WorkloadForm } from "./WorkloadForm";
+import { WorldParams } from "./WorldParams";
 
 const NO_FAULTS: FaultKind[] = [];
 
@@ -24,6 +25,7 @@ export function DesignSettings() {
   const workloadParams = useEngineStore((s) => s.info?.capabilities.workloadParams ?? NO_PARAMS);
   const supportedFaults = useEngineStore((s) => s.info?.capabilities.faults ?? NO_FAULTS);
   const metas = useMetas();
+  const calibration = useEngineStore((s) => s.info?.calibration ?? null);
   return (
     <div data-testid="design-settings" className="flex flex-col gap-2">
       <h2 className="pb-1 text-sm font-semibold">{t("design")}</h2>
@@ -32,6 +34,7 @@ export function DesignSettings() {
       </Field>
       <WorkloadForm workloadParams={workloadParams} />
       <FaultList supported={supportedFaults} metas={metas} />
+      {calibration ? <WorldParams defaults={calibration} /> : null}
     </div>
   );
 }
