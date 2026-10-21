@@ -66,7 +66,9 @@ export async function buildFourTier(page: Page, webReplicas = 2) {
     await r.fill(String(webReplicas));
     await r.press("Enter");
   }
-  await page.keyboard.press("Escape"); // clear the selection (works even from an input)
+  // Leave the inspector field first: Escape does not clear the selection while typing (review I7).
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("problems")).toHaveText("No problems");
 }
 

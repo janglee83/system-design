@@ -449,6 +449,26 @@
     "history": "Các lần chạy",
     "runLabel": "Lần {id} · {time}",
     "tookMs": "{ms} ms",
-    "unavailable": "Hãy chạy lại để xem chi tiết: bộ mô phỏng đã khởi động lại sau lần chạy này."
+    "unavailable": "Hãy chạy lại để xem chi tiết: bộ mô phỏng đã khởi động lại sau lần chạy này.",
+    "stale": "chạy lại để xem"
+  },
+  "panel": {
+    "label": "Kết quả",
+    "tabs": {
+      "metrics": "Số liệu",
+      "events": "Sự kiện",
+      "logs": "Nhật ký",
+      "simulation": "Mô phỏng"
+    },
+    "resize": "Đổi chiều cao khung kết quả",
+    "noRun": "Chưa chạy lần nào",
+    "noRunBody": "Bấm Chạy để mô phỏng thiết kế này. Kết quả sẽ hiện ở đây.",
+    "vsPrevious": "so với lần trước",
+    "better": "tốt hơn",
+    "worse": "kém hơn",
+    "breakdown": "Các yêu cầu đã đi đâu",
+    "series": "Theo thời gian",
+    "node": "Thành phần",
+    "noComparison": "Lần chạy đầu tiên: chưa có gì để so."
   }
 }

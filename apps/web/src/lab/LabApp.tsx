@@ -24,6 +24,7 @@ import { useAutoLayout } from "./canvas/use-auto-layout";
 import type { Design } from "./model/design";
 import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
+import { BottomPanel } from "./panel/BottomPanel";
 import { Problems } from "./Problems";
 import { RunBar } from "./run/RunBar";
 import { useRunDesign } from "./run/use-run-design";
@@ -60,7 +61,9 @@ export function LabApp({ initial }: { initial?: Design }) {
           <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
             <Inspector />
           </aside>
-          <div className="col-span-2 border-t border-border bg-bg" data-tour="panel" />
+          <div className="col-span-2 min-w-0" data-tour="panel">
+            <BottomPanel />
+          </div>
         </div>
         <ConnectPane />
         <LiveValidation />

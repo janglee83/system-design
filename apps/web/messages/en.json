@@ -449,6 +449,26 @@
     "history": "Run history",
     "runLabel": "Run {id} · {time}",
     "tookMs": "{ms} ms",
-    "unavailable": "Run again to inspect: the simulator restarted after this run."
+    "unavailable": "Run again to inspect: the simulator restarted after this run.",
+    "stale": "run again to inspect"
+  },
+  "panel": {
+    "label": "Results",
+    "tabs": {
+      "metrics": "Metrics",
+      "events": "Events",
+      "logs": "Logs",
+      "simulation": "Simulation"
+    },
+    "resize": "Resize the results panel",
+    "noRun": "No run yet",
+    "noRunBody": "Press Run to simulate this design. Results appear here.",
+    "vsPrevious": "vs previous run",
+    "better": "better",
+    "worse": "worse",
+    "breakdown": "What happened to the requests",
+    "series": "Over time",
+    "node": "Component",
+    "noComparison": "First run: nothing to compare yet."
   }
 }
