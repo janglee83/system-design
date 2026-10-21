@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 · Kiểu thành phần</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<style>
+  .lede { max-width: 860px; color: var(--text-2); margin: 0 0 16px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin: 12px 0 0; font-size: 13px; color: var(--text-2); }
+  .legend .sw { display: inline-block; width: 22px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+  .matrix { display: grid; grid-template-columns: 120px repeat(6, minmax(0, 1fr)); gap: 0; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--canvas); overflow: auto; }
+  .matrix > div { padding: 22px 14px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); min-width: 0; }
+  .matrix .h { padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text-3); background: var(--surface); justify-content: flex-start; }
+  .matrix .rowh { justify-content: flex-start; font-size: 13px; font-weight: 600; color: var(--text-2); background: var(--surface); }
+  .matrix > div:nth-last-child(-n+7) { border-bottom: 0; }
+  [data-option="b"] .matrix > div:not(.h):not(.rowh) { padding: 18px 6px; }
+  [data-option="b"] .matrix .node-b { zoom: .8; }
+  .zoom75 { transform: scale(.75); transform-origin: 0 0; }
+  .dense { height: 560px; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <p class="lede">Một thiết kế thật của Lab: 5 thành phần, giá lấy từ bộ mô phỏng. Bật <b>Đang chạy</b> để xem tải, trạng thái và các chấm yêu cầu đi trên đường nối (12.000 yêu cầu/giây, một máy chủ web gặp sự cố ở giây 3). Di chuột lên một thành phần để thấy cổng nối.</p>
+  <div class="canvas-wrap"><div class="canvas" id="main"></div></div>
+  <div class="legend" id="legend"></div>
+
+  <h2 class="section-title">Mọi trạng thái của từng loại</h2>
+  <div class="matrix" id="matrix"></div>
+
+  <h2 class="section-title">Thử độ dày: 10 thành phần ở mức thu phóng 75%</h2>
+  <div class="canvas-wrap dense"><div class="zoom75"><div class="canvas" id="dense"></div></div></div>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const D = SDData;
+const OPTIONS = [
+  { id: "a", name: "Thẻ minh hoạ", recommended: true,
+    summary: "Mỗi loại có một hình vẽ nét riêng của chúng ta đặt trong một thẻ bo góc; tên và số liệu nằm ngay trong thẻ. Khi chạy, nền hình vẽ dâng lên như mực nước theo mức tải; bản sao hiện thành các thẻ xếp chồng phía sau.",
+    pros: ["Có bản sắc rõ như Syscraft nhưng gọn hơn (172×148 gồm cả tên và số liệu, so với ~165×140 chỉ riêng hình vẽ)", "Tên nằm trong thẻ: chọn, rê chuột, trạng thái đều bao trọn một vật", "Mức tải đọc được từ xa nhờ \"mực nước\" và sọc khi quá tải"],
+    cons: ["Chiếm chỗ gấp khoảng 1,6 lần thẻ gọn", "Cần vẽ thêm một hình cho mỗi loại thành phần mới"] },
+  { id: "b", name: "Thẻ gọn có dải màu",
+    summary: "Thẻ ngang 248×64 với dải màu theo loại ở mép trái, hình vẽ thu nhỏ trong ô vuông, giá hoặc % tải canh phải. Khi chạy có thanh tải mảnh ở đáy thẻ.",
+    pros: ["Dày nhất: thiết kế 15–20 thành phần vẫn vừa màn hình", "Số liệu canh cột, đọc nhanh, hợp với người đã quen", "Dễ làm, ít rủi ro"],
+    cons: ["Trông giống công cụ quản trị hơn là phòng thí nghiệm học tập", "Trạng thái chỉ là viền và thanh mảnh, kém nổi khi thu nhỏ"] },
+  { id: "c", name: "Trạm tròn có vòng đo",
+    summary: "Mỗi thành phần là một \"trạm\" tròn như trên bản đồ tàu điện; vòng quanh trạm là đồng hồ đo tải, chấm nhỏ trên vòng là số bản sao. Tên nằm trong nhãn gắn liền bên dưới.",
+    pros: ["Lạ mắt và rất riêng, khác hẳn Syscraft", "Vòng đo tải là cách đọc tải trực quan nhất khi chạy", "Sơ đồ thoáng, giống bản đồ mạng lưới"],
+    cons: ["Nhãn và hình là hai mảnh nên vùng chọn phức tạp hơn", "Ít chỗ cho số liệu trong lúc thiết kế (giá, cấu hình)"] },
+];
+
+const denseNodes = [
+  { id: "c1", kind: "client", label: "Trình duyệt", col: 0, row: 0, replicas: 1, cost: 0, sub: "8.000 yêu cầu/giây", run: { state: "normal", load: null, line: "Gửi 8.000/giây" } },
+  { id: "c2", kind: "client", label: "Ứng dụng di động", col: 0, row: 3, replicas: 1, cost: 0, sub: "4.000 yêu cầu/giây", run: { state: "normal", load: null, line: "Gửi 4.000/giây" } },
+  { id: "l1", kind: "lb", label: "Cổng công khai", col: 1, row: 1, replicas: 2, cost: 50, sub: "Máy ít việc nhất", run: { state: "normal", load: 10, line: "10% · 12.000/giây" } },
+  { id: "w1", kind: "web-server", label: "Web 1", col: 2, row: 0, replicas: 2, cost: 45, sub: "1 vCPU · 2 GB", run: { state: "busy", load: 74, line: "Bận 74%" } },
+  { id: "w2", kind: "web-server", label: "Web 2", col: 2, row: 1, replicas: 2, cost: 45, sub: "1 vCPU · 2 GB", run: { state: "busy", load: 71, line: "Bận 71%" } },
+  { id: "w3", kind: "web-server", label: "Web 3", col: 2, row: 2, replicas: 1, cost: 50, sub: "2 vCPU · 4 GB", run: { state: "normal", load: 48, line: "48% · 8.600/giây" } },
+  { id: "w4", kind: "web-server", label: "Web 4", col: 2, row: 3, replicas: 1, cost: 50, sub: "2 vCPU · 4 GB", run: { state: "down", load: 0, line: "Ngừng chạy" } },
+  { id: "l2", kind: "lb", label: "Cân bằng nội bộ", col: 3, row: 1, replicas: 1, cost: 25, sub: "Lần lượt từng máy", run: { state: "normal", load: 6, line: "6% · 3.600/giây" } },
+  { id: "p1", kind: "postgres", label: "Đơn hàng", col: 4, row: 0, replicas: 2, cost: 360, sub: "1 chính · 1 bản sao", run: { state: "over", load: 112, line: "Quá tải 112%" } },
+  { id: "p2", kind: "postgres", label: "Người dùng", col: 4, row: 2, replicas: 1, cost: 180, sub: "1 chính", run: { state: "normal", load: 38, line: "38% · 1.900/giây" } },
+];
+const denseEdges = [
+  ["c1","l1","http"],["c2","l1","http"],["l1","w1","http"],["l1","w2","http"],["l1","w3","http"],["l1","w4","http"],
+  ["w1","p1","db"],["w2","p1","db"],["w3","l2","http"],["l2","p2","db"],
+].map(([from,to,kind]) => ({ from, to, kind, rate: "" }));
+
+function legend() {
+  const sw = (v) => `<span class="sw" style="border-top-color:var(${v})"></span>`;
+  return `<span>${sw("--e-http")}HTTP</span>
+    <span><span class="sw" style="border-top:2px dashed var(--e-db)"></span>Cơ sở dữ liệu</span>
+    <span>${SDArt.icon("check",12)} Ổn định &lt; 70%</span>
+    <span class="st-chip st-busy">${SDArt.icon("gauge",12)} Bận 70–100%</span>
+    <span class="st-chip st-over">${SDArt.icon("alert",12)} Quá tải &gt; 100%</span>
+    <span class="st-chip st-down">${SDArt.icon("power",12)} Ngừng chạy</span>`;
+}
+
+function matrix(style) {
+  const cols = [["normal","Ổn định"],["busy","Bận"],["over","Quá tải"],["down","Ngừng chạy"],["sel","Đang chọn"],["lock","Bị khoá · có lỗi"]];
+  const samples = {
+    client: { run: { normal: [null,"Gửi 12.000/giây"], busy: [null,"Gửi 12.000/giây"], over: [null,"Gửi 12.000/giây"], down: [0,"Ngừng gửi"] } },
+    lb: { run: { normal: [20,"20% · 12.000/giây"], busy: [82,"Bận 82%"], over: [130,"Quá tải 130%"], down: [0,"Ngừng chạy"] } },
+    "web-server": { run: { normal: [44,"44% · 8.000/giây"], busy: [67,"Bận 67%"], over: [140,"Quá tải 140%"], down: [0,"Ngừng chạy"] } },
+    postgres: { run: { normal: [38,"38% · 1.900/giây"], busy: [88,"Bận 88%"], over: [120,"Quá tải 120%"], down: [0,"Máy chính hỏng"] } },
+  };
+  let html = `<div class="h">Loại</div>` + cols.map(c => `<div class="h">${c[1]}</div>`).join("");
+  D.design.nodes.filter((n,i,a) => a.findIndex(x => x.kind === n.kind) === i).forEach(base => {
+    html += `<div class="rowh">${D.kinds[base.kind].label}</div>`;
+    cols.forEach(([c]) => {
+      const n = JSON.parse(JSON.stringify(base));
+      let mode = "running", extra = {};
+      if (c === "sel") { mode = "editing"; extra.selected = true; }
+      else if (c === "lock") { mode = "editing"; extra.locked = true; extra.issues = 2; }
+      else { const [load, line] = samples[base.kind].run[c]; n.run = { state: base.kind === "client" && c !== "down" ? "normal" : c, load, line }; }
+      html += `<div>${SDNodes.render(style, n, mode, extra)}</div>`;
+    });
+  });
+  return html;
+}
+
+Demo.init({
+  id: "01", title: "01 · Kiểu thành phần trên khung vẽ", subtitle: "trạng thái bận / quá tải / ngừng chạy",
+  options: OPTIONS,
+  onChange(s) {
+    SDNodes.canvas(document.getElementById("main"), s.option, s.mode, { uid: "m", extra: s.mode === "editing" ? { "web-1": { selected: true }, "pg-1": { issues: 0 } } : {} });
+    SDNodes.canvas(document.getElementById("dense"), s.option, s.mode, { uid: "d", nodes: denseNodes, edges: denseEdges, rates: false, rowScale: 1 });
+    document.getElementById("matrix").innerHTML = matrix(s.option);
+    document.getElementById("legend").innerHTML = legend();
+  },
+});
+</script>
+</body>
+</html>
