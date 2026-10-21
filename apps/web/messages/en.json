@@ -470,5 +470,31 @@
     "series": "Over time",
     "node": "Component",
     "noComparison": "First run: nothing to compare yet."
+  },
+  "events": {
+    "time": "Time",
+    "node": "Component",
+    "message": "What happened",
+    "empty": "No events in this run.",
+    "jump": "Jump to {time}"
+  },
+  "logs": {
+    "level": {
+      "info": "Info",
+      "warn": "Warning",
+      "error": "Error"
+    },
+    "filter": "Show levels",
+    "started": "Run {id} started: {nodes, plural, one {# component} other {# components}}, {rps} requests/s for {seconds} s.",
+    "finished": "Run {id} finished in {ms} ms: {ok} answered, {failed} not answered.",
+    "warning": "Before the run: {text}"
+  },
+  "simulation": {
+    "input": "Input sent to the simulator",
+    "engine": "Simulator version {version}",
+    "export": "Export run (JSON)",
+    "copy": "Copy input",
+    "copied": "Input copied to the clipboard.",
+    "copyFailed": "Could not copy. Select the text and copy it by hand."
   }
 }

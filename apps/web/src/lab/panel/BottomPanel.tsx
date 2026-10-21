@@ -8,14 +8,16 @@ import { Tabs, TabsContent, TabsList } from "@/ui/Tabs";
 import { useRuns, useRunsApi, useUi, useUiApi } from "../store/LabStores";
 import { currentRun, previousRun, runAvailable } from "../store/run-store";
 import type { BottomTab } from "../store/ui-store";
+import { EventsTab } from "./EventsTab";
+import { LogsTab } from "./LogsTab";
 import { MetricsTab } from "./MetricsTab";
+import { SimulationTab } from "./SimulationTab";
 
 const TABS: BottomTab[] = ["metrics", "events", "logs", "simulation"];
-const OTHER_TABS = ["events", "logs", "simulation"] as const;
 const MIN = 160;
 
 /** The results panel under the canvas: tabs, run history, resizable height. */
-export function BottomPanel({ tabs }: { tabs?: Partial<Record<Exclude<BottomTab, "metrics">, React.ReactNode>> }) {
+export function BottomPanel() {
   const t = useTranslations();
   const ui = useUiApi();
   const tab = useUi((s) => s.bottomTab);
@@ -25,6 +27,8 @@ export function BottomPanel({ tabs }: { tabs?: Partial<Record<Exclude<BottomTab,
   const previous = useRuns(previousRun);
   const runsApi = useRunsApi();
   const epoch = useEngineStore((s) => s.epoch);
+  const engineVersion = useEngineStore((s) => s.info?.version ?? "");
+  const client = useEngineStore((s) => (s.status === "ready" ? s.client : null));
   const max = typeof window === "undefined" ? 600 : Math.round(window.innerHeight * 0.6);
   const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -55,11 +59,15 @@ export function BottomPanel({ tabs }: { tabs?: Partial<Record<Exclude<BottomTab,
               <TabsContent value="metrics">
                 <MetricsTab run={run} previous={previous} />
               </TabsContent>
-              {OTHER_TABS.map((k) => (
-                <TabsContent key={k} value={k}>
-                  {tabs?.[k] ?? null}
-                </TabsContent>
-              ))}
+              <TabsContent value="events">
+                <EventsTab run={run} />
+              </TabsContent>
+              <TabsContent value="logs">
+                <LogsTab run={run} />
+              </TabsContent>
+              <TabsContent value="simulation">
+                <SimulationTab run={run} epoch={epoch} engineVersion={engineVersion} client={client} />
+              </TabsContent>
             </>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center" data-testid="no-run">

@@ -470,5 +470,31 @@
     "series": "Theo thời gian",
     "node": "Thành phần",
     "noComparison": "Lần chạy đầu tiên: chưa có gì để so."
+  },
+  "events": {
+    "time": "Thời điểm",
+    "node": "Thành phần",
+    "message": "Điều đã xảy ra",
+    "empty": "Lần chạy này không có sự kiện nào.",
+    "jump": "Tới {time}"
+  },
+  "logs": {
+    "level": {
+      "info": "Thông tin",
+      "warn": "Cảnh báo",
+      "error": "Lỗi"
+    },
+    "filter": "Mức hiển thị",
+    "started": "Bắt đầu lần chạy {id}: {nodes, plural, other {# thành phần}}, {rps} yêu cầu/giây trong {seconds} giây.",
+    "finished": "Xong lần chạy {id} sau {ms} ms: {ok} yêu cầu được trả lời, {failed} không được trả lời.",
+    "warning": "Trước khi chạy: {text}"
+  },
+  "simulation": {
+    "input": "Dữ liệu gửi cho bộ mô phỏng",
+    "engine": "Bộ mô phỏng phiên bản {version}",
+    "export": "Xuất lần chạy (JSON)",
+    "copy": "Sao chép dữ liệu vào",
+    "copied": "Đã sao chép dữ liệu vào bộ nhớ tạm.",
+    "copyFailed": "Không sao chép được. Hãy bôi đen rồi tự sao chép."
   }
 }
