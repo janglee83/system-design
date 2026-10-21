@@ -43,7 +43,8 @@ export function LabApp({ initial }: { initial?: Design }) {
           </aside>
           <section className="relative min-h-0" data-tour="canvas">
             <Canvas />
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+            {/* Bottom-left, beside the canvas controls: clear of the minimap at any width. */}
+            <div className="absolute bottom-3 left-16">
               <Problems />
             </div>
             {/* Top-right: the minimap is bottom-right, controls bottom-left, the legend top-left. */}

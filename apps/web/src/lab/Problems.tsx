@@ -59,6 +59,11 @@ export function Problems() {
     );
 
   return (
+    <>
+    {/* The count, announced politely when it changes (the pill itself is a button). */}
+    <span data-testid="problems-live" role="status" aria-live="polite" className="sr-only">
+      {all.length === 0 ? t("problems.none") : t("problems.count", { count: all.length })}
+    </span>
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button
@@ -83,5 +88,6 @@ export function Problems() {
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
+    </>
   );
 }

@@ -151,3 +151,15 @@ test("clicking Add twice places the second node beside the first and announces e
   const overlap = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
   expect(overlap).toBe(false);
 });
+
+test("at 1024 px the problems pill clears the minimap, and its count is announced", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openLab(page);
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  await addAt(page, "Users", 80, 120);
+  const pill = (await page.getByTestId("problems").boundingBox())!;
+  const map = (await page.getByRole("img", { name: "Overview map" }).boundingBox())!;
+  const overlap = pill.x < map.x + map.width && map.x < pill.x + pill.width && pill.y < map.y + map.height && map.y < pill.y + pill.height;
+  expect(overlap).toBe(false);
+  await expect(page.getByTestId("problems-live")).toHaveText("1 problem");
+});
