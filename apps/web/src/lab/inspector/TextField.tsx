@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 
-/** A text input that commits on blur or Enter (one history step per edit). */
+/** Names and labels are short: longer text would only be cut off on the canvas. */
+export const TEXT_MAX = 80;
+
+/** A text input that commits trimmed text on blur or Enter (one history step per edit). */
 export function TextField({
   id,
   label,
@@ -20,7 +23,9 @@ export function TextField({
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
   const commit = () => {
-    if (text !== value) onCommit(text);
+    const next = text.trim();
+    setText(next);
+    if (next !== value) onCommit(next);
   };
   return (
     <input
@@ -29,6 +34,7 @@ export function TextField({
       aria-label={label}
       value={text}
       placeholder={placeholder}
+      maxLength={TEXT_MAX}
       disabled={disabled}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
