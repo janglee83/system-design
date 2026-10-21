@@ -62,3 +62,6 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
+
+.embed .demo-bar, .embed .option-note { display: none; }
+.embed .stage { padding: 12px; }

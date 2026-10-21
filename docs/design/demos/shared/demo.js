@@ -43,6 +43,7 @@
       };
       if (!cfg.options.some((o) => o.id === state.option)) state.option = cfg.options[0].id;
       const root = document.documentElement;
+      if (q.get("embed")) root.classList.add("embed");
       const apply = () => {
         root.dataset.theme = state.theme;
         root.dataset.palette = cfg.ownsPalette ? state.option : state.palette;
