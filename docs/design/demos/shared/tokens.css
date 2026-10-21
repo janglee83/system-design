@@ -140,3 +140,14 @@
   --ease-in: cubic-bezier(.4, 0, 1, 1);
   --t-fast: 120ms; --t-panel: 200ms; --t-overlay: 320ms;
 }
+
+/* Category accents for component illustrations (all palettes; tuned for palette A).
+   entry · compute · data · cache · messaging · storage · external */
+:root {
+  --c-entry: #4F57C9; --c-compute: #2C66C7; --c-data: #7542B3; --c-cache: #0B7A6E;
+  --c-msg: #B0397A; --c-storage: #3D6C8A; --c-external: #5D6470;
+}
+[data-theme="dark"] {
+  --c-entry: #9AA2FF; --c-compute: #79A6FF; --c-data: #BE97F6; --c-cache: #45CFB8;
+  --c-msg: #F07FBB; --c-storage: #8DB8D6; --c-external: #A3ABB6;
+}

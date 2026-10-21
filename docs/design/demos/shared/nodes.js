@@ -36,9 +36,9 @@
     const fillH = load == null ? 0 : Math.min(load, 100);
 
     if (style === "a") {
-      return `<div class="${cls}" style="--k:var(--k-${kindVar(n.kind)})" role="group" aria-label="${esc(aria)}" ${extra.selected ? 'aria-current="true"' : ""} tabindex="0">
+      return `<div class="${cls}" style="--k:${catVar(n.kind)}" role="group" aria-label="${esc(aria)}" ${extra.selected ? 'aria-current="true"' : ""} tabindex="0">
         <div class="art"><span class="fill" style="height:${fillH}%"></span>${svg(n.kind, 76, 57)}${rep}${stChip}</div>
-        <div class="body"><div class="name">${esc(n.label)}</div><div class="meta">${esc(running ? n.run.line : n.sub)}</div><div class="meta2 num">${running ? (load == null || st === "down" ? "&nbsp;" : `<span class="lv">${load}%</span> tải`) : (n.cost ? `${n.cost} $/tháng` : "Miễn phí")}</div></div>
+        <div class="body"><div class="name">${esc(n.label)}</div><div class="meta">${esc(running ? n.run.line : n.sub)}</div><div class="meta2 num">${running ? (load == null || st === "down" ? "&nbsp;" : `<span class="lv">${load}%</span> tải`) : (n.cost == null ? "Chưa có giá" : n.cost ? `${n.cost} $/tháng` : "Miễn phí")}</div></div>
         ${ports}${issue}${lock}</div>`;
     }
     if (style === "b") {
@@ -47,7 +47,7 @@
         ? (st === "down" ? `<span class="val">—</span><span class="unit">tắt</span>` : load == null ? `<span class="val num">${sent}</span><span class="unit">/giây</span>` : `<span class="val num">${load}%</span><span class="unit">tải</span>`)
         : (n.cost ? `<span class="val num">${n.cost}</span><span class="unit">$/tháng</span>` : `<span class="val">—</span><span class="unit">miễn phí</span>`);
       const sub = running ? (st !== "normal" ? chip(st, D.stateWords[st]) : esc(n.run.line)) : esc(n.sub);
-      return `<div class="${cls}" style="--k:var(--k-${kindVar(n.kind)})" role="group" aria-label="${esc(aria)}" ${extra.selected ? 'aria-current="true"' : ""} tabindex="0">
+      return `<div class="${cls}" style="--k:${catVar(n.kind)}" role="group" aria-label="${esc(aria)}" ${extra.selected ? 'aria-current="true"' : ""} tabindex="0">
         <span class="rail"></span><div class="tile">${svg(n.kind, 36, 27)}</div>
         <div class="txt"><div class="name">${esc(n.label)}</div><div class="meta">${rep}${sub}</div></div>
         <div class="right">${right}</div>
@@ -58,7 +58,7 @@
     const R = 46, C = 2 * Math.PI * R;
     const dash = load == null ? 0 : (Math.min(load, 100) / 100) * C;
     const ticks = n.replicas > 1 ? Array.from({ length: n.replicas }, (_, i) => `<span class="tick" style="--i:${i};--n:${n.replicas}"></span>`).join("") : "";
-    return `<div class="${cls}" style="--k:var(--k-${kindVar(n.kind)})" role="group" aria-label="${esc(aria)}" ${extra.selected ? 'aria-current="true"' : ""} tabindex="0">
+    return `<div class="${cls}" style="--k:${catVar(n.kind)}" role="group" aria-label="${esc(aria)}" ${extra.selected ? 'aria-current="true"' : ""} tabindex="0">
       <div class="disc">
         <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="${R}" class="track"/>${running && load != null ? `<circle cx="50" cy="50" r="${R}" class="gauge" stroke-dasharray="${dash} ${C}"/>` : ""}</svg>
         <div class="inner">${svg(n.kind, 54, 40)}</div>${ticks}${ports}
@@ -67,7 +67,8 @@
       ${issue}${lock}</div>`;
   }
 
-  function kindVar(kind) { return { client: "client", lb: "lb", "web-server": "web", postgres: "pg" }[kind]; }
+  function kindVar(kind) { return "x"; }
+  const catVar = (kind) => "var(--c-" + ((D.kinds[kind] || {}).cat || "external") + ")";
 
   /* Canvas: lays out nodes by col/row for a style, draws edges and (running) request dots. */
   function canvas(el, style, mode, opts = {}) {

@@ -21,6 +21,21 @@
   .matrix > div:nth-last-child(-n+7) { border-bottom: 0; }
   [data-option="b"] .matrix > div:not(.h):not(.rowh) { padding: 18px 6px; }
   [data-option="b"] .matrix .node-b { zoom: .8; }
+  .catalog { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--canvas); overflow: hidden; }
+  .catalog .cat-h { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); border-top: 1px solid var(--border); font-weight: 600; }
+  .catalog .cat-h:first-child { border-top: 0; }
+  .catalog .cat-h i { width: 12px; height: 12px; border-radius: 3px; background: var(--k); }
+  .catalog .cat-h span { font-weight: 400; color: var(--text-3); font-size: 13px; }
+  .catalog .krow { display: grid; grid-template-columns: 170px repeat(6, minmax(0, 1fr)); align-items: center; border-bottom: 1px solid var(--border); }
+  .catalog .krow:last-child { border-bottom: 0; }
+  .catalog .krow > div { padding: 14px 6px; display: flex; justify-content: center; }
+  .catalog .krow > .kh { justify-content: flex-start; flex-direction: column; align-items: flex-start; gap: 4px; padding-left: 16px; font-size: 13px; font-weight: 600; }
+  .catalog .kh .tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); }
+  .catalog .kh .tag.ready { background: var(--ok-soft); color: var(--ok); }
+  .catalog .kh small { font-weight: 400; color: var(--text-3); font-size: 12px; line-height: 16px; }
+  .catalog .node-a { zoom: .82; }
+  .catalog .colh { display: grid; grid-template-columns: 170px repeat(6, minmax(0, 1fr)); font-size: 12px; font-weight: 600; color: var(--text-3); background: var(--surface); border-bottom: 1px solid var(--border); }
+  .catalog .colh > div { padding: 8px 6px; text-align: center; } .catalog .colh > div:first-child { text-align: left; padding-left: 16px; }
   .zoom75 { transform: scale(.75); transform-origin: 0 0; }
   .dense { height: 560px; }
 </style>
@@ -33,6 +48,10 @@
 
   <h2 class="section-title">Mọi trạng thái của từng loại</h2>
   <div class="matrix" id="matrix"></div>
+
+  <h2 class="section-title">Danh mục thành phần · 21 loại × mọi trạng thái</h2>
+  <p class="lede">Mỗi loại có hình vẽ riêng theo cùng một ngữ pháp (xem <code>docs/design/illustration-grammar.md</code>); màu theo nhóm. Loại có nhãn <b>Sắp có</b> chưa chạy được trong bộ mô phỏng: <i>kế hoạch 1b</i> là đã có kế hoạch, <i>về sau</i> là theo lộ trình bài học.</p>
+  <div class="catalog" id="catalog"></div>
 
   <h2 class="section-title">Thử độ dày: 10 thành phần ở mức thu phóng 75%</h2>
   <div class="canvas-wrap dense"><div class="zoom75"><div class="canvas" id="dense"></div></div></div>
@@ -108,6 +127,30 @@ function matrix(style) {
   return html;
 }
 
+function catalog() {
+  const cols = [["normal","Ổn định"],["busy","Bận"],["over","Quá tải"],["down","Ngừng chạy"],["sel","Đang chọn"],["lock","Bị khoá · có lỗi"]];
+  const runs = { normal: [35, "1.200/giây"], busy: [78, "3.100/giây"], over: [130, "Từ chối 900/giây"], down: [0, "Ngừng từ giây 4"] };
+  let h = `<div class="colh"><div>Loại</div>${cols.map(c => `<div>${c[1]}</div>`).join("")}</div>`;
+  D.categories.forEach(cat => {
+    const ks = Object.entries(D.kinds).filter(([, k]) => k.cat === cat.id);
+    h += `<div class="cat-h" style="--k:var(--c-${cat.id})"><i></i>${cat.label}<span>${cat.desc} · ${ks.length} loại</span></div>`;
+    ks.forEach(([id, k]) => {
+      const tag = k.status === "ready" ? '<span class="tag ready">Chạy được</span>' : `<span class="tag">Sắp có · ${k.status === "planned" ? "kế hoạch 1b" : "về sau"}</span>`;
+      h += `<div class="krow"><div class="kh">${k.label}${tag}<small>${k.desc}</small></div>`;
+      cols.forEach(([c]) => {
+        const n = { id: id + c, kind: id, label: k.label.replace(/ \(.*\)/, ""), replicas: 1, cost: k.price != null ? Math.round(k.price) : null, sub: D.categories.find(c => c.id === k.cat).label, run: { state: "normal", load: 35, line: "" } };
+        let mode = "running", extra = {};
+        if (c === "sel") { mode = "editing"; extra.selected = true; }
+        else if (c === "lock") { mode = "editing"; extra.locked = true; extra.issues = 1; }
+        else { n.run = { state: c, load: runs[c][0], line: runs[c][1] }; if (id === "client" || id === "mobile") { n.run.load = c === "down" ? 0 : null; if (c !== "down") { n.run.state = "normal"; n.run.line = "Gửi " + runs[c][1].replace("Từ chối ", ""); } } }
+        h += `<div>${SDNodes.render("a", n, mode, extra)}</div>`;
+      });
+      h += `</div>`;
+    });
+  });
+  return h;
+}
+
 Demo.init({
   id: "01", title: "01 · Kiểu thành phần trên khung vẽ", subtitle: "trạng thái bận / quá tải / ngừng chạy",
   options: OPTIONS,
@@ -115,6 +158,7 @@ Demo.init({
     SDNodes.canvas(document.getElementById("main"), s.option, s.mode, { uid: "m", extra: s.mode === "editing" ? { "web-1": { selected: true }, "pg-1": { issues: 0 } } : {} });
     SDNodes.canvas(document.getElementById("dense"), s.option, s.mode, { uid: "d", nodes: denseNodes, edges: denseEdges, rates: false, rowScale: 1 });
     document.getElementById("matrix").innerHTML = matrix(s.option);
+    document.getElementById("catalog").innerHTML = catalog();
     document.getElementById("legend").innerHTML = legend();
   },
 });
