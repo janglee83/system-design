@@ -39,7 +39,10 @@ export function NumberField({ label, value, onChange, min, max, step, integer, u
       else setText(value === undefined ? "" : String(value));
       return;
     }
-    const n = Number(raw.replace(",", "."));
+    // "1,000" is a thousands separator, not 1.0: refuse it rather than guess. A single decimal
+    // comma ("2,5", as written in Vietnamese) is accepted.
+    const trimmed = raw.trim();
+    const n = /^-?\d{1,3}(,\d{3})+$/.test(trimmed) ? Number.NaN : Number(trimmed.replace(",", "."));
     if (!Number.isFinite(n)) {
       setText(value === undefined ? "" : String(value));
       return;

@@ -45,4 +45,17 @@ describe("NumberField", () => {
     await userEvent.tab();
     expect(onChange).toHaveBeenLastCalledWith(undefined);
   });
+
+  it("rejects thousands separators instead of misreading 1,000 as 1, but takes a decimal comma", async () => {
+    const onChange = vi.fn();
+    wrap(<NumberField label="Rate" value={5} onChange={onChange} min={0} />);
+    const input = screen.getByRole("spinbutton", { name: "Rate" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "1,000{Enter}");
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue("5");
+    await userEvent.clear(input);
+    await userEvent.type(input, "2,5{Enter}");
+    expect(onChange).toHaveBeenLastCalledWith(2.5);
+  });
 });
