@@ -1,0 +1,109 @@
+name: web
+
+# Spec §9 path filters, plus the build files (a dependency or image change can break the app).
+on:
+  pull_request:
+    paths: &paths
+      - "apps/web/**"
+      - "packages/**"
+      - "crates/sim-wasm/**"
+      - "crates/sim-core/**"
+      - "content/**"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "compose.ci.yaml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "dev"
+      - ".dockerignore"
+      - ".github/workflows/web.yml"
+  push:
+    branches: [main]
+    paths: *paths
+
+# The jobs only read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  web:
+    name: lint, typecheck, unit, build, e2e + axe (dev container)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      COMPOSE_FILE: compose.yaml:compose.ci.yaml
+      CI_CACHE: ${{ github.workspace }}/.ci-cache
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      # The dev image, with Playwright's Chromium in a cached layer (plan ruling R4).
+      - uses: docker/setup-buildx-action@v3
+      - name: Build dev image (layer cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: system-design-dev:2
+          cache-from: type=gha,scope=dev-image
+          cache-to: type=gha,mode=max,scope=dev-image
+
+      - name: Restore pnpm store
+        uses: actions/cache@v4
+        with:
+          path: .ci-cache/pnpm-store
+          key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-
+
+      - name: Restore cargo registry and wasm build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .ci-cache/cargo-registry
+            .ci-cache/cargo-target
+          key: cargo-web-${{ hashFiles('Cargo.lock') }}-${{ hashFiles('crates/sim-core/**', 'crates/sim-wasm/**') }}
+          restore-keys: cargo-web-${{ hashFiles('Cargo.lock') }}-
+
+      - name: Restore Next build cache
+        uses: actions/cache@v4
+        with:
+          path: .ci-cache/next/cache
+          key: next-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/**', 'packages/**') }}
+          restore-keys: next-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Install JS dependencies
+        run: ./dev pnpm install --frozen-lockfile
+
+      - name: Build wasm
+        run: ./dev pnpm --filter @sd/web ensure-wasm
+
+      - name: Lint
+        run: ./dev pnpm --filter @sd/web lint
+
+      - name: Typecheck
+        run: ./dev pnpm --filter @sd/web typecheck
+
+      - name: Unit tests
+        run: ./dev pnpm --filter @sd/web test
+
+      - name: Next build (with the e2e engine hook)
+        run: ./dev env NEXT_PUBLIC_E2E=1 pnpm --filter @sd/web build
+
+      - name: E2E and accessibility (Playwright)
+        run: ./dev pnpm --filter @sd/web test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

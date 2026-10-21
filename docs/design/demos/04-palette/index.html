@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · Bảng thành phần</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  .app.L-a { grid-template-columns: var(--pw, 272px) minmax(0, 1fr) 0; }
+  .app .insp-empty { display: none; }
+  /* A: grouped list + hover card */
+  .hovercard { position: absolute; z-index: 20; width: 300px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-3); font-size: 13px; color: var(--text-2); }
+  .hovercard .hc-h { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .hovercard .hc-h .tile { width: 56px; height: 44px; border-radius: var(--r-md); display: grid; place-items: center; background: color-mix(in srgb, var(--k) 10%, var(--surface)); }
+  .hovercard b { color: var(--text); font-size: 14px; display: block; }
+  .hovercard dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 10px 0 0; }
+  .hovercard dt { color: var(--text-3); } .hovercard dd { margin: 0; color: var(--text); }
+  .hovercard .soonnote { margin-top: 10px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); }
+  .hovercard::before { content: ""; position: absolute; left: -7px; top: 24px; width: 12px; height: 12px; background: var(--surface); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); transform: rotate(45deg); }
+  .pitem.hot { background: var(--accent-soft); outline: 1px solid color-mix(in srgb, var(--accent-text) 40%, transparent); }
+  .search.typing { border-color: var(--accent-text); background: var(--surface); color: var(--text); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search mark { background: none; color: var(--text); }
+  .nores { padding: 12px 14px; font-size: 13px; color: var(--text-3); }
+  /* B: tile grid */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+  .chip { height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 12.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+  .chip i { width: 8px; height: 8px; border-radius: 2px; background: var(--k); }
+  .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 14px 14px; }
+  .ptile { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+  .ptile .art { height: 64px; display: grid; place-items: center; background: color-mix(in srgb, var(--k) 8%, var(--surface)); position: relative; }
+  .ptile .tx { padding: 6px 8px 8px; } .ptile b { display: block; font-size: 13px; line-height: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ptile small { font: 500 11.5px var(--font-mono); color: var(--text-3); }
+  .ptile.soon { opacity: .5; } .ptile.soon .art::after { content: "Sắp có"; position: absolute; right: 6px; top: 6px; font: 600 10.5px var(--font-sans); padding: 1px 6px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); }
+  .gl { padding: 6px 14px 4px; font-size: 12px; font-weight: 600; color: var(--text-3); }
+  /* C: rail + drawer */
+  .railwrap { display: grid; grid-template-columns: 76px 1fr; height: 100%; min-height: 0; }
+  .rail { border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; background: var(--surface); }
+  .rail button { width: 66px; min-height: 52px; padding: 4px 2px; line-height: 13px; text-align: center; border: 0; border-radius: var(--r-md); background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10.5px; color: var(--text-2); cursor: pointer; }
+  .rail button .dotc { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: color-mix(in srgb, var(--k) 12%, var(--surface)); }
+  .rail button.on { background: var(--surface-2); color: var(--text); font-weight: 600; }
+  .drawer { min-height: 0; overflow: auto; background: var(--surface); }
+  .drawer h4 { margin: 14px 14px 2px; font-size: 15px; } .drawer p { margin: 0 14px 10px; font-size: 12.5px; color: var(--text-3); }
+  [data-mode="running"] .rail button span.lbl, [data-mode="running"] .drawer, [data-mode="running"] .chips, [data-mode="running"] .tiles .tx, [data-mode="running"] .gl { display: none; }
+  [data-mode="running"] .app.L-a { --pw: 64px; }
+  [data-mode="running"] .railwrap { grid-template-columns: 64px; }
+  [data-mode="running"] .tiles { grid-template-columns: 1fr; padding: 12px 8px; } [data-mode="running"] .ptile .art { height: 40px; }
+  [data-mode="running"] .ptile.soon { display: none; }
+  .runnote { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12.5px; color: var(--text-2); box-shadow: var(--shadow-1); display: none; }
+  [data-mode="running"] .runnote { display: block; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0">Toàn bộ 21 loại thành phần, chia 7 nhóm. Loại chưa có trong bộ mô phỏng hiện mờ, có nhãn <b>Sắp có</b> và không kéo được. Chế độ <b>Đang tìm</b> gõ “bo nho dem” (không dấu) để thấy tìm kiếm bỏ qua dấu. <b>Đang chạy</b>: bảng thu gọn để nhường chỗ.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, D = SDData;
+function hovercard(id, top) {
+  const k = D.kinds[id];
+  const st = k.status === "ready" ? "Chạy được" : k.status === "planned" ? "Sắp có · bộ mô phỏng đã lên kế hoạch (1b)" : "Sắp có · theo lộ trình bài học";
+  return `<div class="hovercard" style="left:280px;top:${top}px;--k:${A.cat(id)}"><div class="hc-h"><div class="tile">${SDArt.svg(id, 44, 33)}</div><div><b>${k.label}</b>${D.categories.find(c => c.id === k.cat).label}</div></div>
+    ${k.desc}<dl><dt>Trạng thái</dt><dd>${st}</dd><dt>Giá</dt><dd class="num">${k.price != null ? (k.price ? k.price + " $ mỗi máy/tháng" : "Miễn phí") : "Chưa có"}</dd><dt>Nhận nối</dt><dd>${{ entry: "HTTP", compute: "HTTP", data: "Cơ sở dữ liệu", cache: "Bộ nhớ đệm", msg: "Tin nhắn", storage: "HTTP", external: "HTTP" }[k.cat]}</dd></dl>
+    ${k.status !== "ready" ? `<div class="soonnote">Chưa kéo vào khung vẽ được. Bài học dùng loại này sẽ mở khi bộ mô phỏng hỗ trợ.</div>` : ""}</div>`;
+}
+function listPalette(mode) {
+  const searching = mode === "search";
+  let html = A.palette("", { query: searching ? "bo nho dem" : "" });
+  if (searching) html = html.replace('<div class="search">' + A.ic("search", 14) + ' Tìm thành phần', '<div class="search typing">' + A.ic("search", 14) + ' bo nho dem<span style="opacity:.4">|</span>');
+  if (searching) html = html.replace('<div class="pscroll">', '<div class="nores">2 kết quả cho “bo nho dem” · tìm được cả khi gõ không dấu</div><div class="pscroll">');
+  return html;
+}
+function tilePalette(mode) {
+  const q = mode === "search" ? A.norm("bo nho dem") : "";
+  const groups = D.categories.map(c => {
+    const ks = Object.entries(D.kinds).filter(([, k]) => k.cat === c.id && (!q || A.norm(k.label + " " + k.desc + " " + c.label).includes(q)));
+    if (!ks.length) return "";
+    ks.sort((a, b) => (a[1].status !== "ready") - (b[1].status !== "ready"));
+    return `<div class="gl">${c.label}</div><div class="tiles">${ks.map(([id, k]) => `<div class="ptile${k.status !== "ready" ? " soon" : ""}" style="--k:${A.cat(id)}" title="${k.desc}"><div class="art">${SDArt.svg(id, 54, 40)}</div><div class="tx"><b>${k.label.replace(/ \(.*\)/, "")}</b><small>${k.status === "ready" ? (k.price ? Math.round(k.price) + " $/máy" : "miễn phí") : "chưa có giá"}</small></div></div>`).join("")}</div>`;
+  }).join("");
+  const chips = `<div class="chips"><span class="chip on">Tất cả</span>${D.categories.map(c => `<span class="chip" style="--k:var(--c-${c.id})"><i></i>${c.label}</span>`).join("")}</div>`;
+  return `<aside class="palette" aria-label="Thành phần"><div class="ph"><div class="search${q ? " typing" : ""}">${A.ic("search", 14)} ${q ? "bo nho dem<span style='opacity:.4'>|</span>" : "Tìm thành phần"} <span class="kbd2">⌘K</span></div></div>${q ? "" : chips}<div class="pscroll">${groups}</div></aside>`;
+}
+function railPalette(mode) {
+  const active = mode === "search" ? "cache" : "data";
+  const rail = D.categories.map(c => `<button class="${c.id === active ? "on" : ""}" style="--k:var(--c-${c.id})" aria-label="${c.label}"><span class="dotc">${SDArt.svg(Object.keys(D.kinds).find(k => D.kinds[k].cat === c.id), 22, 16)}</span><span class="lbl">${c.short}</span></button>`).join("");
+  const c = D.categories.find(x => x.id === active);
+  const items = A.paletteItems({}).split('<div class="pgroup">').filter(g => g.includes(`var(--c-${active})`) && g.includes("<h5>")).map(g => '<div class="pgroup">' + g).join("");
+  return `<aside class="palette" aria-label="Thành phần" style="overflow:hidden"><div class="railwrap"><nav class="rail">${rail}</nav><div class="drawer"><h4>${c.label}</h4><p>${c.desc}</p>${items.replace(/<h5>.*?<\/h5>/, "")}</div></div></aside>`;
+}
+function draw(s) {
+  const app = document.getElementById("app");
+  const pal = s.option === "a" ? listPalette(s.mode) : s.option === "b" ? tilePalette(s.mode) : railPalette(s.mode);
+  const running = s.mode === "running";
+  app.style.setProperty("--pw", running ? "64px" : (s.option === "c" ? "336px" : "272px"));
+  app.innerHTML = A.topbar() + pal + `<div class="cv" id="cv">${A.legend("left:16px;bottom:14px")}${A.zoom("right:16px;bottom:14px")}<div class="runnote">Bảng thành phần thu gọn khi đang chạy</div></div><div></div>` + A.playback + A.status();
+  if (running) app.querySelector(".palette").innerHTML = app.querySelector(".palette").innerHTML; // same markup, CSS collapses it
+  A.drawCanvas(document.getElementById("cv"), running ? "running" : "editing", { extra: {} });
+  if (s.option === "a" && s.mode === "editing") {
+    const items = app.querySelectorAll(".pitem");
+    const target = [...items].find(el => el.textContent.includes("CDN"));
+    if (target) {
+      target.classList.add("hot");
+      requestAnimationFrame(() => {
+        const r = target.getBoundingClientRect(), base = app.getBoundingClientRect();
+        app.insertAdjacentHTML("beforeend", hovercard("cdn", r.top - base.top - 12));
+      });
+    }
+  }
+}
+Demo.init({
+  id: "04", title: "04 · Bảng thành phần",
+  modes: [{ id: "editing", label: "Duyệt" }, { id: "search", label: "Đang tìm" }, { id: "running", label: "Đang chạy" }],
+  options: [
+    { id: "a", name: "Danh sách theo nhóm", recommended: true,
+      summary: "Danh sách dọc chia 7 nhóm có chấm màu; mỗi dòng có hình nhỏ, tên, một câu mô tả và giá mỗi máy. Rê chuột (hoặc focus bằng bàn phím) mở thẻ chi tiết: nhận kiểu nối nào, giá, trạng thái hỗ trợ. Loại sắp có nằm trong đúng nhóm nhưng mờ đi.",
+      pros: ["Đọc lướt nhanh nhất; người mới thấy ngay mỗi thứ dùng để làm gì", "Giá hiện trước khi kéo: học chi phí từ lúc thiết kế", "Thêm loại mới chỉ là thêm một dòng"],
+      cons: ["Dài khi đủ 21 loại (cần cuộn ở 800 px)", "Hình vẽ nhỏ (32×24) nên kém nổi"] },
+    { id: "b", name: "Lưới thẻ có hình lớn",
+      summary: "Lưới hai cột, mỗi ô là hình vẽ lớn cùng tên và giá, lọc nhanh bằng thẻ nhóm ở trên. Gần với cách thành phần hiện trên khung vẽ.",
+      pros: ["Đẹp, phô được hình vẽ riêng của sản phẩm", "Bấm thẻ nhóm để lọc rất nhanh"],
+      cons: ["Không có chỗ cho mô tả, người mới phải rê chuột", "Tên dài bị cắt (Kho tệp (object storage))"] },
+    { id: "c", name: "Thanh nhóm + ngăn kéo",
+      summary: "Một dải 64 px chứa 7 nhóm; bấm một nhóm mở ngăn kéo liệt kê các loại trong nhóm đó. Khi đóng ngăn kéo, khung vẽ rộng tối đa.",
+      pros: ["Tiết kiệm chỗ nhất", "Nhóm luôn thấy, hợp khi danh mục lớn lên 30–40 loại"],
+      cons: ["Thêm một lần bấm cho mỗi lần thêm thành phần", "Khó so sánh giữa các nhóm"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>

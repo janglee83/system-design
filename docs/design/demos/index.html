@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bộ sưu tập thiết kế · SD Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/tokens.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/20px "Be Vietnam Pro", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 48px 24px 64px; }
+  h1 { font-size: 28px; line-height: 36px; margin: 0 0 8px; letter-spacing: -.01em; }
+  .lede { color: var(--text-2); max-width: 760px; margin: 0 0 8px; }
+  .meta { color: var(--text-3); font-size: 13px; margin: 0 0 32px; }
+  .meta a { color: var(--accent-text); }
+  h2 { font-size: 13px; color: var(--text-3); font-weight: 600; margin: 32px 0 12px; display: flex; gap: 12px; align-items: center; }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; text-decoration: none; color: inherit; box-shadow: var(--shadow-1); transition: box-shadow 160ms, transform 160ms; }
+  a.card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+  a.card:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+  .thumb { position: relative; height: 200px; overflow: hidden; background: var(--canvas); border-bottom: 1px solid var(--border); }
+  .thumb iframe { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; border: 0; transform: scale(.25); transform-origin: 0 0; pointer-events: none; }
+  .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .n { font: 500 12px "JetBrains Mono", monospace; color: var(--text-3); }
+  .title { font-size: 16px; font-weight: 600; line-height: 22px; }
+  .desc { color: var(--text-2); font-size: 13px; line-height: 19px; }
+  .pill { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .ready { background: var(--ok-soft); color: var(--ok); }
+  .wait { background: var(--surface-3); color: var(--text-2); }
+  .card.later { opacity: .72; }
+  .card.later .thumb { display: grid; place-items: center; color: var(--text-3); font-size: 13px; background-image: radial-gradient(var(--grid) 1px, transparent 1.2px); background-size: 20px 20px; height: 96px; }
+  .toggle { position: fixed; top: 16px; right: 16px; display: inline-flex; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 2px; }
+  .toggle button { border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; font: inherit; font-size: 12.5px; color: var(--text-2); cursor: pointer; }
+  .toggle button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+</style>
+</head>
+<body>
+<div class="toggle" role="group" aria-label="Giao diện"><button data-t="light">Sáng</button><button data-t="dark">Tối</button></div>
+<main class="wrap">
+  <h1>Bộ sưu tập thiết kế</h1>
+  <p class="lede">Mỗi phần tử giao diện có 2–3 phương án để chọn ngay trên trang: đổi phương án, sáng/tối và đang thiết kế/đang chạy ở thanh đen phía trên mỗi demo. Ba phần tử đầu là quyết định nền tảng; các phần sau sẽ được dựng theo lựa chọn của ba phần này.</p>
+  <p class="meta">Nghiên cứu: <a href="../research/completeness.md">completeness.md</a> · <a href="../research/benchmark.md">benchmark.md</a> · <a href="../research/audit.md">audit.md</a> · Bảng quyết định: <a href="../decisions.md">decisions.md</a></p>
+
+  <h2>Đợt 1 · cần chọn</h2>
+  <div class="grid">
+    <a class="card" href="01-node-style/index.html"><div class="thumb"><iframe src="01-node-style/index.html?embed=1&mode=running" loading="lazy" tabindex="-1" title=""></iframe></div>
+      <div class="body"><div class="row"><span class="n">01</span><span class="pill ready">Sẵn sàng · 3 phương án</span></div><div class="title">Kiểu thành phần trên khung vẽ</div><div class="desc">Thẻ minh hoạ, thẻ gọn có dải màu, hay trạm tròn có vòng đo. Kèm đủ trạng thái bận, quá tải, ngừng chạy, đang chọn, bị khoá.</div></div></a>
+    <a class="card" href="02-colour-type-theme/index.html"><div class="thumb"><iframe src="02-colour-type-theme/index.html?embed=1" loading="lazy" tabindex="-1" title=""></iframe></div>
+      <div class="body"><div class="row"><span class="n">02</span><span class="pill ready">Sẵn sàng · 3 phương án</span></div><div class="title">Màu, chữ và giao diện mặc định</div><div class="desc">Giấy & Mực, Than chì & Chàm, Mực đêm & Chanh, với tỉ lệ tương phản WCAG tính trực tiếp và thang chữ 6 bậc.</div></div></a>
+    <a class="card" href="03-app-shell/index.html"><div class="thumb"><iframe src="03-app-shell/index.html?embed=1" loading="lazy" tabindex="-1" title=""></iframe></div>
+      <div class="body"><div class="row"><span class="n">03</span><span class="pill ready">Sẵn sàng · 3 phương án</span></div><div class="title">Khung ứng dụng và nút Chạy</div><div class="desc">Một thanh với một nút Chạy, điều hướng + thanh công cụ, hay khung vẽ tràn màn với bảng nổi.</div></div></a>
+  </div>
+
+  <h2>Đợt 2 · dựng sau khi chọn đợt 1</h2>
+  <div class="grid" id="later"></div>
+</main>
+<script>
+  const later = ["Bảng thành phần", "Bố cục bảng thuộc tính", "Đường nối, cổng, chú giải và nút điều khiển khung vẽ", "Phản hồi khi chạy: thanh phát lại, kết luận, chấm yêu cầu", "Bảng dưới: chỉ số, sự kiện, nhật ký", "Trạng thái trống, đang tải, lỗi", "Hướng dẫn lần đầu", "Trang Học và Thử thách"];
+  document.getElementById("later").innerHTML = later.map((t, i) => `<div class="card later"><div class="thumb">Chưa dựng</div><div class="body"><div class="row"><span class="n">${String(i + 4).padStart(2, "0")}</span><span class="pill wait">Chờ đợt 1</span></div><div class="title">${t}</div></div></div>`).join("");
+  const root = document.documentElement;
+  let t; try { t = localStorage.getItem("sd-demo-theme"); } catch {}
+  t = t || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  let p; try { p = localStorage.getItem("sd-demo-palette"); } catch {}
+  root.dataset.palette = p || "a";
+  const set = (v) => { root.dataset.theme = v; document.querySelectorAll(".toggle button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.t === v))); try { localStorage.setItem("sd-demo-theme", v); } catch {} };
+  document.querySelectorAll(".toggle button").forEach((b) => b.addEventListener("click", () => set(b.dataset.t)));
+  set(t);
+</script>
+</body>
+</html>

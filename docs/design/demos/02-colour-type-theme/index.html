@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 · Màu, chữ và giao diện</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<style>
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-1); }
+  .pad { padding: 20px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .sw { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+  .sw .chip { height: 52px; display: flex; align-items: flex-end; padding: 6px 8px; font-size: 12px; font-weight: 600; }
+  .sw .info { padding: 8px 10px 10px; font-size: 12px; line-height: 16px; color: var(--text-2); }
+  .sw .info b { display: block; color: var(--text); font-size: 13px; font-weight: 600; }
+  .sw .ratio { display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .pass, .fail { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 4px; }
+  .pass { background: var(--ok-soft); color: var(--ok); } .fail { background: var(--over-soft); color: var(--over); }
+  .type-row { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .type-row:last-child { border-bottom: 0; }
+  .type-row .tag { font: 500 12px/16px var(--font-mono); color: var(--text-3); }
+  .t-display { font-size: var(--fs-display); line-height: var(--lh-display); font-weight: 700; letter-spacing: -.01em; }
+  .t-title { font-size: var(--fs-title); line-height: var(--lh-title); font-weight: 600; }
+  .t-heading { font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 600; }
+  .t-body { font-size: var(--fs-body); line-height: var(--lh-body); }
+  .t-label { font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500; color: var(--text-2); }
+  .t-caption { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text-3); }
+  .t-num { font: 600 20px/28px var(--font-mono); font-variant-numeric: tabular-nums; }
+  /* mini product sample */
+  .sample { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: 420px; overflow: hidden; }
+  .sample .cv { position: relative; background-color: var(--canvas); background-image: radial-gradient(var(--grid) 1px, transparent 1.2px); background-size: 20px 20px; display: grid; place-items: center; border-right: 1px solid var(--border); }
+  .sample .insp { padding: 16px; display: flex; flex-direction: column; gap: 14px; background: var(--surface); }
+  .insp h4 { margin: 0; font-size: 16px; line-height: 22px; }
+  .insp .sub { font-size: 12px; color: var(--text-3); margin-top: -10px; }
+  .fld { display: flex; flex-direction: column; gap: 6px; }
+  .fld label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .stepper { display: grid; grid-template-columns: 32px 1fr 32px; height: 32px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; background: var(--surface); }
+  .stepper button { border: 0; background: var(--surface-2); color: var(--text-2); cursor: pointer; font-size: 16px; }
+  .stepper input { border: 0; text-align: center; font: 500 14px var(--font-mono); background: transparent; color: var(--text); min-width: 0; }
+  .sel { height: 32px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); padding: 0 10px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { height: 32px; padding: 0 14px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+  .btn.danger { color: var(--over); border-color: color-mix(in srgb, var(--over) 40%, var(--border)); }
+  .kbd { font: 500 11px/16px var(--font-mono); padding: 0 5px; border-radius: 4px; background: color-mix(in srgb, var(--on-accent) 16%, transparent); }
+  .verdict { position: absolute; left: 16px; right: 16px; top: 16px; display: none; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid color-mix(in srgb, var(--over) 45%, var(--border)); box-shadow: var(--shadow-2); }
+  [data-mode="running"] .verdict { display: flex; }
+  .verdict .big { font-weight: 700; color: var(--over); }
+  .verdict .goals { margin-left: auto; display: flex; gap: 6px; }
+  .toast { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: var(--r-md); background: var(--text); color: var(--bg); font-size: 13px; box-shadow: var(--shadow-3); white-space: nowrap; }
+  [data-mode="running"] .toast { display: none; }
+  .theme-rule { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .theme-rule > div { padding: 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); font-size: 13px; color: var(--text-2); }
+  .theme-rule b { display: block; color: var(--text); font-size: 14px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="grid2">
+    <section>
+      <h2 class="section-title" style="margin-top:0">Vai trò màu · tỉ lệ tương phản tính trực tiếp (WCAG 2.2)</h2>
+      <div class="swatches" id="swatches"></div>
+    </section>
+    <section>
+      <h2 class="section-title" style="margin-top:0">Thang chữ: 6 bậc + số đơn cách</h2>
+      <div class="card pad" id="type"></div>
+    </section>
+  </div>
+
+  <h2 class="section-title">Ghép lại thành sản phẩm: Lab thu nhỏ</h2>
+  <div class="card sample">
+    <div class="cv">
+      <div class="verdict" role="status"><span class="big">✕ Chưa đạt</span><span>Đạt 3/5 mục tiêu · p95 <b class="num">184 ms</b> (mục tiêu ≤ 100 ms)</span>
+        <span class="goals"><span class="st-chip st-normal">✓ Chi phí 430 $</span><span class="st-chip st-over">✕ Độ trễ</span></span></div>
+      <div id="node"></div>
+      <div class="toast">Đã thêm Máy chủ web 1 · <u>Hoàn tác</u></div>
+    </div>
+    <aside class="insp" aria-label="Thuộc tính">
+      <h4>Máy chủ web 1</h4><div class="sub">Máy chủ web · tính toán</div>
+      <div class="fld"><label for="cpu">Số vCPU</label><div class="stepper"><button aria-label="Giảm số vCPU">−</button><input id="cpu" value="1" aria-label="Số vCPU"><button aria-label="Tăng số vCPU">+</button></div></div>
+      <div class="fld"><label>Số bản sao</label><div class="stepper"><button aria-label="Giảm">−</button><input value="2" aria-label="Số bản sao"><button aria-label="Tăng">+</button></div></div>
+      <div class="fld"><label>Cách chia tải</label><div class="sel">Máy đang ít việc nhất <span aria-hidden="true">⌄</span></div></div>
+      <div class="fld"><label>Chi phí ước tính mỗi tháng</label><div class="t-num">45 $</div></div>
+      <div class="btns" style="margin-top:auto">
+        <button class="btn primary">▶ Chạy mô phỏng <span class="kbd">⌘↵</span></button>
+        <button class="btn">Nhân bản</button><button class="btn danger">Xoá</button>
+      </div>
+    </aside>
+  </div>
+
+  <h2 class="section-title">Giao diện mặc định</h2>
+  <div class="theme-rule">
+    <div><b>Theo hệ thống</b>Lần đầu mở, Lab theo cài đặt sáng/tối của máy. Người dùng đổi được ở thanh trên, lựa chọn được nhớ.</div>
+    <div><b>Thiết kế theo cặp</b>Mỗi màu có bản sáng và tối riêng, không đảo ngược tự động; thứ bậc chữ giữ nguyên ở cả hai.</div>
+    <div><b>Màu trạng thái cố định</b>Bận = hổ phách, quá tải = đỏ, ngừng = xám, ổn = xanh lá ở mọi bảng màu, để người học không phải học lại.</div>
+  </div>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const ROLES = [
+  ["--text", "Chữ chính", "--surface"], ["--text-2", "Chữ phụ", "--surface"], ["--text-3", "Chữ mờ", "--surface"],
+  ["--accent", "Nhấn (nút Chạy)", null, "--on-accent"], ["--accent-text", "Nhấn dạng chữ", "--surface"],
+  ["--ok", "Ổn định", "--ok-soft"], ["--busy", "Bận", "--busy-soft"], ["--over", "Quá tải", "--over-soft"], ["--down", "Ngừng chạy", "--down-soft"],
+  ["--e-http", "Đường HTTP", "--canvas"], ["--e-db", "Đường CSDL", "--canvas"], ["--border-strong", "Viền ô nhập", "--surface"],
+  ["--bg", "Nền trang", null], ["--canvas", "Nền khung vẽ", null], ["--surface", "Bề mặt", null],
+];
+const probe = document.createElement("span"); document.body.appendChild(probe);
+function rgb(v) { probe.style.color = `var(${v})`; const m = getComputedStyle(probe).color.match(/[\d.]+/g).map(Number); return m.slice(0, 3); }
+function lum([r, g, b]) { const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); }
+function ratio(a, b) { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); }
+const hex = (c) => "#" + c.map((x) => x.toString(16).padStart(2, "0")).join("").toUpperCase();
+
+function swatches() {
+  return ROLES.map(([v, name, on, fg]) => {
+    const c = rgb(v);
+    let r = "";
+    if (fg && !on) { const f = ratio(rgb(fg), c); r = `<span class="ratio">chữ trên nút <span class="num">${f.toFixed(1)}:1</span><span class="${f >= 4.5 ? "pass" : "fail"}">${f >= 4.5 ? "AA chữ" : "Chưa đạt"}</span></span>`; }
+    if (on) {
+      const isText = !["--accent", "--e-http", "--e-db", "--border-strong"].includes(v);
+      const need = isText ? 4.5 : 3;
+      const val = ratio(c, rgb(on));
+      r = `<span class="ratio"><span class="num">${val.toFixed(1)}:1</span><span class="${val >= need ? "pass" : "fail"}">${val >= need ? (isText ? "AA chữ" : "AA đồ hoạ") : "Chưa đạt"}</span></span>`;
+      if (fg) { const f = ratio(rgb(fg), c); r += `<span class="ratio">chữ trên nút <span class="num">${f.toFixed(1)}:1</span><span class="${f >= 4.5 ? "pass" : "fail"}">${f >= 4.5 ? "AA" : "Chưa đạt"}</span></span>`; }
+    }
+    const chipFg = fg ? `var(${fg})` : (lum(c) > 0.4 ? "#111" : "#fff");
+    return `<div class="sw"><div class="chip" style="background:var(${v});color:${chipFg}">${on || fg ? "Aa" : ""}</div><div class="info"><b>${name}</b><span class="num">${v} · ${hex(c)}</span><br>${r}</div></div>`;
+  }).join("");
+}
+const TYPE = [
+  ["display 28/36", "t-display", "Mở rộng tầng web: dọc hay ngang?"],
+  ["title 20/28", "t-title", "Vượt qua đợt tăng vọt lưu lượng"],
+  ["heading 16/22", "t-heading", "Thiết lập lần chạy · Sự cố"],
+  ["body 14/20", "t-body", "Mỗi người dùng gửi yêu cầu tới cân bằng tải; khi một máy chủ ngừng chạy, phần còn lại phải gánh thêm. Ưu tiên giữ độ trễ p95 dưới 100 ms."],
+  ["label 13/18", "t-label", "Tổng số yêu cầu mỗi giây"],
+  ["caption 12/16", "t-caption", "Giá lấy theo tham số thế giới mặc định · cập nhật trực tiếp"],
+  ["mono số", "t-num", "12.000/giây · 184 ms · 99,95%"],
+];
+function typeSpec() {
+  const fam = getComputedStyle(document.documentElement).getPropertyValue("--font-sans").split(",")[0].replace(/"/g, "");
+  const mono = getComputedStyle(document.documentElement).getPropertyValue("--font-mono").split(",")[0].replace(/"/g, "");
+  return `<div class="t-caption" style="margin-bottom:8px">Chữ: <b>${fam}</b> · Số: <b>${mono}</b> · cả hai có đủ dấu tiếng Việt (Google Fonts)</div>` +
+    TYPE.map(([t, c, s]) => `<div class="type-row"><span class="tag">${t}</span><span class="${c}">${s}</span></div>`).join("");
+}
+
+Demo.init({
+  id: "02", title: "02 · Màu, chữ và giao diện", ownsPalette: true,
+  options: [
+    { id: "a", name: "Giấy & Mực", recommended: true,
+      summary: "Nền giấy ấm, mực xanh lam đậm (teal) làm màu nhấn, chữ Be Vietnam Pro được vẽ riêng cho tiếng Việt, số bằng JetBrains Mono. Bo góc vừa (8–12 px). Nối tiếp bảng màu hiện có nên ít xáo trộn.",
+      pros: ["Khác hẳn Syscraft (nền tối, xanh dương): nhận ra ngay khi chụp màn hình", "Be Vietnam Pro hiển thị dấu chồng (Ừ, Ở, Ữ) gọn, không bị cắt", "Teal không trùng màu trạng thái nào"],
+      cons: ["Nền ấm cần chỉnh kỹ ở chế độ tối để không bị \"bẩn\"", "Ít \"công nghệ\" hơn phương án B"] },
+    { id: "b", name: "Than chì & Chàm",
+      summary: "Xám lạnh như bản vẽ kỹ thuật, màu nhấn chàm (indigo), bộ chữ IBM Plex Sans/Mono, góc gần vuông (4–8 px). Cảm giác chính xác, kỹ sư.",
+      pros: ["Rất \"đồ nghề\", hợp người đi làm", "Plex Mono đọc số liệu rất rõ", "Góc vuông giúp xếp dày hơn"],
+      cons: ["Lạnh, kém thân thiện với người mới học", "Gần với phong cách của nhiều công cụ quản trị"] },
+    { id: "c", name: "Mực đêm & Chanh",
+      summary: "Xanh mực đêm với màu nhấn xanh chanh rực, Plus Jakarta Sans tròn trịa, bo góc lớn (12–22 px). Năng lượng của một sản phẩm học tập.",
+      pros: ["Nổi bật, trẻ trung, hợp khía cạnh trò chơi (thử thách, bảng xếp hạng)", "Nút Chạy cực kỳ dễ thấy"],
+      cons: ["Màu chanh không dùng được làm chữ trên nền sáng (cần bản đậm riêng)", "Dễ mỏi mắt khi làm việc lâu"] },
+  ],
+  onChange() {
+    requestAnimationFrame(() => {
+      document.getElementById("swatches").innerHTML = swatches();
+      document.getElementById("type").innerHTML = typeSpec();
+      let style = "a"; try { style = localStorage.getItem("sd-demo-01-opt") || "a"; } catch {}
+      const n = SDData.design.nodes.find((x) => x.id === "web-1");
+      document.getElementById("node").innerHTML = SDNodes.render(style, n, document.documentElement.dataset.mode, { selected: document.documentElement.dataset.mode !== "running" });
+    });
+  },
+});
+</script>
+</body>
+</html>

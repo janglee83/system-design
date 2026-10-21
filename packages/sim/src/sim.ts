@@ -1,7 +1,7 @@
 import type { WasmBinding } from "./binding";
 import { rethrow } from "./errors";
 import { SimRun } from "./run";
-import type { Calibration, ComponentMeta, FixtureReport, Goal, Graph, GraphLimits, SimInput, ValidationIssue, Verdict } from "./types";
+import type { Calibration, Capabilities, ComponentMeta, FixtureReport, Goal, Graph, GraphLimits, SimInput, ValidationIssue, Verdict } from "./types";
 
 export interface Sim {
   simulate(input: SimInput): SimRun;
@@ -10,6 +10,7 @@ export interface Sim {
   grade(run: SimRun, goals: Goal[]): Verdict;
   listComponents(): ComponentMeta[];
   defaultCalibration(): Calibration;
+  capabilities(): Capabilities;
   checkFixture(json: string): FixtureReport;
   engineVersion(): string;
 }
@@ -25,6 +26,7 @@ export function createSim(binding: WasmBinding): Sim {
     grade: (run, goals) => call(() => binding.grade(run.raw(), goals)) as Verdict,
     listComponents: () => call(() => binding.listComponents()) as ComponentMeta[],
     defaultCalibration: () => call(() => binding.defaultCalibration()) as Calibration,
+    capabilities: () => call(() => binding.capabilities()) as Capabilities,
     checkFixture: (json) => call(() => binding.checkFixture(json)) as FixtureReport,
     engineVersion: () => binding.engineVersion(),
   };

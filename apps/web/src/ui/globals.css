@@ -1,0 +1,123 @@
+@import "tailwindcss";
+@import "./tokens.css";
+@import "@fontsource/be-vietnam-pro/400.css";
+@import "@fontsource/be-vietnam-pro/500.css";
+@import "@fontsource/be-vietnam-pro/600.css";
+@import "@fontsource/be-vietnam-pro/700.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-bg: var(--sd-bg);
+  --color-canvas: var(--sd-canvas);
+  --color-grid: var(--sd-grid);
+  --color-surface: var(--sd-surface);
+  --color-surface-2: var(--sd-surface-2);
+  --color-surface-3: var(--sd-surface-3);
+  --color-border: var(--sd-border);
+  --color-border-strong: var(--sd-border-strong);
+  --color-text: var(--sd-text);
+  --color-text-2: var(--sd-text-2);
+  --color-text-3: var(--sd-text-3);
+  --color-accent: var(--sd-accent);
+  --color-accent-hover: var(--sd-accent-hover);
+  --color-accent-soft: var(--sd-accent-soft);
+  --color-on-accent: var(--sd-on-accent);
+  --color-focus: var(--sd-focus);
+  --color-ok: var(--sd-ok);
+  --color-busy: var(--sd-busy);
+  --color-busy-soft: var(--sd-busy-soft);
+  --color-over: var(--sd-over);
+  --color-over-soft: var(--sd-over-soft);
+  --color-down: var(--sd-down);
+  --color-down-soft: var(--sd-down-soft);
+  --color-info: var(--sd-info);
+  --color-edge-http: var(--sd-edge-http);
+  --color-edge-db: var(--sd-edge-db);
+  --color-edge-cache: var(--sd-edge-cache);
+  --color-edge-msg: var(--sd-edge-msg);
+  --color-cat-general: var(--sd-cat-general);
+  --color-cat-compute: var(--sd-cat-compute);
+  --color-cat-data: var(--sd-cat-data);
+  --color-scrim: var(--sd-scrim);
+
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --text-2xs: 11px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-md: 16px;
+  --text-md--line-height: 24px;
+  --text-lg: 18px;
+  --text-lg--line-height: 26px;
+  --text-xl: 22px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 28px;
+  --text-2xl--line-height: 34px;
+  --text-3xl: 36px;
+  --text-3xl--line-height: 42px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-1: var(--sd-shadow-1);
+  --shadow-2: var(--sd-shadow-2);
+  --shadow-3: var(--sd-shadow-3);
+  --ease-sd: var(--sd-ease);
+}
+
+html {
+  background: var(--sd-bg);
+  color: var(--sd-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* In the base layer so utilities (outline-none on an input inside a ringed control) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--sd-focus);
+    outline-offset: 2px;
+  }
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.section-label {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sd-text-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+
+@keyframes sd-pulse {
+  50% {
+    border-color: color-mix(in srgb, var(--sd-over) 45%, transparent);
+  }
+}

@@ -1,0 +1,500 @@
+{
+  "meta": {
+    "title": "System Design Lab",
+    "description": "Dựng một hệ thống, chạy thử và xem nó gãy ở đâu."
+  },
+  "common": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "retry": "Thử lại",
+    "loading": "Đang tải…",
+    "comingSoon": "Sắp có"
+  },
+  "lab": {
+    "title": "Lab",
+    "heading": "Bàn thiết kế",
+    "palette": "Thành phần",
+    "inspector": "Thuộc tính",
+    "canvas": "Khung vẽ thiết kế",
+    "empty": {
+      "title": "Chưa có gì ở đây",
+      "body": "Kéo một thành phần vào khung vẽ, hoặc bấm {shortcut} để tìm."
+    },
+    "legend": {
+      "title": "Kiểu kết nối"
+    },
+    "node": {
+      "replicas": "× {count}",
+      "costPerMonth": "{cost} $/tháng",
+      "costUnknown": "—",
+      "locked": "Thử thách đã khóa thành phần này",
+      "issues": "{count, plural, other {# vấn đề}}"
+    },
+    "minimap": "Bản đồ thu nhỏ",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "fitView": "Vừa màn hình",
+    "snap": "Bám theo lưới",
+    "canvasRole": "khung vẽ thiết kế",
+    "nodeRole": "thành phần",
+    "controls": "Điều khiển khung vẽ",
+    "autoLayout": "Sắp xếp gọn",
+    "groupAction": "Gộp nhóm",
+    "ungroupAction": "Bỏ nhóm",
+    "layoutFailed": "Không sắp xếp được bố cục. Thiết kế của bạn vẫn giữ nguyên."
+  },
+  "nav": {
+    "primary": "Chính",
+    "wordmark": "SD Lab",
+    "lab": "Lab",
+    "learn": "Học",
+    "challenges": "Thử thách",
+    "leaderboard": "Bảng xếp hạng",
+    "home": "Trang chủ System Design Lab"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "theme": {
+    "label": "Giao diện",
+    "light": "Sáng",
+    "dark": "Tối",
+    "system": "Theo hệ thống"
+  },
+  "help": {
+    "label": "Trợ giúp",
+    "about": "Giới thiệu"
+  },
+  "about": {
+    "title": "Về System Design Lab",
+    "body": "Bàn thực hành thiết kế hệ thống: dựng một thiết kế, chạy nó trên bộ mô phỏng ngay trong trình duyệt, và xem phần nào trụ vững, phần nào gãy. Mọi thứ chạy trên máy của bạn.",
+    "appVersion": "Phiên bản ứng dụng {version}",
+    "engineVersion": "Lõi mô phỏng {version}"
+  },
+  "shell": {
+    "desktopNotice": "Lab được thiết kế cho màn hình rộng từ 1280 điểm ảnh. Bạn vẫn dùng được ở đây, nhưng vài khung sẽ hơi chật.",
+    "dismiss": "Ẩn đi"
+  },
+  "learn": {
+    "title": "Học",
+    "placeholder": "Bài học sẽ có trong bản cập nhật tới. Dưới đây là lộ trình các bài sẽ đi theo."
+  },
+  "challenges": {
+    "title": "Thử thách",
+    "placeholder": "Phần chơi thử thách sắp ra mắt. Bạn đã có thể mở thiết kế ban đầu của mọi thử thách trong Lab."
+  },
+  "leaderboard": {
+    "title": "Bảng xếp hạng",
+    "placeholder": "Xếp hạng các thiết kế đạt yêu cầu với chi phí thấp nhất sẽ hiện ở đây khi có tài khoản."
+  },
+  "engine": {
+    "loading": "Đang khởi động bộ mô phỏng…",
+    "ready": "Bộ mô phỏng {version}",
+    "failed": "Không khởi động được bộ mô phỏng. Hãy kiểm tra kết nối rồi thử lại.",
+    "event": {
+      "db": {
+        "no-replica": "{node}: máy chính hỏng và không còn bản sao nào thay thế.",
+        "primary-down": "{node}: máy chính hỏng; còn {replicas, plural, other {# bản sao}}.",
+        "promoted": "{node}: một bản sao đã được nâng lên làm máy chính."
+      },
+      "fault": {
+        "no-target": "Một sự cố không tìm thấy thành phần phù hợp nên bị bỏ qua.",
+        "traffic-surge": "Lưu lượng vọt lên gấp {factor} lần.",
+        "unsupported": "Bộ mô phỏng chưa hỗ trợ sự cố này nên bỏ qua."
+      },
+      "instance": {
+        "down": "{node}: một máy ngừng chạy; còn {remaining} máy hoạt động."
+      },
+      "lb": {
+        "node-down": "{node}: một nút cân bằng tải hỏng; còn {remaining} nút."
+      },
+      "node": {
+        "overloaded": "{node} quá tải và bắt đầu từ chối yêu cầu."
+      }
+    },
+    "validation": {
+      "calibration": {
+        "invalid": "Tham số thế giới “{field}” có giá trị không hợp lệ."
+      },
+      "client": {
+        "no-path": "{node} không có đường nào tới máy chủ."
+      },
+      "config": {
+        "invalid": "{node}: “{field}” nằm ngoài khoảng cho phép."
+      },
+      "edge": {
+        "not-accepted": "{target} không nhận kết nối kiểu {kind}.",
+        "unknown-node": "Có một kết nối trỏ tới thành phần không còn tồn tại."
+      },
+      "graph": {
+        "cycle": "Thiết kế vòng ngược qua {node}; yêu cầu sẽ chạy vòng mãi.",
+        "no-client": "Hãy thêm thành phần Người dùng để có nơi gửi yêu cầu."
+      },
+      "limits": {
+        "kind-not-allowed": "Thử thách này không cho dùng {node}.",
+        "too-many-instances": "Tổng số máy vượt giới hạn của thử thách.",
+        "too-many-nodes": "Số thành phần nhiều hơn mức thử thách cho phép."
+      },
+      "node": {
+        "duplicate-id": "Có hai thành phần trùng mã {node}.",
+        "unknown-kind": "{node} là loại thành phần mà bộ mô phỏng không biết.",
+        "unreachable": "{node} không nhận được yêu cầu nào vì không có gì nối tới nó."
+      },
+      "workload": {
+        "invalid": "Thiết lập lưu lượng “{field}” không hợp lệ."
+      }
+    }
+  },
+  "component": {
+    "client": "Người dùng",
+    "lb": "Cân bằng tải",
+    "web-server": "Máy chủ web",
+    "postgres": "PostgreSQL"
+  },
+  "componentDescription": {
+    "client": "Nơi yêu cầu xuất phát: những người đang dùng hệ thống của bạn.",
+    "lb": "Chia yêu cầu đến cho các máy chủ phía sau để không máy nào bị dồn quá sức.",
+    "web-server": "Chạy mã ứng dụng và trả lời yêu cầu HTTP. Thêm CPU hoặc thêm bản sao để phục vụ được nhiều hơn.",
+    "postgres": "Cơ sở dữ liệu quan hệ giữ dữ liệu an toàn. Bản sao đọc gánh bớt phần đọc."
+  },
+  "category": {
+    "general": "Chung",
+    "compute": "Tính toán",
+    "data": "Dữ liệu"
+  },
+  "role": {
+    "client": "Phía người dùng",
+    "balancer": "Cân bằng tải",
+    "service": "Dịch vụ",
+    "database": "Cơ sở dữ liệu"
+  },
+  "edgeKind": {
+    "http": "HTTP",
+    "db": "Cơ sở dữ liệu",
+    "cache": "Bộ nhớ đệm",
+    "msg": "Tin nhắn"
+  },
+  "configField": {
+    "cpu": "Số vCPU",
+    "memoryGb": "Bộ nhớ (GB)",
+    "readReplicas": "Bản sao đọc",
+    "algorithm": "Cách chia tải"
+  },
+  "configOption": {
+    "algorithm": {
+      "round-robin": "Lần lượt từng máy",
+      "least-conn": "Máy đang ít việc nhất"
+    }
+  },
+  "override": {
+    "rpsPerInstance": "Yêu cầu/giây mỗi máy",
+    "serviceMs": "Thời gian xử lý (ms)",
+    "costPerMonth": "Chi phí mỗi tháng ($)"
+  },
+  "calibration": {
+    "webRpsPerVcpu": "Web: số yêu cầu/giây mỗi vCPU",
+    "webServiceMs": "Web: thời gian xử lý một yêu cầu (ms)",
+    "webQueuePerGb": "Web: số yêu cầu chờ được trên mỗi GB bộ nhớ",
+    "webCostPerVcpu": "Web: chi phí tháng cho vCPU đầu tiên ($)",
+    "webCostPerExtraVcpu": "Web: chi phí tháng cho mỗi vCPU thêm ($)",
+    "lbRpsPerReplica": "Cân bằng tải: số yêu cầu/giây mỗi nút",
+    "lbServiceMs": "Cân bằng tải: thời gian mỗi yêu cầu (ms)",
+    "lbQueueSeconds": "Cân bằng tải: giữ được bao nhiêu giây lưu lượng",
+    "lbCostPerReplica": "Cân bằng tải: chi phí tháng mỗi nút ($)",
+    "lbMaxUtilizationForLatency": "Cân bằng tải: mức bận bắt đầu gây chậm",
+    "pgQpsPerInstance": "PostgreSQL: số truy vấn/giây mỗi máy",
+    "pgServiceMs": "PostgreSQL: thời gian mỗi truy vấn (ms)",
+    "pgQueueSeconds": "PostgreSQL: giữ được bao nhiêu giây truy vấn",
+    "pgCostPerInstance": "PostgreSQL: chi phí tháng mỗi máy ($)",
+    "pgFailoverMs": "PostgreSQL: thời gian nâng bản sao lên (ms)",
+    "pgMaxUtilizationForLatency": "PostgreSQL: mức bận bắt đầu gây chậm",
+    "edgeDelayHttpMs": "Độ trễ mạng trên kết nối HTTP (ms)",
+    "edgeDelayDbMs": "Độ trễ mạng trên kết nối cơ sở dữ liệu (ms)",
+    "edgeDelayCacheMs": "Độ trễ mạng trên kết nối bộ nhớ đệm (ms)",
+    "edgeDelayMsgMs": "Độ trễ mạng trên kết nối tin nhắn (ms)"
+  },
+  "profile": {
+    "read-heavy": "Chủ yếu đọc",
+    "write-heavy": "Chủ yếu ghi",
+    "mixed": "Đọc ghi xen kẽ",
+    "chat": "Nhắn tin",
+    "feed": "Bảng tin",
+    "jobs": "Tác vụ nền"
+  },
+  "arrivals": {
+    "poisson": "Ngẫu nhiên (Poisson)",
+    "uniform": "Đều đặn"
+  },
+  "fault": {
+    "traffic-surge-3x": "Lưu lượng tăng gấp ba",
+    "instance-down": "Một máy chủ ngừng chạy",
+    "instance-slow": "Một máy chủ chạy chậm",
+    "lb-node-down": "Một nút cân bằng tải hỏng",
+    "cache-down": "Bộ nhớ đệm ngừng chạy",
+    "db-overloaded": "Cơ sở dữ liệu quá tải",
+    "db-primary-down": "Máy chính của cơ sở dữ liệu hỏng",
+    "db-replica-down": "Một bản sao cơ sở dữ liệu hỏng",
+    "db-stalled": "Cơ sở dữ liệu bị treo",
+    "broker-down": "Hệ thống tin nhắn ngừng chạy",
+    "object-storage-down": "Kho lưu trữ tệp ngừng chạy",
+    "kv-node-down": "Một nút kho khóa–giá trị hỏng",
+    "third-party-down": "Dịch vụ bên ngoài ngừng trả lời",
+    "third-party-slow": "Dịch vụ bên ngoài phản hồi chậm"
+  },
+  "metric": {
+    "p50": "p50",
+    "p95": "p95",
+    "p99": "p99",
+    "availability": "Tỉ lệ trả lời được",
+    "throughputRps": "Thông lượng",
+    "costPerMonth": "Chi phí mỗi tháng",
+    "spofCount": "Điểm hỏng là sập",
+    "exposedBackends": "Máy chủ lộ ra ngoài",
+    "peakBusy": "Mức bận cao nhất",
+    "peakDbConnections": "Kết nối cơ sở dữ liệu cao nhất",
+    "cacheOps": "Thao tác bộ nhớ đệm",
+    "requestsTotal": "Tổng số yêu cầu",
+    "requestsOk": "Đã trả lời",
+    "requestsRejected": "Bị từ chối",
+    "requestsTimedOut": "Quá hạn",
+    "requestsUnreachable": "Không tới đích",
+    "duplicateIds": "Mã bị trùng",
+    "outOfOrderIds": "Mã sai thứ tự",
+    "lostUpdates": "Cập nhật bị mất",
+    "writeConflicts": "Xung đột khi ghi",
+    "duplicateWrites": "Ghi hai lần",
+    "staleReads": "Đọc phải dữ liệu cũ",
+    "peakQueueDepth": "Hàng đợi dài nhất",
+    "lostMessages": "Tin nhắn bị mất",
+    "statusFlaps": "Trạng thái chập chờn",
+    "staleOnline": "Trạng thái trực tuyến bị cũ",
+    "inboxWritesPerSec": "Số lần ghi hộp thư mỗi giây"
+  },
+  "timelineField": {
+    "inFlight": "Đang xử lý",
+    "queued": "Đang chờ",
+    "busy": "Độ bận",
+    "rejected": "Bị từ chối",
+    "up": "Đang chạy"
+  },
+  "traceOutcome": {
+    "delivered": "Đã trả lời",
+    "rejected": "Bị từ chối",
+    "timeout": "Quá hạn",
+    "unreachable": "Không tới đích"
+  },
+  "traceAction": {
+    "send": "Gửi đi",
+    "serve": "Được xử lý",
+    "reject": "Bị từ chối",
+    "down": "Gặp máy đã ngừng"
+  },
+  "palette": {
+    "search": "Tìm thành phần",
+    "add": "Thêm {name}",
+    "notAllowed": "Thử thách này không cho dùng thành phần này.",
+    "noMatch": "Không có thành phần nào khớp “{query}”.",
+    "added": "Đã thêm {name}"
+  },
+  "connect": {
+    "title": "Nối {source} tới…",
+    "description": "Chọn nơi nhận yêu cầu từ {source}. Dùng phím mũi tên rồi Enter.",
+    "none": "Chưa có thành phần nào khác để nối.",
+    "refused": {
+      "not-accepted": "{target} không nhận kết nối đi vào.",
+      "duplicate": "Hai thành phần này đã được nối rồi.",
+      "self": "Một thành phần không thể tự nối với chính nó.",
+      "unknown-node": "Thành phần đó không còn nữa."
+    }
+  },
+  "problems": {
+    "none": "Không có vấn đề",
+    "count": "{count, plural, other {# vấn đề}}",
+    "title": "Vấn đề",
+    "blocking": "Cần sửa trước khi chạy",
+    "warning": "Nên xem lại",
+    "select": "Xem trên khung vẽ",
+    "field": {
+      "replicas": "Số bản sao"
+    }
+  },
+  "inspector": {
+    "design": "Thiết kế",
+    "name": "Tên",
+    "untitled": "Thiết kế chưa đặt tên",
+    "label": "Nhãn",
+    "replicas": "Số bản sao",
+    "settings": "Cấu hình",
+    "cost": "Chi phí ước tính mỗi tháng",
+    "costValue": "{cost} $",
+    "advanced": "Nâng cao",
+    "advancedHint": "Ghi đè riêng cho thành phần này; để trống thì dùng tham số thế giới.",
+    "lockedNotice": "Thử thách đã khóa thành phần này. Bạn có thể di chuyển nhưng không sửa được.",
+    "edge": "Kết nối",
+    "edgeKind": "Kiểu",
+    "edgeKindNotAccepted": "{kind} ({target} không nhận)",
+    "multi": "Đã chọn {count} mục",
+    "decrease": "Giảm {label}",
+    "increase": "Tăng {label}"
+  },
+  "group": {
+    "untitled": "Nhóm",
+    "rename": "Đổi tên nhóm",
+    "label": "Tên nhóm"
+  },
+  "workload": {
+    "traffic": "Lưu lượng",
+    "runSettings": "Thiết lập lần chạy",
+    "params": "Tham số kịch bản",
+    "paramKey": "Tên tham số",
+    "paramValue": "Giá trị",
+    "paramAdd": "Thêm tham số",
+    "paramRemove": "Xóa {name}",
+    "paramIgnored": "Bộ mô phỏng chưa đọc “{name}”; tham số vẫn được lưu cùng thiết kế.",
+    "surgeToggle": "Lưu lượng tăng vọt",
+    "percent": "%",
+    "seconds": "giây",
+    "field": {
+      "profile": "Kiểu lưu lượng",
+      "baseRps": "Tổng số yêu cầu mỗi giây",
+      "writeRatio": "Tỉ lệ yêu cầu ghi",
+      "clients": "Số người dùng khác nhau",
+      "clientTimeoutMs": "Người dùng bỏ cuộc sau (ms)",
+      "arrivals": "Cách yêu cầu đến",
+      "trafficEndMs": "Ngừng nhận yêu cầu mới lúc (giây)",
+      "durationMs": "Độ dài lần chạy (giây)",
+      "seed": "Hạt giống ngẫu nhiên",
+      "surge": {
+        "factor": "Hệ số tăng vọt",
+        "atMs": "Bắt đầu tăng lúc (giây)",
+        "durationMs": "Kéo dài (giây)"
+      }
+    }
+  },
+  "presets": {
+    "label": "Mẫu",
+    "choose": "Áp dụng một mẫu…",
+    "save": "Lưu lưu lượng hiện tại thành mẫu",
+    "saveTitle": "Lưu mẫu lưu lượng",
+    "name": "Tên mẫu",
+    "delete": "Xóa mẫu {name}",
+    "builtIn": "Có sẵn",
+    "yours": "Của bạn",
+    "quiet": "Giờ vắng",
+    "lunch": "Cao điểm trưa",
+    "flashSale": "Đợt giảm giá chớp nhoáng",
+    "writeStorm": "Cơn bão ghi",
+    "unavailable": "Muốn lưu mẫu cần bộ nhớ trình duyệt, nhưng cửa sổ này không cho dùng."
+  },
+  "faults": {
+    "title": "Sự cố",
+    "empty": "Chưa có sự cố nào. Lần chạy sẽ yên ổn.",
+    "add": "Thêm sự cố",
+    "random": "Sự cố ngẫu nhiên",
+    "kind": "Sự cố",
+    "target": "Nhắm vào",
+    "anyTarget": "Bất kỳ thành phần phù hợp (bộ mô phỏng tự chọn)",
+    "noTarget": "Ảnh hưởng toàn bộ lưu lượng",
+    "at": "Lúc (giây)",
+    "remove": "Xóa sự cố",
+    "comingSoon": "Sắp có: bộ mô phỏng chưa mô phỏng sự cố này.",
+    "noCandidate": "Chưa có sự cố được hỗ trợ nào hợp với thiết kế này."
+  },
+  "canvasA11y": {
+    "nodeDescription": "Bấm Enter hoặc phím cách để chọn thành phần. Bấm Delete để xóa, Escape để hủy.",
+    "nodeDescriptionKeyboard": "Bấm Enter hoặc phím cách để chọn thành phần, rồi dùng phím mũi tên để di chuyển. Bấm Delete để xóa, Escape để hủy.",
+    "nodeMoved": "Đã dời thành phần đang chọn {direction}. Vị trí mới: x {x}, y {y}.",
+    "direction": {
+      "up": "lên trên",
+      "down": "xuống dưới",
+      "left": "sang trái",
+      "right": "sang phải"
+    },
+    "edgeDescription": "Bấm Enter hoặc phím cách để chọn kết nối, rồi Delete để xóa hoặc Escape để hủy.",
+    "controls": "Điều khiển khung vẽ",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "fitView": "Vừa màn hình",
+    "interactive": "Khóa hoặc mở chỉnh sửa",
+    "minimap": "Bản đồ thu nhỏ",
+    "handle": "Cổng kết nối",
+    "node": "{label}, {kind}",
+    "group": "Nhóm {label}",
+    "edge": "Kết nối {kind} từ {source} tới {target}"
+  },
+  "world": {
+    "title": "Tham số thế giới",
+    "intro": "Máy và mạng trong mô phỏng nhanh và đắt đến đâu. Thay đổi chỉ áp dụng cho thiết kế này.",
+    "changed": "{count, plural, other {Đã đổi #}}",
+    "reset": "Về mặc định",
+    "resetAll": "Đặt lại tất cả",
+    "default": "Mặc định {value}",
+    "group": {
+      "web": "Máy chủ web",
+      "lb": "Cân bằng tải",
+      "pg": "PostgreSQL",
+      "network": "Mạng"
+    }
+  },
+  "run": {
+    "run": "Chạy",
+    "running": "Đang chạy…",
+    "blocked": "Hãy sửa các vấn đề trước",
+    "refused": "Bộ mô phỏng từ chối thiết lập này. Xem danh sách vấn đề.",
+    "failed": "Lần chạy bị lỗi: {message}",
+    "duration": "{seconds} giây",
+    "history": "Các lần chạy",
+    "runLabel": "Lần {id} · {time}",
+    "tookMs": "{ms} ms",
+    "unavailable": "Hãy chạy lại để xem chi tiết: bộ mô phỏng đã khởi động lại sau lần chạy này.",
+    "stale": "chạy lại để xem"
+  },
+  "panel": {
+    "label": "Kết quả",
+    "tabs": {
+      "metrics": "Số liệu",
+      "events": "Sự kiện",
+      "logs": "Nhật ký",
+      "simulation": "Mô phỏng"
+    },
+    "resize": "Đổi chiều cao khung kết quả",
+    "noRun": "Chưa chạy lần nào",
+    "noRunBody": "Bấm Chạy để mô phỏng thiết kế này. Kết quả sẽ hiện ở đây.",
+    "vsPrevious": "so với lần trước",
+    "better": "tốt hơn",
+    "worse": "kém hơn",
+    "breakdown": "Các yêu cầu đã đi đâu",
+    "series": "Theo thời gian",
+    "node": "Thành phần",
+    "noComparison": "Lần chạy đầu tiên: chưa có gì để so."
+  },
+  "events": {
+    "time": "Thời điểm",
+    "node": "Thành phần",
+    "message": "Điều đã xảy ra",
+    "empty": "Lần chạy này không có sự kiện nào.",
+    "jump": "Tới {time}"
+  },
+  "logs": {
+    "level": {
+      "info": "Thông tin",
+      "warn": "Cảnh báo",
+      "error": "Lỗi"
+    },
+    "filter": "Mức hiển thị",
+    "started": "Bắt đầu lần chạy {id}: {nodes, plural, other {# thành phần}}, {rps} yêu cầu/giây trong {seconds} giây.",
+    "finished": "Xong lần chạy {id} sau {ms} ms: {ok} yêu cầu được trả lời, {failed} không được trả lời.",
+    "warning": "Trước khi chạy: {text}"
+  },
+  "simulation": {
+    "input": "Dữ liệu gửi cho bộ mô phỏng",
+    "engine": "Bộ mô phỏng phiên bản {version}",
+    "export": "Xuất lần chạy (JSON)",
+    "copy": "Sao chép dữ liệu vào",
+    "copied": "Đã sao chép dữ liệu vào bộ nhớ tạm.",
+    "copyFailed": "Không sao chép được. Hãy bôi đen rồi tự sao chép."
+  }
+}

@@ -1,0 +1,500 @@
+{
+  "meta": {
+    "title": "System Design Lab",
+    "description": "Build a system, run it, and watch where it breaks."
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "comingSoon": "Coming soon"
+  },
+  "lab": {
+    "title": "Lab",
+    "heading": "Lab workspace",
+    "palette": "Components",
+    "inspector": "Inspector",
+    "canvas": "Design canvas",
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "Drag a component onto the canvas, or press {shortcut} to search."
+    },
+    "legend": {
+      "title": "Connections"
+    },
+    "node": {
+      "replicas": "× {count}",
+      "costPerMonth": "${cost} /mo",
+      "costUnknown": "—",
+      "locked": "Locked by the challenge",
+      "issues": "{count, plural, one {# problem} other {# problems}}"
+    },
+    "minimap": "Overview map",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "snap": "Snap to grid",
+    "canvasRole": "design canvas",
+    "nodeRole": "component",
+    "controls": "Canvas controls",
+    "autoLayout": "Tidy layout",
+    "groupAction": "Group",
+    "ungroupAction": "Ungroup",
+    "layoutFailed": "The layout could not be worked out. Your design is unchanged."
+  },
+  "nav": {
+    "primary": "Main",
+    "wordmark": "SD Lab",
+    "lab": "Lab",
+    "learn": "Learn",
+    "challenges": "Challenges",
+    "leaderboard": "Leaderboard",
+    "home": "System Design Lab home"
+  },
+  "language": {
+    "label": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Follow the system"
+  },
+  "help": {
+    "label": "Help",
+    "about": "About this lab"
+  },
+  "about": {
+    "title": "About System Design Lab",
+    "body": "A practice bench for system design: build a design, run it on a simulator in your browser, and see what holds and what breaks. Everything runs on your machine.",
+    "appVersion": "App version {version}",
+    "engineVersion": "Simulator engine {version}"
+  },
+  "shell": {
+    "desktopNotice": "This lab is built for screens at least 1280 pixels wide. It still works here, but some panels will be cramped.",
+    "dismiss": "Dismiss"
+  },
+  "learn": {
+    "title": "Learn",
+    "placeholder": "Lessons arrive in the next update. Here is the path they will follow."
+  },
+  "challenges": {
+    "title": "Challenges",
+    "placeholder": "Challenge play arrives soon. You can already open any challenge's starting design in the Lab."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "placeholder": "Rankings of the cheapest passing designs will appear here once accounts exist."
+  },
+  "engine": {
+    "loading": "Starting the simulator…",
+    "ready": "Simulator {version}",
+    "failed": "The simulator could not start. Check your connection, then try again.",
+    "event": {
+      "db": {
+        "no-replica": "{node}: the primary failed and there is no replica to take over.",
+        "primary-down": "{node}: the primary failed; {replicas, plural, one {# replica} other {# replicas}} left.",
+        "promoted": "{node}: a replica was promoted to primary."
+      },
+      "fault": {
+        "no-target": "A fault found no matching component and was skipped.",
+        "traffic-surge": "Traffic jumped to {factor}×.",
+        "unsupported": "This fault is not simulated yet, so it was skipped."
+      },
+      "instance": {
+        "down": "{node}: one instance stopped; {remaining} still running."
+      },
+      "lb": {
+        "node-down": "{node}: a balancer node failed; {remaining} left."
+      },
+      "node": {
+        "overloaded": "{node} is overloaded and has started rejecting requests."
+      }
+    },
+    "validation": {
+      "calibration": {
+        "invalid": "World parameter “{field}” has an invalid value."
+      },
+      "client": {
+        "no-path": "{node} has no path to a server."
+      },
+      "config": {
+        "invalid": "{node}: “{field}” is outside the allowed range."
+      },
+      "edge": {
+        "not-accepted": "{target} does not accept {kind} connections.",
+        "unknown-node": "A connection points to a component that no longer exists."
+      },
+      "graph": {
+        "cycle": "The design loops back through {node}; requests would go round forever.",
+        "no-client": "Add a Users component so something sends requests."
+      },
+      "limits": {
+        "kind-not-allowed": "This challenge does not allow {node}.",
+        "too-many-instances": "The total number of instances is over the challenge limit.",
+        "too-many-nodes": "There are more components than the challenge allows."
+      },
+      "node": {
+        "duplicate-id": "Two components share the id {node}.",
+        "unknown-kind": "{node} is a component type the simulator does not know.",
+        "unreachable": "{node} gets no requests: nothing connects to it."
+      },
+      "workload": {
+        "invalid": "Traffic setting “{field}” is invalid."
+      }
+    }
+  },
+  "component": {
+    "client": "Users",
+    "lb": "Load balancer",
+    "web-server": "Web server",
+    "postgres": "PostgreSQL"
+  },
+  "componentDescription": {
+    "client": "Where requests come from: the people using your system.",
+    "lb": "Spreads incoming requests across the servers behind it so no single one is swamped.",
+    "web-server": "Runs your application code and answers HTTP requests. Add CPUs or copies to serve more.",
+    "postgres": "A relational database that keeps data safe. Read replicas share the reading load."
+  },
+  "category": {
+    "general": "General",
+    "compute": "Compute",
+    "data": "Data"
+  },
+  "role": {
+    "client": "Client",
+    "balancer": "Balancer",
+    "service": "Service",
+    "database": "Database"
+  },
+  "edgeKind": {
+    "http": "HTTP",
+    "db": "Database",
+    "cache": "Cache",
+    "msg": "Messaging"
+  },
+  "configField": {
+    "cpu": "vCPUs",
+    "memoryGb": "Memory (GB)",
+    "readReplicas": "Read replicas",
+    "algorithm": "Balancing method"
+  },
+  "configOption": {
+    "algorithm": {
+      "round-robin": "Take turns",
+      "least-conn": "Fewest open requests"
+    }
+  },
+  "override": {
+    "rpsPerInstance": "Requests/s per instance",
+    "serviceMs": "Service time (ms)",
+    "costPerMonth": "Cost per month ($)"
+  },
+  "calibration": {
+    "webRpsPerVcpu": "Web: requests/s per vCPU",
+    "webServiceMs": "Web: time to serve a request (ms)",
+    "webQueuePerGb": "Web: waiting requests per GB of memory",
+    "webCostPerVcpu": "Web: monthly cost of the first vCPU ($)",
+    "webCostPerExtraVcpu": "Web: monthly cost per extra vCPU ($)",
+    "lbRpsPerReplica": "Load balancer: requests/s per node",
+    "lbServiceMs": "Load balancer: time per request (ms)",
+    "lbQueueSeconds": "Load balancer: seconds of traffic it can hold",
+    "lbCostPerReplica": "Load balancer: monthly cost per node ($)",
+    "lbMaxUtilizationForLatency": "Load balancer: busy level where delays start",
+    "pgQpsPerInstance": "PostgreSQL: queries/s per instance",
+    "pgServiceMs": "PostgreSQL: time per query (ms)",
+    "pgQueueSeconds": "PostgreSQL: seconds of queries it can hold",
+    "pgCostPerInstance": "PostgreSQL: monthly cost per instance ($)",
+    "pgFailoverMs": "PostgreSQL: time to promote a replica (ms)",
+    "pgMaxUtilizationForLatency": "PostgreSQL: busy level where delays start",
+    "edgeDelayHttpMs": "Network delay on HTTP links (ms)",
+    "edgeDelayDbMs": "Network delay on database links (ms)",
+    "edgeDelayCacheMs": "Network delay on cache links (ms)",
+    "edgeDelayMsgMs": "Network delay on messaging links (ms)"
+  },
+  "profile": {
+    "read-heavy": "Mostly reads",
+    "write-heavy": "Mostly writes",
+    "mixed": "Mixed",
+    "chat": "Chat",
+    "feed": "Feed",
+    "jobs": "Background jobs"
+  },
+  "arrivals": {
+    "poisson": "Random (Poisson)",
+    "uniform": "Steady"
+  },
+  "fault": {
+    "traffic-surge-3x": "Traffic triples",
+    "instance-down": "A server goes down",
+    "instance-slow": "A server slows down",
+    "lb-node-down": "A load balancer node fails",
+    "cache-down": "The cache goes down",
+    "db-overloaded": "The database is overloaded",
+    "db-primary-down": "The database primary fails",
+    "db-replica-down": "A database replica fails",
+    "db-stalled": "The database stalls",
+    "broker-down": "The message broker goes down",
+    "object-storage-down": "Object storage goes down",
+    "kv-node-down": "A key-value node fails",
+    "third-party-down": "A third-party service goes down",
+    "third-party-slow": "A third-party service slows down"
+  },
+  "metric": {
+    "p50": "p50",
+    "p95": "p95",
+    "p99": "p99",
+    "availability": "Availability",
+    "throughputRps": "Throughput",
+    "costPerMonth": "Cost per month",
+    "spofCount": "Single points of failure",
+    "exposedBackends": "Exposed backends",
+    "peakBusy": "Peak busy",
+    "peakDbConnections": "Peak database connections",
+    "cacheOps": "Cache operations",
+    "requestsTotal": "Total requests",
+    "requestsOk": "Answered",
+    "requestsRejected": "Rejected",
+    "requestsTimedOut": "Timed out",
+    "requestsUnreachable": "Unreachable",
+    "duplicateIds": "Duplicate IDs",
+    "outOfOrderIds": "Out-of-order IDs",
+    "lostUpdates": "Lost updates",
+    "writeConflicts": "Write conflicts",
+    "duplicateWrites": "Duplicate writes",
+    "staleReads": "Stale reads",
+    "peakQueueDepth": "Longest queue",
+    "lostMessages": "Lost messages",
+    "statusFlaps": "Status flaps",
+    "staleOnline": "Stale online status",
+    "inboxWritesPerSec": "Inbox writes per second"
+  },
+  "timelineField": {
+    "inFlight": "In flight",
+    "queued": "Waiting",
+    "busy": "Busy",
+    "rejected": "Rejected",
+    "up": "Running"
+  },
+  "traceOutcome": {
+    "delivered": "Answered",
+    "rejected": "Rejected",
+    "timeout": "Timed out",
+    "unreachable": "Unreachable"
+  },
+  "traceAction": {
+    "send": "Sent",
+    "serve": "Served",
+    "reject": "Rejected",
+    "down": "Hit a stopped server"
+  },
+  "palette": {
+    "search": "Search components",
+    "add": "Add {name}",
+    "notAllowed": "This challenge does not allow this component.",
+    "noMatch": "No component matches “{query}”.",
+    "added": "Added {name}"
+  },
+  "connect": {
+    "title": "Connect {source} to…",
+    "description": "Pick where requests from {source} should go. Use the arrow keys, then Enter.",
+    "none": "There is nothing else to connect to yet.",
+    "refused": {
+      "not-accepted": "{target} does not take incoming connections.",
+      "duplicate": "These two are already connected.",
+      "self": "A component cannot connect to itself.",
+      "unknown-node": "That component no longer exists."
+    }
+  },
+  "problems": {
+    "none": "No problems",
+    "count": "{count, plural, one {# problem} other {# problems}}",
+    "title": "Problems",
+    "blocking": "Must fix before running",
+    "warning": "Worth a look",
+    "select": "Show on canvas",
+    "field": {
+      "replicas": "Replicas"
+    }
+  },
+  "inspector": {
+    "design": "Design",
+    "name": "Name",
+    "untitled": "Untitled design",
+    "label": "Label",
+    "replicas": "Replicas",
+    "settings": "Settings",
+    "cost": "Estimated monthly cost",
+    "costValue": "${cost}",
+    "advanced": "Advanced",
+    "advancedHint": "Override this one component; leave empty to use the world parameters.",
+    "lockedNotice": "The challenge locks this component. You can move it, but not change it.",
+    "edge": "Connection",
+    "edgeKind": "Kind",
+    "edgeKindNotAccepted": "{kind} (not accepted by {target})",
+    "multi": "{count} items selected",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}"
+  },
+  "group": {
+    "untitled": "Group",
+    "rename": "Rename group",
+    "label": "Group name"
+  },
+  "workload": {
+    "traffic": "Traffic",
+    "runSettings": "Run settings",
+    "params": "Scenario parameters",
+    "paramKey": "Parameter name",
+    "paramValue": "Value",
+    "paramAdd": "Add parameter",
+    "paramRemove": "Remove {name}",
+    "paramIgnored": "This simulator does not read “{name}” yet; it is kept with the design.",
+    "surgeToggle": "Traffic surge",
+    "percent": "%",
+    "seconds": "s",
+    "field": {
+      "profile": "Traffic shape",
+      "baseRps": "Total requests per second",
+      "writeRatio": "Share of writes",
+      "clients": "Distinct clients",
+      "clientTimeoutMs": "Client gives up after (ms)",
+      "arrivals": "Arrival pattern",
+      "trafficEndMs": "Stop new traffic at (s)",
+      "durationMs": "Run length (s)",
+      "seed": "Random seed",
+      "surge": {
+        "factor": "Surge multiplier",
+        "atMs": "Surge starts at (s)",
+        "durationMs": "Surge lasts (s)"
+      }
+    }
+  },
+  "presets": {
+    "label": "Preset",
+    "choose": "Apply a preset…",
+    "save": "Save current traffic as a preset",
+    "saveTitle": "Save traffic preset",
+    "name": "Preset name",
+    "delete": "Delete preset {name}",
+    "builtIn": "Built in",
+    "yours": "Yours",
+    "quiet": "Quiet hours",
+    "lunch": "Lunch peak",
+    "flashSale": "Flash sale",
+    "writeStorm": "Write storm",
+    "unavailable": "Saving presets needs browser storage, which this window does not allow."
+  },
+  "faults": {
+    "title": "Faults",
+    "empty": "No faults. The run will be calm.",
+    "add": "Add fault",
+    "random": "Random fault",
+    "kind": "Fault",
+    "target": "Target",
+    "anyTarget": "Any matching (the simulator picks)",
+    "noTarget": "Affects all traffic",
+    "at": "At (s)",
+    "remove": "Remove fault",
+    "comingSoon": "Coming soon: the simulator does not model this fault yet.",
+    "noCandidate": "No supported fault matches this design yet."
+  },
+  "canvasA11y": {
+    "nodeDescription": "Press Enter or Space to select a component. Press Delete to remove it and Escape to cancel.",
+    "nodeDescriptionKeyboard": "Press Enter or Space to select a component, then move it with the arrow keys. Press Delete to remove it and Escape to cancel.",
+    "nodeMoved": "Moved the selected component {direction}. New position: x {x}, y {y}.",
+    "direction": {
+      "up": "up",
+      "down": "down",
+      "left": "left",
+      "right": "right"
+    },
+    "edgeDescription": "Press Enter or Space to select a connection, then Delete to remove it or Escape to cancel.",
+    "controls": "Canvas controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "interactive": "Lock or unlock editing",
+    "minimap": "Overview map",
+    "handle": "Connection port",
+    "node": "{label}, {kind}",
+    "group": "Group {label}",
+    "edge": "{kind} connection from {source} to {target}"
+  },
+  "world": {
+    "title": "World parameters",
+    "intro": "How fast and how expensive the simulated machines and network are. Changes apply to this design only.",
+    "changed": "{count, plural, one {# changed} other {# changed}}",
+    "reset": "Reset to default",
+    "resetAll": "Reset all",
+    "default": "Default {value}",
+    "group": {
+      "web": "Web servers",
+      "lb": "Load balancers",
+      "pg": "PostgreSQL",
+      "network": "Network"
+    }
+  },
+  "run": {
+    "run": "Run",
+    "running": "Running…",
+    "blocked": "Fix the problems first",
+    "refused": "The simulator refused this setup. See the problems list.",
+    "failed": "The run failed: {message}",
+    "duration": "{seconds} s",
+    "history": "Run history",
+    "runLabel": "Run {id} · {time}",
+    "tookMs": "{ms} ms",
+    "unavailable": "Run again to inspect: the simulator restarted after this run.",
+    "stale": "run again to inspect"
+  },
+  "panel": {
+    "label": "Results",
+    "tabs": {
+      "metrics": "Metrics",
+      "events": "Events",
+      "logs": "Logs",
+      "simulation": "Simulation"
+    },
+    "resize": "Resize the results panel",
+    "noRun": "No run yet",
+    "noRunBody": "Press Run to simulate this design. Results appear here.",
+    "vsPrevious": "vs previous run",
+    "better": "better",
+    "worse": "worse",
+    "breakdown": "What happened to the requests",
+    "series": "Over time",
+    "node": "Component",
+    "noComparison": "First run: nothing to compare yet."
+  },
+  "events": {
+    "time": "Time",
+    "node": "Component",
+    "message": "What happened",
+    "empty": "No events in this run.",
+    "jump": "Jump to {time}"
+  },
+  "logs": {
+    "level": {
+      "info": "Info",
+      "warn": "Warning",
+      "error": "Error"
+    },
+    "filter": "Show levels",
+    "started": "Run {id} started: {nodes, plural, one {# component} other {# components}}, {rps} requests/s for {seconds} s.",
+    "finished": "Run {id} finished in {ms} ms: {ok} answered, {failed} not answered.",
+    "warning": "Before the run: {text}"
+  },
+  "simulation": {
+    "input": "Input sent to the simulator",
+    "engine": "Simulator version {version}",
+    "export": "Export run (JSON)",
+    "copy": "Copy input",
+    "copied": "Input copied to the clipboard.",
+    "copyFailed": "Could not copy. Select the text and copy it by hand."
+  }
+}
