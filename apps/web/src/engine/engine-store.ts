@@ -14,6 +14,8 @@ export interface EngineState {
   info: EngineInfo | null;
   error: string | null;
   client: EngineClient | null;
+  /** The client's current epoch; runs from an older one cannot be inspected. */
+  epoch: number;
   start(): void;
   retry(): void;
   /** Terminates the client and returns to idle; start() works again afterwards. */
@@ -47,13 +49,17 @@ export function createEngineStore(makeClient: () => EngineClient) {
       info: null,
       error: null,
       client: null,
+      epoch: -1,
       start() {
         if (get().client) return;
         const client = makeClient();
         client.onCrash((e) => {
           if (get().client === client) set({ status: "error", error: e.message });
         });
-        set({ client });
+        client.onRestart((epoch) => {
+          if (get().client === client) set({ epoch });
+        });
+        set({ client, epoch: client.epoch });
         void load(client);
       },
       retry() {
@@ -65,7 +71,7 @@ export function createEngineStore(makeClient: () => EngineClient) {
       stop() {
         generation++;
         const client = get().client;
-        set({ client: null, status: "idle", info: null, error: null });
+        set({ client: null, status: "idle", info: null, error: null, epoch: -1 });
         client?.terminate();
       },
     };

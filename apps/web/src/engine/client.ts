@@ -26,6 +26,9 @@ export class EngineCrashError extends Error {
 
 type Pending = { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> };
 
+/** Engine epochs are unique in the page: a new client or a restarted worker gets the next one. */
+let epochs = 0;
+
 /** A request the worker has not answered by then is treated as a stuck worker. */
 export const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -40,6 +43,8 @@ export class EngineClient {
   #stopped: EngineCrashError | null = null;
   /** Set when the worker crashed: later requests reject with it until restart(). */
   #crashed: EngineCrashError | null = null;
+  #epoch = epochs++;
+  #restartListeners = new Set<(epoch: number) => void>();
 
   constructor(factory: () => WorkerLike, { timeoutMs = REQUEST_TIMEOUT_MS }: { timeoutMs?: number } = {}) {
     this.#factory = factory;
@@ -112,13 +117,28 @@ export class EngineClient {
     return () => this.#listeners.delete(listener);
   }
 
-  /** Kills the worker (pending requests reject) and starts a fresh one. */
+  /**
+   * Which worker instance answers now. Kept runs (trace, export) live in one worker: a run made in
+   * an older epoch can no longer be inspected (Task 22, Phase 2 review I6).
+   */
+  get epoch(): number {
+    return this.#epoch;
+  }
+
+  onRestart(listener: (epoch: number) => void): () => void {
+    this.#restartListeners.add(listener);
+    return () => this.#restartListeners.delete(listener);
+  }
+
+  /** Kills the worker (pending requests reject) and starts a fresh one in a new epoch. */
   restart(): void {
     if (this.#stopped) return;
     this.#worker.terminate();
     this.#fail(new EngineCrashError("engine restarted"));
     this.#crashed = null;
+    this.#epoch = epochs++;
     this.#spawn();
+    for (const l of this.#restartListeners) l(this.#epoch);
   }
 
   /** Kills the worker for good: pending and later requests reject with EngineCrashError. */

@@ -131,4 +131,22 @@ describe("EngineClient", () => {
       vi.useRealTimers();
     }
   });
+
+  it("counts engine epochs: every restart, manual or automatic, starts a new one", async () => {
+    const crash = (msg: Envelope): Reply => ({ id: msg.id, ok: false, error: { kind: "crash", message: "trap" } });
+    let n = 0;
+    const client = new EngineClient(() => (n++ === 1 ? new FakeWorker(crash) : new FakeWorker()));
+    const restarts = vi.fn();
+    client.onRestart(restarts);
+    const e0 = client.epoch;
+    client.restart();
+    const e1 = client.epoch;
+    expect(e1).toBeGreaterThan(e0);
+    await client.request({ type: "engineVersion" }).catch(() => {}); // the second worker traps: auto restart
+    expect(client.epoch).toBeGreaterThan(e1);
+    expect(restarts).toHaveBeenCalledTimes(2);
+    expect(restarts).toHaveBeenLastCalledWith(client.epoch);
+    // Epochs are unique across clients too (a remounted Lab gets a new client).
+    expect(new EngineClient(() => new FakeWorker()).epoch).toBeGreaterThan(client.epoch);
+  });
 });

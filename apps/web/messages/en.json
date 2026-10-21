@@ -438,5 +438,17 @@
       "pg": "PostgreSQL",
       "network": "Network"
     }
+  },
+  "run": {
+    "run": "Run",
+    "running": "Running…",
+    "blocked": "Fix the problems first",
+    "refused": "The simulator refused this setup. See the problems list.",
+    "failed": "The run failed: {message}",
+    "duration": "{seconds} s",
+    "history": "Run history",
+    "runLabel": "Run {id} · {time}",
+    "tookMs": "{ms} ms",
+    "unavailable": "Run again to inspect: the simulator restarted after this run."
   }
 }

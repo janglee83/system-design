@@ -1,4 +1,5 @@
 import type { Node, SimInput } from "@sd/sim";
+import { emptyDesign, type Design } from "../lab/model/design";
 import { sim } from "@sd/sim/node";
 import type { WorkerLike } from "../engine/client";
 import type { Envelope, Reply } from "../engine/protocol";
@@ -62,4 +63,26 @@ export class FakeWorker implements WorkerLike {
   crash(message: string) {
     this.onerror?.({ message, preventDefault() {} } as ErrorEvent);
   }
+}
+
+/** A Lab design holding a SimInput's graph and workload, nodes laid out on one row. */
+export function designFromInput(input: SimInput): Design {
+  return {
+    ...emptyDesign(),
+    nodes: input.graph.nodes.map((n, i) => ({
+      id: n.id,
+      kind: n.kind,
+      label: n.label,
+      replicas: n.replicas,
+      config: { ...n.config } as Design["nodes"][number]["config"],
+      position: { x: 240 * i, y: 0 },
+      groupId: null,
+    })),
+    edges: input.graph.edges.map((e) => ({ ...e })),
+    workload: structuredClone(input.workload),
+    faults: input.faults.map((f) => ({ ...f })),
+    durationMs: input.durationMs,
+    seed: input.seed,
+    calibration: { ...(input.calibration ?? {}) },
+  };
 }

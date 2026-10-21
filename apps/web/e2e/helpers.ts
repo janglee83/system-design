@@ -50,3 +50,31 @@ export async function connectToCard(page: Page, from: string, to: string) {
   await page.mouse.move(b.x, b.y, { steps: 12 });
   await page.mouse.up();
 }
+
+/** client → lb → web-server (×replicas) → postgres, laid out on one row. */
+export async function buildFourTier(page: Page, webReplicas = 2) {
+  await addAt(page, "Users", 100, 220);
+  await addAt(page, "Load balancer", 330, 220);
+  await addAt(page, "Web server", 560, 220);
+  await addAt(page, "PostgreSQL", 790, 220);
+  await connectByDrag(page, "client-1", "lb-1");
+  await connectByDrag(page, "lb-1", "web-server-1");
+  await connectByDrag(page, "web-server-1", "postgres-1");
+  if (webReplicas !== 1) {
+    await page.getByTestId("node-web-server-1").click();
+    const r = page.getByRole("complementary", { name: "Inspector" }).getByRole("spinbutton", { name: "Replicas" });
+    await r.fill(String(webReplicas));
+    await r.press("Enter");
+  }
+  await page.keyboard.press("Escape"); // clear the selection (works even from an input)
+  await expect(page.getByTestId("problems")).toHaveText("No problems");
+}
+
+export async function runOnce(page: Page): Promise<string> {
+  const bar = page.getByTestId("run-bar");
+  const before = await bar.getAttribute("data-run-id");
+  await bar.getByRole("button", { name: /^Run/ }).click();
+  await expect(bar).not.toHaveAttribute("data-run-id", before ?? "");
+  await expect(bar).toHaveAttribute("data-status", "idle");
+  return (await bar.getAttribute("data-run-id"))!;
+}

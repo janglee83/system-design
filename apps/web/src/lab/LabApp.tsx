@@ -25,6 +25,8 @@ import type { Design } from "./model/design";
 import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
 import { Problems } from "./Problems";
+import { RunBar } from "./run/RunBar";
+import { useRunDesign } from "./run/use-run-design";
 import { LabStoresProvider, useDesign, useDesignApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
@@ -46,6 +48,9 @@ export function LabApp({ initial }: { initial?: Design }) {
             {/* Bottom-left, beside the canvas controls: clear of the minimap at any width. */}
             <div className="absolute bottom-3 left-16">
               <Problems />
+            </div>
+            <div className="absolute top-3 left-1/2 -translate-x-1/2">
+              <RunPane />
             </div>
             {/* Top-right: the minimap is bottom-right, controls bottom-left, the legend top-left. */}
             <div className="absolute top-3 right-3">
@@ -91,7 +96,9 @@ function LabShortcuts() {
   const ui = useUiApi();
   const flow = useReactFlow();
   const layout = useAutoLayout();
+  const run = useRunDesign();
   useLabShortcuts({
+    run,
     undo: () => undo(api),
     redo: () => redo(api),
     delete: () => deleteSelection(api),
@@ -114,4 +121,8 @@ function LabShortcuts() {
     escape: () => api.getState().clearSelection(),
   });
   return null;
+}
+
+function RunPane() {
+  return <RunBar onRun={useRunDesign()} />;
 }

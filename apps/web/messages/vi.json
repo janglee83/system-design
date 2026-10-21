@@ -438,5 +438,17 @@
       "pg": "PostgreSQL",
       "network": "Mạng"
     }
+  },
+  "run": {
+    "run": "Chạy",
+    "running": "Đang chạy…",
+    "blocked": "Hãy sửa các vấn đề trước",
+    "refused": "Bộ mô phỏng từ chối thiết lập này. Xem danh sách vấn đề.",
+    "failed": "Lần chạy bị lỗi: {message}",
+    "duration": "{seconds} giây",
+    "history": "Các lần chạy",
+    "runLabel": "Lần {id} · {time}",
+    "tookMs": "{ms} ms",
+    "unavailable": "Hãy chạy lại để xem chi tiết: bộ mô phỏng đã khởi động lại sau lần chạy này."
   }
 }
