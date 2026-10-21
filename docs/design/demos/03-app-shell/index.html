@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="../shared/demo.css">
 <link rel="stylesheet" href="../shared/nodes.css">
-<link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="../shared/app.css">
 </head>
 <body>
 <main class="stage">
@@ -57,7 +57,7 @@ const run = `<div class="run"><button class="go">${ic("play")} Chạy mô phỏn
 const util = `<button class="u-btn" aria-label="Giao diện sáng/tối">${ic("sun")}</button><button class="u-btn util-x" aria-label="Ngôn ngữ">VI</button><button class="u-btn util-x" aria-label="Trợ giúp">${ic("help")}</button>`;
 
 function palette(extra = "") {
-  const item = (kind, price, sub) => `<div class="pitem" style="--k:var(--k-${kv[kind]})" title="Kéo vào khung vẽ"><div class="tile">${SDArt.svg(kind, 32, 24)}</div><div><b>${SDData.kinds[kind].label}</b><small>${sub}</small></div><div class="price">${price}</div></div>`;
+  const item = (kind, price, sub) => `<div class="pitem" style="--k:var(--c-${SDData.kinds[kind].cat})" title="Kéo vào khung vẽ"><div class="tile">${SDArt.svg(kind, 32, 24)}</div><div><b>${SDData.kinds[kind].label}</b><small>${sub}</small></div><div class="price">${price}</div></div>`;
   const soon = (name, sub) => `<div class="pitem soon" style="--k:var(--down)"><div class="tile"></div><div><b>${name}</b><small>${sub}</small></div><div class="price">Sắp có</div></div>`;
   return `<aside class="palette ${extra}" aria-label="Thành phần">
     <div class="ph"><div class="search">${ic("search", 14)} Tìm thành phần <span class="kbd2">⌘K</span></div></div>
@@ -70,7 +70,7 @@ function palette(extra = "") {
 function inspector(extra = "") {
   const spark = (pts, color) => `<svg viewBox="0 0 120 28" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
   return `<aside class="insp ${extra}" aria-label="Thuộc tính">
-    <div class="ih" style="--k:var(--k-web)"><div class="tile">${SDArt.svg("web-server", 34, 26)}</div><div><b>Máy chủ web 1</b><small>Máy chủ web · tính toán</small></div><button class="u-btn" aria-label="Thu gọn">${ic("panel")}</button></div>
+    <div class="ih" style="--k:var(--c-compute)"><div class="tile">${SDArt.svg("web-server", 34, 26)}</div><div><b>Máy chủ web 1</b><small>Máy chủ web · tính toán</small></div><button class="u-btn" aria-label="Thu gọn">${ic("panel")}</button></div>
     <div class="isec edit-only"><h6>Cấu hình</h6>
       <div class="two"><div class="f"><label>Số vCPU</label><div class="stp"><b>−</b><span>1</span><b>+</b></div></div><div class="f"><label>Bộ nhớ (GB)</label><div class="stp"><b>−</b><span>2</span><b>+</b></div></div></div>
       <div class="f"><label>Số bản sao</label><div class="stp"><b>−</b><span>2</span><b>+</b></div><span class="hint">Mỗi bản sao chịu khoảng 9.000 yêu cầu/giây với 1 vCPU.</span></div></div>

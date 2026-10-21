@@ -38,7 +38,7 @@
       const state = {
         option: q.get("opt") || store.get(key + "-opt") || cfg.options[0].id,
         theme: q.get("theme") || store.get("sd-demo-theme") || (sysDark ? "dark" : "light"),
-        mode: q.get("mode") || store.get(key + "-mode") || "editing",
+        mode: q.get("mode") || store.get(key + "-mode") || (Array.isArray(cfg.modes) ? cfg.modes[0].id : "editing"),
         palette: q.get("palette") || store.get("sd-demo-palette") || "a",
       };
       if (!cfg.options.some((o) => o.id === state.option)) state.option = cfg.options[0].id;
@@ -65,7 +65,9 @@
       );
       bar.appendChild(seg("Giao diện", [{ id: "light", label: "Sáng" }, { id: "dark", label: "Tối" }], state.theme, (v) => { state.theme = v; store.set("sd-demo-theme", v); apply(); }));
       if (cfg.modes !== false) {
-        bar.appendChild(seg("Trạng thái", [{ id: "editing", label: "Đang thiết kế" }, { id: "running", label: "Đang chạy" }], state.mode, (v) => { state.mode = v; store.set(key + "-mode", v); apply(); }));
+        const modes = Array.isArray(cfg.modes) ? cfg.modes : [{ id: "editing", label: "Đang thiết kế" }, { id: "running", label: "Đang chạy" }];
+        if (!modes.some((m) => m.id === state.mode)) state.mode = modes[0].id;
+        bar.appendChild(seg(cfg.modeLabel || "Trạng thái", modes, state.mode, (v) => { state.mode = v; store.set(key + "-mode", v); apply(); }));
       }
       document.body.prepend(bar);
 

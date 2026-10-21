@@ -6,13 +6,13 @@ window.SDData = {
   // status: ready = engine supports it today; planned = engine plan 1b; later = curriculum / parity backlog.
   // price: engine calibration for ready kinds only; planned/later kinds have no price yet.
   categories: [
-    { id: "entry", label: "Lối vào", desc: "Nơi yêu cầu đến và được dẫn đường" },
-    { id: "compute", label: "Tính toán", desc: "Chạy mã ứng dụng" },
-    { id: "data", label: "Dữ liệu", desc: "Lưu giữ lâu dài" },
-    { id: "cache", label: "Bộ nhớ đệm", desc: "Trả lời nhanh từ bộ nhớ" },
-    { id: "msg", label: "Tin nhắn", desc: "Chuyển việc đi bất đồng bộ" },
-    { id: "storage", label: "Lưu trữ tệp", desc: "Ảnh, video, tệp lớn" },
-    { id: "external", label: "Bên ngoài", desc: "Dịch vụ không thuộc hệ thống của bạn" },
+    { id: "entry", short: "Lối vào", label: "Lối vào", desc: "Nơi yêu cầu đến và được dẫn đường" },
+    { id: "compute", short: "Tính toán", label: "Tính toán", desc: "Chạy mã ứng dụng" },
+    { id: "data", short: "Dữ liệu", label: "Dữ liệu", desc: "Lưu giữ lâu dài" },
+    { id: "cache", short: "Đệm", label: "Bộ nhớ đệm", desc: "Trả lời nhanh từ bộ nhớ" },
+    { id: "msg", short: "Tin nhắn", label: "Tin nhắn", desc: "Chuyển việc đi bất đồng bộ" },
+    { id: "storage", short: "Tệp", label: "Lưu trữ tệp", desc: "Ảnh, video, tệp lớn" },
+    { id: "external", short: "Bên ngoài", label: "Bên ngoài", desc: "Dịch vụ không thuộc hệ thống của bạn" },
   ],
   kinds: {
     client: { label: "Người dùng", cat: "entry", status: "ready", price: 0, desc: "Nơi yêu cầu xuất phát." },
