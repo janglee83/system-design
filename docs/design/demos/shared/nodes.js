@@ -94,7 +94,7 @@
       const dead = mode === "running" && (tgt.run.state === "down" || src.run.state === "down");
       const hot = mode === "running" && tgt.run.state === "over";
       paths += `<path id="e-${opts.uid || ""}${i}" d="${d}" class="edge k-${e.kind} ${dead ? "dead" : ""} ${hot ? "hot" : ""}" marker-end="url(#arrow-${e.kind}${opts.uid || ""})"/>`;
-      if (mode === "running" && !dead) {
+      if (mode === "running" && !dead && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
         for (let j = 0; j < 4; j++) {
           dots += `<circle r="3.2" opacity="0" class="dot k-${e.kind} ${hot && j === 3 ? "rejected" : ""}"><set attributeName="opacity" to="1" begin="${(j * 0.6 + i * 0.17).toFixed(2)}s"/><animateMotion dur="2.4s" repeatCount="indefinite" begin="${(j * 0.6 + i * 0.17).toFixed(2)}s"><mpath href="#e-${opts.uid || ""}${i}"/></animateMotion></circle>`;
         }

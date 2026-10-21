@@ -31,7 +31,7 @@
   --ok: #1D7849; --ok-soft: #DDF1E5;
   --busy: #9A5A00; --busy-line: #C47A0A; --busy-soft: #FBEED5;
   --over: #BF3328; --over-soft: #FBE2DE;
-  --down: #6B707B; --down-soft: #ECECEE;
+  --down: #5E636D; --down-soft: #ECECEE;
   --k-client: #4F57C9; --k-lb: #0B7671; --k-web: #2C66C7; --k-pg: #7542B3;
   --e-http: #2F5FD0; --e-db: #7F44C4; --e-cache: #0B8460; --e-msg: #B8387D;
   --shadow-1: 0 1px 2px rgb(25 28 32 / .06), 0 1px 1px rgb(25 28 32 / .04);
@@ -67,7 +67,7 @@
   --ok: #19774A; --ok-soft: #DDF0E5;
   --busy: #965700; --busy-line: #C27908; --busy-soft: #F9EDD6;
   --over: #BE2F2F; --over-soft: #F9E0E0;
-  --down: #6A707C; --down-soft: #EBECEF;
+  --down: #5D636E; --down-soft: #EBECEF;
   --k-client: #2F6BBE; --k-lb: #0E7A70; --k-web: #4B3FCF; --k-pg: #A2396E;
   --e-http: #2F6BBE; --e-db: #A2396E; --e-cache: #0E7A70; --e-msg: #B35C00;
   --shadow-1: 0 1px 0 rgb(21 24 29 / .06);
@@ -103,7 +103,7 @@
   --ok: #16794B; --ok-soft: #DCF1E5;
   --busy: #985900; --busy-line: #C47B0A; --busy-soft: #FAEED6;
   --over: #C1322A; --over-soft: #FBE1DD;
-  --down: #6B717C; --down-soft: #ECEDEF;
+  --down: #5E646F; --down-soft: #ECEDEF;
   --k-client: #3D5BD9; --k-lb: #0E7C74; --k-web: #121A2B; --k-pg: #8A3FC1;
   --e-http: #3D5BD9; --e-db: #8A3FC1; --e-cache: #0E7C74; --e-msg: #C2410C;
   --shadow-1: 0 1px 2px rgb(18 26 43 / .07);
