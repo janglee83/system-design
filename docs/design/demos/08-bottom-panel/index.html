@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 · Bảng dưới</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  html .app.L-a { grid-template-columns: 64px minmax(0, 1fr) var(--rw, 0px) !important; grid-template-rows: 56px minmax(0, 1fr) var(--bh, 0px) 28px !important; }
+  html .app .playback { display: none !important; }
+  html .app .running-ctl { display: none !important; } html .app .run { display: inline-flex !important; }
+  .bp { grid-column: 1 / -1; border-top: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
+  .bp .grip { height: 6px; display: grid; place-items: center; cursor: ns-resize; } .bp .grip::after { content: ""; width: 36px; height: 3px; border-radius: 2px; background: var(--border-strong); opacity: .5; }
+  .bp .bar { display: flex; align-items: center; gap: 4px; padding: 0 12px 0 8px; border-bottom: 1px solid var(--border); }
+  .tab { padding: 9px 10px; font-size: 13px; font-weight: 500; color: var(--text-2); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 6px; align-items: center; }
+  .tab.on { color: var(--text); font-weight: 600; border-bottom-color: var(--accent-text); }
+  .tab em { font-style: normal; font: 600 11px var(--font-mono); padding: 0 6px; border-radius: 999px; background: var(--over-soft); color: var(--over); }
+  .bp .bar .right { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-3); }
+  .bp .content { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
+  .runsel { height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--r-sm); display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 12.5px; }
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+  .kpi { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+  .kpi small { display: block; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+  .kpi b { font: 600 20px/26px var(--font-mono); } .kpi b.bad { color: var(--over); } .kpi b.good { color: var(--ok); }
+  .kpi .d { font: 500 11.5px var(--font-mono); color: var(--text-3); } .kpi .d.up { color: var(--over); } .kpi .d.dn { color: var(--ok); }
+  .multi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .chart { border: 1px solid var(--border); border-radius: var(--r-md); padding: 8px 10px 6px; background: var(--surface); }
+  .chart h6 { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; justify-content: space-between; }
+  .chart h6 span { font: 500 11.5px var(--font-mono); color: var(--text-3); }
+  .chart svg { width: 100%; height: 70px; display: block; }
+  .axis { font: 10px var(--font-mono); fill: var(--text-3); }
+  .evlist { display: flex; flex-direction: column; }
+  .ev { display: grid; grid-template-columns: 74px 22px 1fr auto; gap: 10px; align-items: center; padding: 8px 6px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .ev .t { font: 500 12px var(--font-mono); color: var(--text-3); }
+  .ev .i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; }
+  .ev .i.bad { background: var(--over-soft); color: var(--over); } .ev .i.warn { background: var(--busy-soft); color: var(--busy); } .ev .i.info { background: var(--surface-3); color: var(--text-2); }
+  .ev .lnk { font-size: 12.5px; color: var(--accent-text); }
+  table.logs { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.logs th { text-align: left; font-weight: 600; color: var(--text-3); padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); }
+  table.logs td { padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); white-space: nowrap; }
+  table.logs td.m { font-family: var(--font-mono); }
+  .oc { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .oc.ok { background: var(--ok-soft); color: var(--ok); } .oc.no { background: var(--over-soft); color: var(--over); } .oc.to { background: var(--busy-soft); color: var(--busy); }
+  .filters { display: flex; gap: 6px; margin-bottom: 8px; } .fchip { height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); } .fchip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .simgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; }
+  .simgrid .f { display: flex; flex-direction: column; gap: 6px; } .simgrid label { font-size: 13px; color: var(--text-2); font-weight: 500; }
+  .ctl-step { display: grid; grid-template-columns: 30px 1fr auto 30px; height: 32px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; }
+  .ctl-step b { display: grid; place-items: center; background: var(--surface-2); font-weight: 400; color: var(--text-2); } .ctl-step span { display: grid; place-items: center; font: 500 14px var(--font-mono); } .ctl-step em { font-style: normal; font-size: 12px; color: var(--text-3); display: grid; place-items: center; padding-right: 8px; }
+  .ctl-sel { height: 32px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); padding: 0 10px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+  /* B: unified timeline */
+  .tl { display: grid; grid-template-columns: 150px 1fr; }
+  .tl .lab { font-size: 12.5px; color: var(--text-2); padding: 0 10px 0 4px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border); }
+  .tl .lab b { font: 600 13px var(--font-mono); color: var(--text); } .tl .lab b.bad { color: var(--over); }
+  .tl .lane { position: relative; border-bottom: 1px solid var(--border); }
+  .tl .lane svg { width: 100%; height: 100%; display: block; }
+  .tl .ax { height: 22px; } .tl .evl { height: 30px; } .tl .ln { height: 46px; } .tl .hm { height: 22px; }
+  .tlwrap .cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--accent-text); pointer-events: none; }
+  .tlwrap .cursor b { position: absolute; top: -1px; left: -24px; font: 600 10.5px/16px var(--font-mono); padding: 0 5px; border-radius: 4px; background: var(--accent); color: var(--on-accent); }
+  .tl .evm { position: absolute; top: 6px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid var(--over); color: var(--over); }
+  .tl .evm span { position: absolute; left: 22px; top: 0; font-size: 12px; white-space: nowrap; color: var(--text); }
+  .tlwrap { position: relative; }
+  /* C: right drawer */
+  .drawer { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  .drawer .bar { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--border); }
+  .drawer .content { flex: 1; min-height: 0; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .drawer .kpis { grid-template-columns: 1fr 1fr; margin: 0; }
+  .drawer .multi { grid-template-columns: 1fr; }
+  .drawer .simgrid { grid-template-columns: 1fr 1fr; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0">Sau lần chạy #3. Bốn thẻ khớp với bảng mà Lab đang dựng (Chỉ số, Sự kiện, Nhật ký, Mô phỏng). Số liệu so với lần #2 (trước khi thêm sự cố). Sự kiện dùng đúng câu chữ của bộ mô phỏng trong messages/vi.json.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, ic = A.ic;
+// series over 0–10 s, 21 samples (every 0.5 s)
+const t = [...Array(21).keys()].map((i) => i / 2);
+const S = {
+  p95: t.map((x) => (x < 3 ? 34 + 3 * Math.sin(x * 3) : x < 3.5 ? 90 : 176 + 10 * Math.sin(x * 2))),
+  avail: t.map((x) => (x < 3.4 ? 100 : 82 + 2 * Math.sin(x * 2.4))),
+  thru: t.map((x) => (x < 3.4 ? 12000 : 10000 + 150 * Math.sin(x * 3))),
+  web1: t.map((x) => (x < 3 ? 34 : 67 + 2 * Math.sin(x * 2))),
+  web2: t.map((x) => (x < 3 ? 34 : 0)),
+  pg: t.map((x) => (x < 3 ? 72 : 120)),
+  lb: t.map(() => 20),
+};
+function line(vals, max, color, o = {}) {
+  const W = 300, H = o.h || 70, pts = vals.map((v, i) => `${(i / (vals.length - 1)) * W},${H - 4 - (Math.min(v, max) / max) * (H - 10)}`).join(" ");
+  const thr = o.thr != null ? `<line x1="0" x2="${W}" y1="${H - 4 - (o.thr / max) * (H - 10)}" y2="${H - 4 - (o.thr / max) * (H - 10)}" stroke="var(--over)" stroke-dasharray="4 4" stroke-width="1" vector-effect="non-scaling-stroke"/>` : "";
+  const area = o.area ? `<polygon points="0,${H} ${pts} ${W},${H}" fill="color-mix(in srgb, ${color} 14%, transparent)"/>` : "";
+  const ev = (o.events || []).map((x) => `<line x1="${(x / 10) * W}" x2="${(x / 10) * W}" y1="0" y2="${H}" stroke="var(--over)" stroke-width="1" opacity=".5" vector-effect="non-scaling-stroke"/>`).join("");
+  const cur = o.cursor != null ? `<line x1="${(o.cursor / 10) * W}" x2="${(o.cursor / 10) * W}" y1="0" y2="${H}" stroke="var(--accent-text)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${area}${thr}${ev}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>${cur}</svg>`;
+}
+const KPI = [
+  ["Độ trễ p95", "184 ms", "bad", "▲ 146 ms so với #2", "up"],
+  ["Trả lời được", "83,4%", "bad", "▼ 16,5 điểm", "up"],
+  ["Thông lượng", "10.000/s", "", "▼ 2.000/s", "up"],
+  ["Bị từ chối", "13.200", "bad", "▲ 13.200", "up"],
+  ["Chi phí mỗi tháng", "430 $", "", "= như #2", ""],
+  ["Điểm hỏng là sập", "1", "bad", "Cân bằng tải 1", ""],
+];
+const kpis = () => `<div class="kpis">${KPI.map(([l, v, c, d, dc]) => `<div class="kpi"><small>${l}</small><b class="${c}">${v}</b><div class="d ${dc}">${d}</div></div>`).join("")}</div>`;
+const multi = () => `<div class="multi">
+  <div class="chart"><h6>Độ trễ p95 <span>mục tiêu ≤ 100 ms</span></h6>${line(S.p95, 220, "var(--over)", { thr: 100, events: [3, 3.4], cursor: 4.2 })}</div>
+  <div class="chart"><h6>Tỉ lệ trả lời được <span>≥ 99,9%</span></h6>${line(S.avail, 100, "var(--busy-line)", { thr: 99.9, events: [3, 3.4], cursor: 4.2 })}</div>
+  <div class="chart"><h6>Độ bận theo thành phần <span>%</span></h6>${line(S.pg, 130, "var(--c-data)", { thr: 100, events: [3, 3.4], cursor: 4.2 }).replace("</svg>", "") + line(S.web1, 130, "var(--c-compute)").replace(/^<svg[^>]*>/, "")}</div>
+  <div class="chart"><h6>Thông lượng <span>yêu cầu/giây</span></h6>${line(S.thru, 13000, "var(--accent-text)", { area: true, events: [3, 3.4], cursor: 4.2 })}</div></div>`;
+const EVENTS = [
+  ["00:00,0", "info", "info", "Lưu lượng bắt đầu: 12.000 yêu cầu/giây, đọc ghi xen kẽ.", ""],
+  ["00:03,0", "bad", "alert", "Máy chủ web 2: một máy ngừng chạy; còn 0 máy hoạt động.", "Sự cố đã lên lịch"],
+  ["00:03,4", "bad", "alert", "PostgreSQL 1 quá tải và bắt đầu từ chối yêu cầu.", "Xem trên sơ đồ"],
+  ["00:03,4", "warn", "alert", "Máy chủ web 1 bận trên 70%.", "Xem trên sơ đồ"],
+  ["00:10,0", "info", "info", "Kết thúc: 120.000 yêu cầu, 13.200 bị từ chối.", ""],
+];
+const events = () => `<div class="evlist">${EVENTS.map(([tm, c, i, txt, l]) => `<div class="ev"><span class="t">${tm}</span><span class="i ${c}">${ic(i, 12)}</span><span>${txt}</span><span class="lnk">${l}</span></div>`).join("")}</div>`;
+const LOGS = [
+  ["00:04,200", "#48.211", "Người dùng 1 → Cân bằng tải 1 → Máy chủ web 1 → PostgreSQL 1", "no", "Bị từ chối", "5,3 ms"],
+  ["00:04,198", "#48.190", "Người dùng 1 → Cân bằng tải 1 → Máy chủ web 1 → PostgreSQL 1", "ok", "Đã trả lời", "171 ms"],
+  ["00:04,196", "#48.172", "Người dùng 1 → Cân bằng tải 1 → Máy chủ web 1", "to", "Quá hạn", "1.000 ms"],
+  ["00:04,190", "#48.140", "Người dùng 1 → Cân bằng tải 1 → Máy chủ web 1 → PostgreSQL 1", "ok", "Đã trả lời", "164 ms"],
+  ["00:02,950", "#35.402", "Người dùng 1 → Cân bằng tải 1 → Máy chủ web 2 → PostgreSQL 1", "ok", "Đã trả lời", "36 ms"],
+  ["00:02,948", "#35.380", "Người dùng 1 → Cân bằng tải 1 → Máy chủ web 1 → PostgreSQL 1", "ok", "Đã trả lời", "34 ms"],
+];
+const logs = () => `<div class="filters"><span class="fchip on">Tất cả</span><span class="fchip">Bị từ chối · 13.200</span><span class="fchip">Quá hạn · 640</span><span class="fchip">Không tới đích · 0</span></div>
+  <table class="logs"><thead><tr><th>Thời điểm</th><th>Yêu cầu</th><th>Đường đi</th><th>Kết quả</th><th>Thời gian</th></tr></thead><tbody>${LOGS.map(([tm, id, p, c, o, d]) => `<tr><td class="m">${tm}</td><td class="m">${id}</td><td>${p}</td><td><span class="oc ${c}">${o}</span></td><td class="m">${d}</td></tr>`).join("")}</tbody></table>`;
+const step = (v, u = "") => `<div class="ctl-step"><b>−</b><span>${v}</span><em>${u}</em><b>+</b></div>`;
+const sim = () => `<div class="simgrid">
+  <div class="f"><label>Mẫu</label><div class="ctl-sel">Cao điểm trưa ${ic("chev", 14)}</div></div>
+  <div class="f"><label>Kiểu lưu lượng</label><div class="ctl-sel">Đọc ghi xen kẽ ${ic("chev", 14)}</div></div>
+  <div class="f"><label>Tổng số yêu cầu mỗi giây</label>${step("12.000")}</div>
+  <div class="f"><label>Tỉ lệ yêu cầu ghi</label>${step(20, "%")}</div>
+  <div class="f"><label>Người dùng bỏ cuộc sau</label>${step("1.000", "ms")}</div>
+  <div class="f"><label>Độ dài lần chạy</label>${step(10, "giây")}</div>
+  <div class="f"><label>Sự cố</label><div class="ctl-sel">1 · Máy chủ web 2 ngừng ở giây 3 ${ic("chev", 14)}</div></div>
+  <div class="f"><label>Hạt giống ngẫu nhiên</label>${step(1)}</div></div>`;
+const TABS = [["metrics", "Chỉ số"], ["events", "Sự kiện", 3], ["logs", "Nhật ký"], ["sim", "Mô phỏng"]];
+const tabs = (cur) => TABS.map(([id, l, n]) => `<span class="tab ${id === cur ? "on" : ""}">${l}${n ? `<em>${n}</em>` : ""}</span>`).join("");
+const body = (m) => (m === "metrics" ? kpis() + multi() : m === "events" ? events() : m === "logs" ? logs() : sim());
+
+function timeline() {
+  const lane = (lab, val, cls, svg, h) => `<div class="lab">${lab}<b class="${cls}">${val}</b></div><div class="lane ${h}">${svg}</div>`;
+  const heat = (vals) => `<svg viewBox="0 0 300 22" preserveAspectRatio="none">${vals.map((v, i) => `<rect x="${(i / vals.length) * 300}" y="3" width="${300 / vals.length + 1}" height="16" shape-rendering="crispEdges" fill="${v === 0 ? "var(--down-soft)" : v > 100 ? "var(--over)" : v >= 70 ? "var(--busy-line)" : "color-mix(in srgb, var(--ok) " + (20 + v / 2) + "%, var(--surface))"}"/>`).join("")}</svg>`;
+  const ticks = `<svg viewBox="0 0 300 22" preserveAspectRatio="none">${[0, 2, 4, 6, 8, 10].map((x) => `<line x1="${x * 30}" x2="${x * 30}" y1="14" y2="22" stroke="var(--border-strong)" vector-effect="non-scaling-stroke"/>`).join("")}</svg>`;
+  return `<div class="tlwrap"><div class="tl">
+    <div class="lab" style="border-bottom:0"></div><div class="lane ax" style="border-bottom:0">${ticks}<div style="position:absolute;inset:0;display:flex;justify-content:space-between;font:10.5px var(--font-mono);color:var(--text-3);padding-top:0">${[0, 2, 4, 6, 8, 10].map((x) => `<span>${x}s</span>`).join("")}</div></div>
+    <div class="lab">Sự kiện</div><div class="lane evl"><span style="position:absolute;right:calc(70% + 14px);top:6px;font-size:12px;white-space:nowrap">Máy chủ web 2 ngừng</span><span class="evm" style="left:30%">${ic("alert", 10)}</span><span class="evm" style="left:34%">${ic("alert", 10)}</span><span style="position:absolute;left:calc(34% + 14px);top:6px;font-size:12px;white-space:nowrap">PostgreSQL 1 quá tải</span></div>
+    ${lane("Độ trễ p95", "184 ms", "bad", line(S.p95, 220, "var(--over)", { thr: 100, h: 46 }), "ln")}
+    ${lane("Trả lời được", "83,4%", "bad", line(S.avail, 100, "var(--busy-line)", { thr: 99.9, h: 46, area: true }), "ln")}
+    ${lane("PostgreSQL 1", "120%", "bad", heat(S.pg), "hm")}
+    ${lane("Máy chủ web 1", "67%", "", heat(S.web1), "hm")}
+    ${lane("Máy chủ web 2", "ngừng", "", heat(S.web2), "hm")}
+    ${lane("Cân bằng tải 1", "20%", "", heat(S.lb), "hm")}
+  </div><div class="cursor" style="left:calc(150px + (100% - 150px) * .42)"><b>4,2s</b></div></div>`;
+}
+function draw(s) {
+  const app = document.getElementById("app");
+  const isC = s.option === "c";
+  app.style.setProperty("--rw", isC ? "460px" : "0px");
+  app.style.setProperty("--bh", isC ? "0px" : (s.option === "b" && (s.mode === "metrics" || s.mode === "events") ? "360px" : "320px"));
+  const head = `<div class="right"><span class="runsel">${ic("clock", 12)} Lần #3 · so với #2 ${ic("chev", 12)}</span><button class="u-btn" aria-label="Xuất kết quả">${ic("list", 14)}</button><button class="u-btn" aria-label="Thu gọn">${ic("chev", 14)}</button></div>`;
+  let panel;
+  if (isC) panel = `<aside class="drawer" aria-label="Kết quả"><div class="bar">${tabs(s.mode)}</div><div class="content">${s.mode === "metrics" ? kpis() + multi() : body(s.mode)}</div></aside>`;
+  else if (s.option === "b" && (s.mode === "metrics" || s.mode === "events")) panel = `<section class="bp"><div class="grip"></div><div class="bar"><span class="tab on">Dòng thời gian</span><span class="tab">Nhật ký</span><span class="tab">Mô phỏng</span>${head}</div><div class="content" style="padding:6px 12px">${timeline()}</div></section>`;
+  else panel = `<section class="bp"><div class="grip"></div><div class="bar">${s.option === "b" ? `<span class="tab">Dòng thời gian</span><span class="tab ${s.mode === "logs" ? "on" : ""}">Nhật ký</span><span class="tab ${s.mode === "sim" ? "on" : ""}">Mô phỏng</span>` : tabs(s.mode)}${head}</div><div class="content">${body(s.mode)}</div></section>`;
+  const right = isC ? panel : "<div></div>";
+  app.innerHTML = A.topbar({ saved: "Lần chạy #3 xong · vừa xong" }) + A.palette() + `<div class="cv" id="cv">${A.zoom("right:16px;bottom:14px")}</div>` + right + (isC ? "<div></div>" : panel) + A.status();
+  document.documentElement.dataset.mode = "running";
+  A.drawCanvas(document.getElementById("cv"), "running", { noDots: true, rates: false, padY: 30 });
+}
+Demo.init({
+  id: "08", title: "08 · Bảng dưới: chỉ số, sự kiện, nhật ký, mô phỏng", modeLabel: "Thẻ",
+  modes: [{ id: "metrics", label: "Chỉ số" }, { id: "events", label: "Sự kiện" }, { id: "logs", label: "Nhật ký" }, { id: "sim", label: "Mô phỏng" }],
+  options: [
+    { id: "a", name: "Bảng dưới có thẻ", recommended: true,
+      summary: "Bảng kéo giãn được dưới khung vẽ, bốn thẻ. Thẻ Chỉ số mở đầu bằng 6 số chính có so sánh với lần trước, rồi 4 biểu đồ nhỏ cùng trục thời gian, có vạch mục tiêu và vạch sự kiện. Sự kiện và nhật ký đọc như câu, có lối tắt \"Xem trên sơ đồ\".",
+      pros: ["Khớp với bảng mà Lab đang dựng: chỉ đổi phần nhìn, không đổi cấu trúc", "So sánh với lần trước ngay trên từng số", "Biểu đồ dùng chung vạch sự kiện nên thấy nguyên nhân–hệ quả"],
+      cons: ["Khung vẽ thấp đi 320 px khi mở", "Bốn biểu đồ nhỏ, phải rê chuột để đọc giá trị"] },
+    { id: "b", name: "Dòng thời gian chung",
+      summary: "Chỉ số và sự kiện gộp thành một dòng thời gian: mỗi làn một chỉ số hoặc một thành phần (dải nhiệt độ bận), cùng một con trỏ thời gian đi xuyên qua và đồng bộ với thanh phát lại.",
+      pros: ["Kể được câu chuyện: sự cố → quá tải → độ trễ tăng, trên cùng một trục", "Dải nhiệt cho thấy thành phần nào gãy trước"],
+      cons: ["Lạ với người mới, cần một lần giải thích", "Cao hơn (360 px) để đủ làn"] },
+    { id: "c", name: "Ngăn kết quả bên phải",
+      summary: "Kết quả mở thành ngăn 460 px bên phải thay cho bảng thuộc tính; mọi thứ xếp dọc.",
+      pros: ["Khung vẽ giữ nguyên chiều cao", "Hợp màn hình rất rộng (1920 px)"],
+      cons: ["Ở 1280–1440 px khung vẽ còn rất hẹp", "Nhật ký dạng bảng không vừa chiều ngang"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>
