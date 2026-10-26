@@ -19,7 +19,9 @@ function setup(design = designFromInput(fourTier())) {
 describe("runDesign", () => {
   it("runs a valid design and makes it the current run", async () => {
     const { client, stores } = setup();
-    const r = await runDesign(stores, client);
+    const out = await runDesign(stores, client);
+    expect(out.kind).toBe("ran");
+    const r = out.kind === "ran" ? out.record : null;
     expect(r!.metrics.requestsTotal).toBeGreaterThan(0);
     expect(r!.timeline.frames).toBe(100);
     expect(currentRun(stores.runs.getState())).toBe(r);
@@ -38,27 +40,48 @@ describe("runDesign", () => {
     const { client, stores, worker } = setup();
     stores.check.getState().setRunIssues([{ code: "graph.no-client", blocking: true, nodeId: null, edgeId: null, field: null }]);
     const post = vi.spyOn(worker(), "postMessage");
-    expect(await runDesign(stores, client)).toBeNull();
+    expect(await runDesign(stores, client)).toEqual({ kind: "declined", reason: "blocked" });
     expect(post).not.toHaveBeenCalled();
   });
 
   it("puts the engine's refusal into the problems list and leaves the history alone", async () => {
     const { client, stores } = setup();
     stores.design.setState((s) => ({ design: { ...s.design, workload: { ...s.design.workload, clientTimeoutMs: 0 } } }));
-    expect(await runDesign(stores, client)).toBeNull();
+    expect(await runDesign(stores, client)).toEqual({ kind: "refused" });
     expect(stores.check.getState().runIssues.map((i) => i.code)).toContain("workload.invalid");
     expect(stores.runs.getState().runs).toEqual([]);
   });
 
   it("records the engine epoch; after a restart the run stays listed but is not inspectable", async () => {
     const { client, stores } = setup();
-    const first = (await runDesign(stores, client))!;
+    const ran = async () => {
+      const o = await runDesign(stores, client);
+      if (o.kind !== "ran") throw new Error(o.kind);
+      return o.record;
+    };
+    const first = await ran();
     client.restart();
-    const second = (await runDesign(stores, client))!;
+    const second = await ran();
     expect([first.id, second.id]).toEqual([1, 2]); // local ids keep counting
     expect(first.engineRunId).toBe(second.engineRunId); // the new worker started again at 1
     expect(runAvailable(first, client.epoch)).toBe(false);
     expect(runAvailable(second, client.epoch)).toBe(true);
     expect(stores.runs.getState().runs).toHaveLength(2);
+  });
+
+  it("declines while the check is stale (a change not yet validated), without calling the worker", async () => {
+    const { client, stores, worker } = setup();
+    stores.check.getState().markStale();
+    const post = vi.spyOn(worker(), "postMessage");
+    expect(await runDesign(stores, client)).toEqual({ kind: "declined", reason: "checking" });
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("declines while a run is in progress, and without an engine", async () => {
+    const { client, stores } = setup();
+    const first = runDesign(stores, client);
+    expect(await runDesign(stores, client)).toEqual({ kind: "declined", reason: "busy" });
+    expect((await first).kind).toBe("ran");
+    expect(await runDesign(stores, null)).toEqual({ kind: "declined", reason: "engine" });
   });
 });

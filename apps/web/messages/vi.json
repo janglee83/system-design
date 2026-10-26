@@ -450,7 +450,8 @@
     "runLabel": "Lần {id} · {time}",
     "tookMs": "{ms} ms",
     "unavailable": "Hãy chạy lại để xem chi tiết: bộ mô phỏng đã khởi động lại sau lần chạy này.",
-    "stale": "chạy lại để xem"
+    "stale": "chạy lại để xem",
+    "checking": "Đang kiểm tra thiết kế. Thử lại sau giây lát."
   },
   "panel": {
     "label": "Kết quả",

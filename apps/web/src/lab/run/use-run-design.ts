@@ -15,14 +15,14 @@ export function useRunDesign(): () => void {
   const runs = useRunsApi();
   const playback = usePlaybackApi();
   return useCallback(() => {
-    if (!client) return;
     // A new run selects itself and starts paused at 0 s (R18).
     const onRun = (r: { input: { durationMs: number } }) => playback.getState().reset(r.input.durationMs);
-    void runDesign({ design, check, runs, onRun }, client).then((r) => {
-      if (r) return;
-      const error = runs.getState().error;
-      if (error) toast(t("failed", { message: error }), "error");
-      else if (check.getState().runIssues.length > 0) toast(t("refused"), "warn");
+    void runDesign({ design, check, runs, onRun }, client).then((out) => {
+      // Say why from this attempt's outcome only, never from an earlier run's error.
+      if (out.kind === "failed") toast(t("failed", { message: out.message }), "error");
+      else if (out.kind === "refused") toast(t("refused"), "warn");
+      else if (out.kind === "declined" && out.reason === "checking") toast(t("checking"), "info");
+      else if (out.kind === "declined" && out.reason === "blocked") toast(t("blocked"), "warn");
     });
   }, [client, design, check, runs, playback, t]);
 }

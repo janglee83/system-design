@@ -450,7 +450,8 @@
     "runLabel": "Run {id} · {time}",
     "tookMs": "{ms} ms",
     "unavailable": "Run again to inspect: the simulator restarted after this run.",
-    "stale": "run again to inspect"
+    "stale": "run again to inspect",
+    "checking": "Still checking the design. Try again in a moment."
   },
   "panel": {
     "label": "Results",
