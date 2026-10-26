@@ -125,4 +125,14 @@ describe("useLiveValidation", () => {
     expect(h.check.getState().issues.map((i) => i.code)).toContain("graph.no-client");
     expect(h.design.getState().design.nodes.find((n) => n.id === "web-server-1")!.replicas).toBe(2);
   });
+
+  it("clears the engine's run-time refusal on any design change, even one the check ignores", async () => {
+    const h = await setup();
+    const refused = { code: "workload.invalid", blocking: true, nodeId: null, edgeId: null, field: "clientTimeoutMs" };
+    act(() => h.check.getState().setRunIssues([refused]));
+    expect(h.canRun()).toBe(false);
+    act(() => h.design.getState().apply((d) => ({ ...d, workload: { ...d.workload, clientTimeoutMs: 900 } })));
+    expect(h.check.getState().runIssues).toEqual([]);
+    await expect.poll(() => h.canRun()).toBe(true);
+  });
 });

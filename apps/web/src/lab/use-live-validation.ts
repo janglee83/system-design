@@ -7,7 +7,10 @@ import { useCheckApi, useDesignApi } from "./store/LabStores";
 
 const DEBOUNCE_MS = 150;
 
-/** What the engine's validate and pricing read. Positions, groups and names are not part of it. */
+/**
+ * What the engine's validate and pricing read: the graph (kinds, labels, replicas, config, edges),
+ * the world parameters and the challenge limits. Positions and groups are not part of it.
+ */
 const engineKey = (d: Design) => JSON.stringify([toEngineGraph(d), d.calibration, d.challenge?.limits ?? null]);
 
 /**
@@ -49,8 +52,11 @@ export function useLiveValidation(): void {
     run();
     const unsub = design.subscribe((s, prev) => {
       if (s.design === prev.design) return;
+      // The engine's refusal of the last run (workload.invalid, calibration.invalid…) is about the
+      // design as it was. Any change, even to the workload or faults, may have fixed it.
+      if (check.getState().runIssues.length > 0) check.getState().setRunIssues([]);
       const key = engineKey(s.design);
-      if (key === lastKey) return; // a move or a rename: nothing for the engine to re-check
+      if (key === lastKey) return; // a move or a group change: nothing for the engine to re-check
       lastKey = key;
       check.getState().markStale(); // synchronously, so Run cannot use the old result (R11)
       clearTimeout(timer);
