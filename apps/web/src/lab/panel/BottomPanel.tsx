@@ -5,7 +5,8 @@ import { useEngineStore } from "@/engine/EngineProvider";
 import { ResizeHandle } from "@/ui/ResizeHandle";
 import { Select } from "@/ui/Select";
 import { Tabs, TabsContent, TabsList } from "@/ui/Tabs";
-import { useRuns, useRunsApi, useUi, useUiApi } from "../store/LabStores";
+import { selectRun } from "../run/select-run";
+import { usePlaybackApi, useRuns, useRunsApi, useUi, useUiApi } from "../store/LabStores";
 import { currentRun, previousRun, runAvailable } from "../store/run-store";
 import type { BottomTab } from "../store/ui-store";
 import { EventsTab } from "./EventsTab";
@@ -26,6 +27,7 @@ export function BottomPanel() {
   const run = useRuns(currentRun);
   const previous = useRuns(previousRun);
   const runsApi = useRunsApi();
+  const playback = usePlaybackApi();
   const epoch = useEngineStore((s) => s.epoch);
   const engineVersion = useEngineStore((s) => s.info?.version ?? "");
   const client = useEngineStore((s) => (s.status === "ready" ? s.client : null));
@@ -43,7 +45,7 @@ export function BottomPanel() {
               <Select<string>
                 label={t("run.history")}
                 value={String(run?.id ?? "")}
-                onChange={(v) => runsApi.getState().select(Number(v))}
+                onChange={(v) => selectRun(runsApi, playback, Number(v))}
                 options={[...runs].reverse().map((r) => ({
                   value: String(r.id),
                   label: t("run.runLabel", { id: r.id, time: time(r.startedAt) }),
