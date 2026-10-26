@@ -5,6 +5,7 @@ import { useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { issueText } from "./issue-text";
+import { faultIssues } from "./model/faults";
 import { allIssues } from "./store/check-store";
 import { useCheck, useDesign, useDesignApi } from "./store/LabStores";
 import { useMetas } from "./use-metas";
@@ -20,7 +21,8 @@ export function Problems() {
   const flow = useReactFlow();
   const [open, setOpen] = useState(false);
 
-  const all = useMemo(() => allIssues({ issues, runIssues }), [issues, runIssues]);
+  const faultChecks = useMemo(() => faultIssues(design), [design]);
+  const all = useMemo(() => [...allIssues({ issues, runIssues }), ...faultChecks], [issues, runIssues, faultChecks]);
   const blocking = all.filter((i) => i.blocking);
   const warnings = all.filter((i) => !i.blocking);
   const dot = all.length === 0 ? "var(--sd-ok)" : blocking.length > 0 ? "var(--sd-over)" : "var(--sd-busy)";

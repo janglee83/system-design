@@ -525,5 +525,11 @@
     "discard": "Your unsaved changes will be lost. Continue?",
     "empty_template": "Empty",
     "openConfirm": "Open"
+  },
+  "labCheck": {
+    "fault": {
+      "target-missing": "A fault targets {node}, which is no longer in the design. It will hit any matching component.",
+      "after-end": "A fault at {time} s comes after the run ends, so it never happens."
+    }
   }
 }

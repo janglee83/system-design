@@ -151,4 +151,19 @@ describe("design ops", () => {
     expect(setFaults(d, [{ kind: "instance-down", target: null, atMs: 4000 }])).not.toBe(d);
     expect(setFaults(d, [])).not.toBe(d);
   });
+
+  it("deleting a node clears the target of faults aimed at it", () => {
+    const d = {
+      ...build(),
+      faults: [
+        { kind: "instance-down" as const, target: "web-server-1", atMs: 3000 },
+        { kind: "db-primary-down" as const, target: "postgres-1", atMs: 4000 },
+      ],
+    };
+    const after = deleteItems(d, { nodes: ["web-server-1"], edges: [], groups: [] });
+    expect(after.faults).toEqual([
+      { kind: "instance-down", target: null, atMs: 3000 },
+      { kind: "db-primary-down", target: "postgres-1", atMs: 4000 },
+    ]);
+  });
 });

@@ -37,4 +37,15 @@ describe("issueText", () => {
     const t = createTranslator({ locale: "en", messages: en, onError: () => {} });
     expect(issueText({ code: "brand.new", nodeId: null, edgeId: null, field: null, blocking: true }, { design: design(), metas: META_BY_KIND, t })).toBe("brand.new");
   });
+
+  it("words the Lab's own fault checks", () => {
+    const t = createTranslator({ locale: "en", messages: en });
+    const ctx = { design: design(), metas: META_BY_KIND, t };
+    expect(issueText({ code: "lab.fault.target-missing", nodeId: "web-server-9", edgeId: null, field: null, blocking: false }, ctx)).toBe(
+      "A fault targets web-server-9, which is no longer in the design. It will hit any matching component.",
+    );
+    expect(issueText({ code: "lab.fault.after-end", nodeId: null, edgeId: null, field: "12.5", blocking: false }, ctx)).toBe(
+      "A fault at 12.5 s comes after the run ends, so it never happens.",
+    );
+  });
 });

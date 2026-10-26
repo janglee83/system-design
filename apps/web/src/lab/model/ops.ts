@@ -84,7 +84,11 @@ export function deleteItems(d: Design, sel: ItemSelection): Design {
   const edges = d.edges.filter((e) => !edgeIds.has(e.id) && !nodeIds.has(e.from) && !nodeIds.has(e.to));
   const groups = d.groups.filter((g) => !groupIds.has(g.id));
   if (nodes.length === d.nodes.length && edges.length === d.edges.length && groups.length === d.groups.length) return d;
-  return dropEmptyGroups({ ...d, nodes, edges, groups });
+  // A fault aimed at a deleted node falls back to "any matching" rather than pointing at nothing.
+  const faults = d.faults.some((f) => f.target !== null && nodeIds.has(f.target))
+    ? d.faults.map((f) => (f.target !== null && nodeIds.has(f.target) ? { ...f, target: null } : f))
+    : d.faults;
+  return dropEmptyGroups({ ...d, nodes, edges, groups, faults });
 }
 
 function mapNode(d: Design, id: string, f: (n: LabNode) => LabNode): Design {

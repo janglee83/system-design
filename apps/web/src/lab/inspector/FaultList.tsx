@@ -2,6 +2,7 @@
 import type { ComponentMeta, Fault, FaultKind } from "@sd/sim";
 import { Dices, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRef } from "react";
 import { ALL_FAULT_KINDS } from "@/i18n/engine-codes";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
@@ -24,8 +25,18 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
   const faults = useDesign((s) => s.design.faults);
   const design = useDesign((s) => s.design);
   const durationS = design.durationMs / 1000;
+  // Faults carry no id: keep a parallel list of row keys so removing a row does not shift the
+  // other rows' elements (and their focus and input state).
+  const keys = useRef<{ list: number[]; next: number }>({ list: [], next: 0 });
+  const k = keys.current;
+  while (k.list.length < faults.length) k.list.push(k.next++);
+  if (k.list.length > faults.length) k.list.length = faults.length;
+  const removeAt = (i: number) => {
+    k.list.splice(i, 1);
+    write(faults.filter((_, j) => j !== i));
+  };
   const write = (next: Fault[]) => api.getState().apply((d) => setFaults(d, next));
-  const update = (i: number, patch: Partial<Fault>) => write(faults.map((f, k) => (k === i ? { ...f, ...patch } : f)));
+  const update = (i: number, patch: Partial<Fault>) => write(faults.map((f, j) => (j === i ? { ...f, ...patch } : f)));
   const label = (id: string) => {
     const n = design.nodes.find((x) => x.id === id);
     return n ? displayLabel(n, metas.get(n.kind) ?? null, t) : id;
@@ -47,7 +58,7 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
         {faults.map((f, i) => {
           const targets = targetsFor(f.kind, design, metas);
           return (
-            <li key={i} data-testid={`fault-${i}`} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-2">
+            <li key={k.list[i]} data-testid={`fault-${i}`} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-2">
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1">
                   <Select<FaultKind>
@@ -62,7 +73,7 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
                     }))}
                   />
                 </div>
-                <IconButton label={t("faults.remove")} onClick={() => write(faults.filter((_, k) => k !== i))} className="size-7">
+                <IconButton label={t("faults.remove")} onClick={() => removeAt(i)} className="size-7">
                   <X size={14} aria-hidden />
                 </IconButton>
               </div>

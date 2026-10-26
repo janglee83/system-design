@@ -1,4 +1,4 @@
-import type { ComponentMeta, Fault, FaultKind, Role } from "@sd/sim";
+import type { ComponentMeta, Fault, FaultKind, Role, ValidationIssue } from "@sd/sim";
 import type { Design } from "./design";
 import { mulberry32 } from "./rng";
 
@@ -45,4 +45,23 @@ export function randomFault(d: Design, metas: ReadonlyMap<string, ComponentMeta>
 export function defaultFault(d: Design, metas: ReadonlyMap<string, ComponentMeta>, supported: readonly FaultKind[]): Fault {
   const kind = supported.find((k) => targetsFor(k, d, metas).length > 0) ?? "traffic-surge-3x";
   return { kind, target: null, atMs: Math.round((d.durationMs * 0.3) / 100) * 100 };
+}
+
+/**
+ * The Lab's own checks on the fault list (non-blocking): a target that is not in the design (an
+ * imported file), and a fault at or after the end of the run, which never fires. Codes start with
+ * "lab." and are worded under `labCheck` (issue-text.ts); `field` carries the time in seconds.
+ */
+export function faultIssues(d: Pick<Design, "nodes" | "faults" | "durationMs">): ValidationIssue[] {
+  const ids = new Set(d.nodes.map((n) => n.id));
+  const out: ValidationIssue[] = [];
+  for (const f of d.faults) {
+    if (f.target !== null && !ids.has(f.target)) {
+      out.push({ code: "lab.fault.target-missing", blocking: false, nodeId: f.target, edgeId: null, field: null });
+    }
+    if (f.atMs >= d.durationMs) {
+      out.push({ code: "lab.fault.after-end", blocking: false, nodeId: null, edgeId: null, field: String(f.atMs / 1000) });
+    }
+  }
+  return out;
 }

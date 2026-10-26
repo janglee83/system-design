@@ -525,5 +525,11 @@
     "discard": "Các thay đổi chưa lưu sẽ mất. Vẫn tiếp tục?",
     "empty_template": "Trống",
     "openConfirm": "Mở"
+  },
+  "labCheck": {
+    "fault": {
+      "target-missing": "Một sự cố nhắm vào {node}, thành phần này không còn trong thiết kế. Sự cố sẽ nhắm vào bất kỳ thành phần phù hợp nào.",
+      "after-end": "Một sự cố lúc {time} giây xảy ra sau khi lần chạy kết thúc, nên không bao giờ xảy ra."
+    }
   }
 }

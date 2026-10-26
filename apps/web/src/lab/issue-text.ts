@@ -31,6 +31,12 @@ export function issueText(issue: ValidationIssue, { design, metas, t }: IssueCon
     const n = id ? design.nodes.find((x) => x.id === id) : undefined;
     return n ? displayLabel(n, metas.get(n.kind) ?? null, t) : (id ?? "");
   };
+  if (issue.code.startsWith("lab.")) {
+    // The Lab's own checks (model/faults.ts faultIssues): `field` carries a time in seconds.
+    const key = `labCheck.${issue.code.slice(4)}`;
+    if (t.has && !t.has(key)) return issue.code;
+    return t(key, { node: label(issue.nodeId), time: issue.field ?? "" });
+  }
   const edge = issue.edgeId ? design.edges.find((e) => e.id === issue.edgeId) : undefined;
   const key = `engine.validation.${issue.code}`;
   if (t.has && !t.has(key)) return issue.code;

@@ -2,7 +2,7 @@ import type { FaultKind } from "@sd/sim";
 import { describe, expect, it } from "vitest";
 import { ALL_FAULT_KINDS } from "@/i18n/engine-codes";
 import { emptyDesign, type Design } from "./design";
-import { FAULT_TARGETS, randomFault, targetsFor } from "./faults";
+import { FAULT_TARGETS, faultIssues, randomFault, targetsFor } from "./faults";
 import { addNode } from "./ops";
 import { mulberry32 } from "./rng";
 import { META_BY_KIND, meta } from "../../test/metas";
@@ -63,5 +63,21 @@ describe("faults", () => {
       expect(randomFault({ ...d, seed }, META_BY_KIND, SUPPORTED)!.kind).toBe("traffic-surge-3x");
     }
     expect(randomFault(d, META_BY_KIND, ["instance-down"])).toBeNull();
+  });
+
+  it("flags a fault whose target is gone and one that comes after the run ends", () => {
+    const d = {
+      ...design(),
+      durationMs: 10_000,
+      faults: [
+        { kind: "instance-down" as const, target: "web-server-9", atMs: 3000 },
+        { kind: "lb-node-down" as const, target: "lb-1", atMs: 10_000 },
+        { kind: "traffic-surge-3x" as const, target: null, atMs: 2000 },
+      ],
+    };
+    expect(faultIssues(d)).toEqual([
+      { code: "lab.fault.target-missing", blocking: false, nodeId: "web-server-9", edgeId: null, field: null },
+      { code: "lab.fault.after-end", blocking: false, nodeId: null, edgeId: null, field: "10" },
+    ]);
   });
 });

@@ -91,4 +91,13 @@ describe("FaultList", () => {
     act(() => {});
     expect(faults()[0]!.atMs).toBe(4500);
   });
+
+  it("keeps each row's element when an earlier row is removed (stable keys)", async () => {
+    setup();
+    for (let i = 0; i < 3; i++) await userEvent.click(screen.getByRole("button", { name: "Add fault" }));
+    const second = screen.getByTestId("fault-1");
+    await userEvent.click(within(screen.getByTestId("fault-0")).getByRole("button", { name: "Remove fault" }));
+    expect(faults()).toHaveLength(2);
+    expect(screen.getByTestId("fault-0")).toBe(second);
+  });
 });
