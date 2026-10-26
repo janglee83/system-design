@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 · Bảng thuộc tính</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  .app.L-a { grid-template-columns: 248px minmax(0, 1fr) 368px; }
+  [data-mode="running"] .app.L-a { grid-template-columns: 64px minmax(0, 1fr) 368px; }
+  .ins { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  .ins .body { flex: 1; min-height: 0; overflow: auto; }
+  .ins .hd { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .ins .hd .tile { width: 44px; height: 44px; border-radius: var(--r-md); display: grid; place-items: center; background: color-mix(in srgb, var(--k) 10%, var(--surface)); }
+  .ins .hd input { font: 600 16px/22px var(--font-sans); border: 1px solid transparent; border-radius: var(--r-xs); padding: 0 4px; margin-left: -5px; background: transparent; color: var(--text); width: 100%; }
+  .ins .hd input:hover { border-color: var(--border); }
+  .ins .hd small { color: var(--text-3); font-size: 12px; }
+  .ins .ft { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+  .btn { height: 32px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; }
+  .btn.danger { color: var(--over); border-color: color-mix(in srgb, var(--over) 35%, var(--border)); margin-left: auto; }
+  .btn.ghost { border-color: transparent; color: var(--text-2); }
+  /* field controls */
+  .ctl-step { display: grid; grid-template-columns: 32px 1fr auto 32px; height: 32px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; background: var(--surface); }
+  .ctl-step b { display: grid; place-items: center; background: var(--surface-2); color: var(--text-2); font-weight: 400; }
+  .ctl-step span { display: grid; place-items: center; font: 500 14px var(--font-mono); }
+  .ctl-step em { font-style: normal; font-size: 12px; color: var(--text-3); display: grid; place-items: center; padding-right: 8px; }
+  .ctl-sel { height: 32px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; background: var(--surface); white-space: nowrap; overflow: hidden; }
+  .ctl-tog { width: 36px; height: 20px; border-radius: 999px; background: var(--surface-3); position: relative; flex: none; }
+  .ctl-tog::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-1); }
+  .ctl-tog.on { background: var(--accent); } .ctl-tog.on::after { left: 18px; background: var(--on-accent); }
+  .val { font: 600 20px/26px var(--font-mono); }
+  .hint { font-size: 12px; line-height: 16px; color: var(--text-3); }
+  .conn { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--surface-2); }
+  .conn i { width: 18px; border-top: 2px solid var(--e-http); } .conn i.db { border-top-style: dashed; border-color: var(--e-db); }
+  .conn small { margin-left: auto; color: var(--text-3); }
+  .fault { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 10px; border: 1px solid var(--border); border-radius: var(--r-md); font-size: 13px; }
+  .fault small { color: var(--text-3); grid-column: 1; }
+  /* A: sections, label above */
+  .A .sec { border-bottom: 1px solid var(--border); }
+  .A .sec > h6 { margin: 0; padding: 12px 16px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .A .sec > h6 .sum { margin-left: auto; font-weight: 400; color: var(--text-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+  .A .sec > h6 .ic { transition: transform var(--t-fast); }
+  .A .sec.closed > h6 .ic { transform: rotate(-90deg); }
+  .A .sec .in { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .A .sec.closed .in { display: none; }
+  .A .f { display: flex; flex-direction: column; gap: 6px; } .A .f > label { font-size: 13px; font-weight: 500; color: var(--text-2); display: flex; justify-content: space-between; }
+  .A .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .A .f.inline { flex-direction: row; align-items: center; justify-content: space-between; }
+  /* B: tabs */
+  .B .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+  .B .tabs span { padding: 10px 8px; font-size: 13px; font-weight: 500; color: var(--text-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .B .tabs span.on { color: var(--text); border-bottom-color: var(--accent-text); font-weight: 600; }
+  .B .tabs span em { font-style: normal; font: 500 11px var(--font-mono); padding: 0 5px; border-radius: 999px; background: var(--surface-3); margin-left: 4px; }
+  .B .pane { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .B .f { display: flex; flex-direction: column; gap: 6px; } .B .f > label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .B .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .B h6 { margin: 6px 0 -4px; font-size: 12px; color: var(--text-3); font-weight: 600; }
+  .B .f.inline { flex-direction: row; align-items: center; justify-content: space-between; }
+  /* C: property sheet */
+  .C .grp { padding: 10px 16px 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--text-3); text-transform: uppercase; background: var(--surface-2); border-bottom: 1px solid var(--border); border-top: 1px solid var(--border); }
+  .C .grp:first-child { border-top: 0; }
+  .C .f { display: grid; grid-template-columns: 42% 1fr; align-items: center; gap: 8px; padding: 6px 16px; min-height: 40px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+  .C .f > label { font-size: 13px; color: var(--text-2); }
+  .C .ctl-step, .C .ctl-sel { height: 28px; } .C .ctl-step { grid-template-columns: 26px 1fr auto 26px; }
+  .C .f .hint { grid-column: 1 / -1; margin-top: -2px; }
+  .C .row2 { display: contents; } .C .f.inline .ctl-tog { justify-self: end; }
+  .C .blk { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+  /* live stats (running) */
+  .live { display: flex; flex-direction: column; gap: 12px; }
+  .gauge { display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: center; }
+  .gauge svg { width: 76px; height: 76px; transform: rotate(-90deg); }
+  .gauge .t b { display: block; font: 600 24px/28px var(--font-mono); color: var(--busy); } .gauge .t span { font-size: 13px; color: var(--text-2); }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kv div { padding: 8px 10px; border-radius: var(--r-md); background: var(--surface-2); }
+  .kv small { display: block; font-size: 12px; color: var(--text-3); } .kv b { font: 600 16px var(--font-mono); }
+  .chart { height: 64px; border-radius: var(--r-md); background: var(--surface-2); padding: 6px 8px; position: relative; }
+  .chart svg { width: 100%; height: 100%; }
+  .evs { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+  .evs div { display: grid; grid-template-columns: 52px 1fr; gap: 8px; } .evs span { font: 500 12px var(--font-mono); color: var(--text-3); }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0">Ba trạng thái của bảng bên phải: một <b>thành phần đang chọn</b> (Máy chủ web 1), <b>không chọn gì</b> (thiết lập của cả thiết kế: lưu lượng, lần chạy, sự cố), và <b>đang chạy</b> (số liệu trực tiếp của thành phần đang chọn). Mọi trường lấy từ bộ mô phỏng và messages/vi.json.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, ic = A.ic;
+const step = (v, unit = "") => `<div class="ctl-step"><b aria-hidden="true">−</b><span>${v}</span><em>${unit}</em><b aria-hidden="true">+</b></div>`;
+const sel = (v) => `<div class="ctl-sel">${v}${ic("chev", 14)}</div>`;
+const tog = (on) => `<span class="ctl-tog${on ? " on" : ""}" role="switch" aria-checked="${on}"></span>`;
+const F = (label, ctl, o = {}) => ({ label, ctl, ...o });
+
+const NODE = {
+  head: { kind: "web-server", name: "Máy chủ web 1", sub: "Máy chủ web · Tính toán" },
+  sections: [
+    { id: "cfg", title: "Cấu hình", sum: "1 vCPU · 2 GB · ×2", fields: [
+      F("Số vCPU", step(1), { pair: 1 }), F("Bộ nhớ (GB)", step(2), { pair: 2 }),
+      F("Số bản sao", step(2), { hint: "Cả nhóm chịu khoảng 18.000 yêu cầu/giây (9.000 mỗi máy với 1 vCPU)." }),
+    ] },
+    { id: "cost", title: "Chi phí mỗi tháng", sum: "45 $", fields: [F("Ước tính", `<div class="val">45 $</div>`, { hint: "2 máy × 22,5 $ (vCPU đầu tiên). Mỗi vCPU thêm: 27,5 $." })] },
+    { id: "conn", title: "Kết nối", sum: "1 vào · 1 ra", html: `<div class="conn"><i></i>Từ Cân bằng tải 1<small>HTTP</small></div><div class="conn"><i class="db"></i>Tới PostgreSQL 1<small>Cơ sở dữ liệu</small></div>` },
+    { id: "adv", title: "Nâng cao", sum: "Theo tham số thế giới", closed: true, fields: [
+      F("Yêu cầu/giây mỗi máy", step("—")), F("Thời gian xử lý (ms)", step("—")), F("Chi phí mỗi tháng ($)", step("—")),
+    ] },
+  ],
+  foot: `<button class="btn">Nhân bản</button><button class="btn danger">Xoá</button>`,
+};
+const DESIGN = {
+  head: { kind: null, name: "Cửa hàng trực tuyến", sub: "Thiết kế · 5 thành phần · 430 $/tháng" },
+  sections: [
+    { id: "traffic", title: "Lưu lượng", sum: "12.000/giây · đọc ghi xen kẽ", fields: [
+      F("Mẫu", sel("Cao điểm trưa")),
+      F("Kiểu lưu lượng", sel("Đọc ghi xen kẽ")),
+      F("Tổng số yêu cầu mỗi giây", step("12.000")),
+      F("Tỉ lệ yêu cầu ghi", step(20, "%"), { pair: 1 }), F("Người dùng khác nhau", step("1.000"), { pair: 2 }),
+      F("Người dùng bỏ cuộc sau", step("1.000", "ms")),
+      F("Cách yêu cầu đến", sel("Ngẫu nhiên (Poisson)")),
+      F("Lưu lượng tăng vọt", tog(false), { inline: true }),
+    ] },
+    { id: "run", title: "Thiết lập lần chạy", sum: "10 giây · hạt giống 1", fields: [F("Độ dài lần chạy", step(10, "giây"), { pair: 1 }), F("Hạt giống ngẫu nhiên", step(1), { pair: 2 })] },
+    { id: "faults", title: "Sự cố", sum: "1 sự cố", html: `<div class="fault"><b>Một máy chủ ngừng chạy</b><span class="num">giây 3</span><small>Nhắm vào Máy chủ web 2</small></div><div style="display:flex;gap:8px"><button class="btn">${ic("plus", 14)} Thêm sự cố</button><button class="btn ghost">${ic("retry", 14)} Sự cố ngẫu nhiên</button></div>` },
+  ],
+  foot: `<button class="btn">${ic("list", 14)} Xuất thiết kế</button>`,
+};
+const gaugeSvg = `<svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="32" fill="none" stroke="var(--surface-3)" stroke-width="8"/><circle cx="38" cy="38" r="32" fill="none" stroke="var(--busy-line)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${0.67 * 201} 201"/></svg>`;
+const chart = `<div class="chart"><svg viewBox="0 0 300 52" preserveAspectRatio="none"><line x1="0" y1="10" x2="300" y2="10" stroke="var(--over)" stroke-dasharray="4 4" stroke-width="1"/><line x1="0" y1="18" x2="300" y2="18" stroke="var(--busy-line)" stroke-dasharray="2 4" stroke-width="1"/><polyline points="0,44 30,42 60,40 90,38 100,24 130,20 160,19 190,18 220,19 250,18 300,19" fill="none" stroke="var(--busy-line)" stroke-width="2" vector-effect="non-scaling-stroke"/><line x1="126" y1="0" x2="126" y2="52" stroke="var(--text-3)" stroke-width="1"/></svg></div>`;
+const RUN = {
+  head: NODE.head,
+  sections: [
+    { id: "live", title: "Ngay lúc này · giây 4,2", sum: "Bận 67%", html: `<div class="live"><div class="gauge">${gaugeSvg}<div class="t"><b>67%</b><span>Bận · 2/2 máy đang chạy<br>Gánh thêm phần của Máy chủ web 2 từ giây 3</span></div></div>
+      <div class="kv"><div><small>Yêu cầu/giây</small><b>12.000</b></div><div><small>p95 tại đây</small><b>9 ms</b></div><div><small>Đang chờ</small><b>0</b></div><div><small>Bị từ chối</small><b>0</b></div></div></div>` },
+    { id: "chart", title: "Độ bận theo thời gian", sum: "", html: `${chart}<div class="hint">Vạch đứt: 70% (bận) và 100% (quá tải). Đường dọc: thời điểm đang xem.</div>` },
+    { id: "ev", title: "Sự kiện của thành phần này", sum: "2", html: `<div class="evs"><div><span>00:03,0</span>Máy chủ web 2 ngừng chạy, lưu lượng dồn sang đây</div><div><span>00:03,4</span>Độ bận vượt 70%</div></div>` },
+  ],
+  foot: `<button class="btn">${ic("route", 14)} Theo một yêu cầu qua đây</button>`,
+};
+
+function fieldsHtml(fields, variant) {
+  let out = "", pend = null;
+  fields.forEach((f) => {
+    const cell = variant === "C"
+      ? `<div class="f${f.inline ? " inline" : ""}"><label>${f.label}</label>${f.ctl}${f.hint ? `<div class="hint">${f.hint}</div>` : ""}</div>`
+      : `<div class="f${f.inline ? " inline" : ""}"><label>${f.label}</label>${f.ctl}${f.hint ? `<div class="hint">${f.hint}</div>` : ""}</div>`;
+    if (variant !== "C" && f.pair === 1) { pend = cell; return; }
+    if (variant !== "C" && f.pair === 2 && pend) { out += `<div class="row2">${pend}${cell}</div>`; pend = null; return; }
+    out += cell;
+  });
+  return out;
+}
+function header(h) {
+  const k = h.kind ? A.cat(h.kind) : "var(--accent-text)";
+  const tile = h.kind ? SDArt.svg(h.kind, 34, 26) : A.ic("layout", 20);
+  return `<div class="hd" style="--k:${k}"><div class="tile">${tile}</div><div><input value="${h.name}" aria-label="Tên"><small>${h.sub}</small></div><button class="u-btn" aria-label="Thu gọn bảng">${ic("panel")}</button></div>`;
+}
+function renderA(m) {
+  return `<aside class="ins A" aria-label="Thuộc tính">${header(m.head)}<div class="body">${m.sections.map((s) =>
+    `<section class="sec${s.closed ? " closed" : ""}"><h6>${ic("chev", 14)}${s.title}${s.closed && s.sum ? `<span class="sum">${s.sum}</span>` : ""}</h6><div class="in">${s.html || fieldsHtml(s.fields, "A")}</div></section>`).join("")}</div><div class="ft">${m.foot}</div></aside>`;
+}
+function renderB(m, mode) {
+  const tabs = mode === "design" ? ["Lưu lượng", "Lần chạy", "Sự cố"] : mode === "running" ? ["Trực tiếp", "Biểu đồ", "Sự kiện"] : ["Cấu hình", "Chi phí", "Kết nối", "Nâng cao"];
+  const first = m.sections[0];
+  return `<aside class="ins B" aria-label="Thuộc tính">${header(m.head)}<div class="tabs" role="tablist">${tabs.map((t, i) => `<span role="tab" class="${i ? "" : "on"}">${t}${m.sections[i] && m.sections[i].sum && i ? `<em>${m.sections[i].sum.split(" ")[0]}</em>` : ""}</span>`).join("")}</div>
+    <div class="body"><div class="pane">${first.html || fieldsHtml(first.fields, "B")}</div></div><div class="ft">${m.foot}</div></aside>`;
+}
+function renderC(m) {
+  return `<aside class="ins C" aria-label="Thuộc tính">${header(m.head)}<div class="body">${m.sections.map((s) =>
+    `<div class="grp">${s.title}</div>${s.html ? `<div class="blk">${s.html}</div>` : fieldsHtml(s.fields, "C")}`).join("")}</div><div class="ft">${m.foot}</div></aside>`;
+}
+function draw(s) {
+  const model = s.mode === "design" ? DESIGN : s.mode === "running" ? RUN : NODE;
+  const ins = s.option === "a" ? renderA(model) : s.option === "b" ? renderB(model, s.mode) : renderC(model);
+  const runMode = s.mode === "running" ? "running" : "editing";
+  document.documentElement.dataset.mode = s.mode === "running" ? "running" : s.mode;
+  const app = document.getElementById("app");
+  app.innerHTML = A.topbar() + A.palette() + `<div class="cv" id="cv">${A.legend("left:16px;bottom:14px")}${A.zoom("right:16px;bottom:14px")}</div>` + ins + A.playback + A.status();
+  A.drawCanvas(document.getElementById("cv"), runMode, { extra: s.mode === "design" ? {} : { "web-1": { selected: true } } });
+}
+Demo.init({
+  id: "05", title: "05 · Bảng thuộc tính",
+  modes: [{ id: "editing", label: "Chọn một thành phần" }, { id: "design", label: "Không chọn gì" }, { id: "running", label: "Đang chạy" }],
+  options: [
+    { id: "a", name: "Các mục gấp gọn", recommended: true,
+      summary: "Bảng rộng 368 px, các mục xếp dọc có thể gấp; khi gấp, mục hiện một dòng tóm tắt (\"1 vCPU · 2 GB · ×2\"). Nhãn nằm trên ô nhập nên không bao giờ bị cắt; gợi ý giải thích con số ngay dưới ô (\"cả nhóm chịu 18.000 yêu cầu/giây\").",
+      pros: ["Sửa lỗi lớn của bản hiện tại: nhãn dài không còn bị cắt", "Dòng tóm tắt cho biết cấu hình mà không cần mở", "Cùng một khuôn cho thành phần, thiết kế và lúc chạy"],
+      cons: ["Cao hơn: thiết kế có nhiều trường phải cuộn", "Cần nhớ mục nào đang mở (lưu theo loại thành phần)"] },
+    { id: "b", name: "Thẻ tab",
+      summary: "Đầu bảng cố định, bên dưới là các tab (Cấu hình / Chi phí / Kết nối / Nâng cao); chỉ một nhóm hiện mỗi lúc. Khi chạy, tab đổi thành Trực tiếp / Biểu đồ / Sự kiện.",
+      pros: ["Gọn, không phải cuộn", "Rõ ràng khi có nhiều nhóm trường"],
+      cons: ["Giấu bớt thông tin: không thấy chi phí khi đang sửa cấu hình", "Thêm một lần bấm cho mỗi nhóm"] },
+    { id: "c", name: "Bảng hai cột dày",
+      summary: "Kiểu bảng thuộc tính của công cụ thiết kế: nhãn bên trái, ô nhập 28 px bên phải, nhóm bằng tiêu đề chữ hoa nhỏ.",
+      pros: ["Dày nhất, thấy được nhiều trường nhất", "Quen thuộc với người đã dùng Figma/IDE"],
+      cons: ["Nhãn tiếng Việt dài dễ bị chật (\"Người dùng bỏ cuộc sau\")", "Kém thân thiện với người mới, ít chỗ cho gợi ý"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>
