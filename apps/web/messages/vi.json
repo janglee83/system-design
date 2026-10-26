@@ -496,5 +496,33 @@
     "copy": "Sao chép dữ liệu vào",
     "copied": "Đã sao chép dữ liệu vào bộ nhớ tạm.",
     "copyFailed": "Không sao chép được. Hãy bôi đen rồi tự sao chép."
+  },
+  "designs": {
+    "menu": "Thiết kế",
+    "new": "Mới",
+    "open": "Mở…",
+    "save": "Lưu",
+    "saveAs": "Lưu thành…",
+    "import": "Nhập…",
+    "export": "Xuất",
+    "saved": "Đã lưu “{name}”.",
+    "unsaved": "Có thay đổi chưa lưu",
+    "dialogTitle": "Thiết kế của bạn",
+    "dialogDescription": "Thiết kế được giữ trong trình duyệt này, lưu bao nhiêu cũng được.",
+    "empty": "Chưa có thiết kế nào được lưu.",
+    "updated": "Cập nhật {when}",
+    "nodes": "{count, plural, other {# thành phần}}",
+    "rename": "Đổi tên",
+    "duplicate": "Nhân bản",
+    "delete": "Xóa",
+    "deleteConfirm": "Xóa “{name}”? Không thể hoàn tác.",
+    "copySuffix": "bản sao",
+    "nameLabel": "Tên thiết kế",
+    "openAction": "Mở “{name}”",
+    "storageUnavailable": "Trình duyệt không cho lab lưu dữ liệu, nên không lưu được thiết kế ở đây.",
+    "draftRestored": "Đã mở lại đúng chỗ bạn đang làm.",
+    "discard": "Các thay đổi chưa lưu sẽ mất. Vẫn tiếp tục?",
+    "empty_template": "Trống",
+    "openConfirm": "Mở"
   }
 }

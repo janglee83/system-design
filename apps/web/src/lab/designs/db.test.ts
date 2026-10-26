@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { deletePreset, getKv, listPresets, openLabDb, putPreset, setKv } from "./db";
+import { emptyDesign } from "../model/design";
+import { deleteDesign, deletePreset, getDesign, getKv, listDesigns, listPresets, openLabDb, putDesign, putPreset, setKv } from "./db";
 
 describe("lab database", () => {
   it("creates the three stores", async () => {
@@ -20,5 +21,18 @@ describe("lab database", () => {
     await setKv("settings", { a: 1 });
     expect(await getKv("settings")).toEqual({ a: 1 });
     expect(await getKv("missing")).toBeUndefined();
+  });
+});
+
+describe("saved designs", () => {
+  it("lists newest first and has no count limit", async () => {
+    for (let i = 0; i < 120; i++) {
+      await putDesign({ id: `d${i}`, name: `D${i}`, createdAt: i, updatedAt: i, design: emptyDesign(`D${i}`) });
+    }
+    const all = await listDesigns();
+    expect(all.length).toBeGreaterThanOrEqual(120);
+    expect(all[0]!.id).toBe("d119");
+    await deleteDesign("d119");
+    expect(await getDesign("d119")).toBeUndefined();
   });
 });

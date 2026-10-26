@@ -5,6 +5,7 @@ import { useEngineStore } from "@/engine/EngineProvider";
 import type { Design } from "../model/design";
 import { createCheckStore, hasBlocking, type CheckState } from "./check-store";
 import { createDesignStore, type DesignState, type DesignStore } from "./design-store";
+import { createDocStore, type DocState } from "./doc-store";
 import { createPlaybackStore, type PlaybackState } from "./playback-store";
 import { createRunStore, type RunState } from "./run-store";
 import { createUiStore, type UiState } from "./ui-store";
@@ -15,6 +16,7 @@ interface Stores {
   check: ReturnType<typeof createCheckStore>;
   runs: ReturnType<typeof createRunStore>;
   playback: ReturnType<typeof createPlaybackStore>;
+  doc: ReturnType<typeof createDocStore>;
 }
 const Ctx = createContext<Stores | null>(null);
 
@@ -25,6 +27,7 @@ export function LabStoresProvider({ initial, children }: { initial?: Design; chi
     check: createCheckStore(),
     runs: createRunStore(),
     playback: createPlaybackStore(),
+    doc: createDocStore(),
   }));
   return <Ctx.Provider value={stores}>{children}</Ctx.Provider>;
 }
@@ -45,6 +48,8 @@ export const useRuns = <T,>(sel: (s: RunState) => T): T => useStore(useStores().
 export const useRunsApi = () => useStores().runs;
 export const usePlayback = <T,>(sel: (s: PlaybackState) => T): T => useStore(useStores().playback, sel);
 export const usePlaybackApi = () => useStores().playback;
+export const useDoc = <T,>(sel: (s: DocState) => T): T => useStore(useStores().doc, sel);
+export const useDocApi = () => useStores().doc;
 
 /** Run is possible once the engine is ready and the latest check found nothing blocking (R11). */
 export function useCanRun(): boolean {

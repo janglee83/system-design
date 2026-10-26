@@ -20,6 +20,8 @@ export const SHORTCUTS = [
   { id: "zoomOut", keys: ["-"], group: "view" },
   { id: "toggleSnap", keys: ["Shift+G"], group: "view" },
   { id: "palette", keys: ["Mod+K"], group: "general" },
+  { id: "save", keys: ["Mod+S"], group: "general" },
+  { id: "open", keys: ["Mod+O"], group: "general" },
   { id: "shortcuts", keys: ["Shift+/"], group: "general" },
   { id: "escape", keys: ["Escape"], group: "general" },
 ] as const;

@@ -1,6 +1,8 @@
 "use client";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
+import { toast } from "@/ui/toast-store";
 import { useEngineStart, useEngineStore } from "@/engine/EngineProvider";
 import { EngineStatus } from "@/engine/EngineStatus";
 import { Canvas } from "./canvas/Canvas";
@@ -22,13 +24,18 @@ import {
 import { useAddComponent } from "./canvas/use-add-component";
 import { useAutoLayout } from "./canvas/use-auto-layout";
 import type { Design } from "./model/design";
+import { DesignMenu } from "./designs/DesignMenu";
+import { DesignsDialog } from "./designs/DesignsDialog";
+import { SaveDialog } from "./designs/SaveDialog";
+import { loadDraft, useAutosave } from "./designs/use-autosave";
+import { useDocActions } from "./designs/use-doc-actions";
 import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
 import { BottomPanel } from "./panel/BottomPanel";
 import { Problems } from "./Problems";
 import { RunBar } from "./run/RunBar";
 import { useRunDesign } from "./run/use-run-design";
-import { LabStoresProvider, useDesign, useDesignApi, useUiApi } from "./store/LabStores";
+import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
 import { useMetas } from "./use-metas";
@@ -42,7 +49,12 @@ export function LabApp({ initial }: { initial?: Design }) {
         <h1 className="sr-only">{t("heading")}</h1>
         <div data-testid="lab-page" className="grid min-h-0 flex-1 grid-cols-[256px_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_auto]">
           <aside aria-label={t("palette")} className="row-span-2 min-h-0 border-r border-border bg-bg" data-tour="palette">
-            <PalettePane />
+            <div className="flex h-full min-h-0 flex-col">
+              <DesignMenu />
+              <div className="min-h-0 flex-1">
+                <PalettePane />
+              </div>
+            </div>
           </aside>
           <section className="relative min-h-0" data-tour="canvas">
             <Canvas />
@@ -68,6 +80,9 @@ export function LabApp({ initial }: { initial?: Design }) {
         <ConnectPane />
         <LiveValidation />
         <LabShortcuts />
+        <DesignsDialog />
+        <SaveDialog />
+        <Drafts restore={!initial} />
       </ReactFlowProvider>
     </LabStoresProvider>
   );
@@ -100,7 +115,10 @@ function LabShortcuts() {
   const flow = useReactFlow();
   const layout = useAutoLayout();
   const run = useRunDesign();
+  const docActions = useDocActions();
   useLabShortcuts({
+    save: docActions.save,
+    open: () => ui.getState().set({ designsOpen: true }),
     run,
     undo: () => undo(api),
     redo: () => redo(api),
@@ -128,4 +146,26 @@ function LabShortcuts() {
 
 function RunPane() {
   return <RunBar onRun={useRunDesign()} />;
+}
+
+/** Autosaves the draft, and restores it once when the Lab opens without a design from the URL (R22). */
+function Drafts({ restore }: { restore: boolean }) {
+  useAutosave();
+  const design = useDesignApi();
+  const doc = useDocApi();
+  const t = useTranslations("designs");
+  useEffect(() => {
+    if (!restore) return;
+    let cancelled = false; // StrictMode runs this twice; only the live run restores
+    void loadDraft().then((draft) => {
+      if (cancelled || !draft || draft.design.nodes.length === 0) return;
+      design.getState().replace(draft.design);
+      doc.getState().reset(draft.savedId);
+      toast(t("draftRestored"), "info");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [restore, design, doc, t]);
+  return null;
 }

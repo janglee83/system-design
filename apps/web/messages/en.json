@@ -496,5 +496,33 @@
     "copy": "Copy input",
     "copied": "Input copied to the clipboard.",
     "copyFailed": "Could not copy. Select the text and copy it by hand."
+  },
+  "designs": {
+    "menu": "Design",
+    "new": "New",
+    "open": "Open…",
+    "save": "Save",
+    "saveAs": "Save as…",
+    "import": "Import…",
+    "export": "Export",
+    "saved": "Saved “{name}”.",
+    "unsaved": "Unsaved changes",
+    "dialogTitle": "Your designs",
+    "dialogDescription": "Designs are kept in this browser. There is no limit on how many you keep.",
+    "empty": "No saved designs yet.",
+    "updated": "Updated {when}",
+    "nodes": "{count, plural, one {# component} other {# components}}",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{name}”? This cannot be undone.",
+    "copySuffix": "copy",
+    "nameLabel": "Design name",
+    "openAction": "Open “{name}”",
+    "storageUnavailable": "This browser is not letting the lab store data, so designs cannot be saved here.",
+    "draftRestored": "Picked up where you left off.",
+    "discard": "Your unsaved changes will be lost. Continue?",
+    "empty_template": "Empty",
+    "openConfirm": "Open"
   }
 }

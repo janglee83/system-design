@@ -38,3 +38,10 @@ export const putPreset = async (p: Preset): Promise<void> => void (await (await 
 export const deletePreset = async (id: string): Promise<void> => (await openLabDb()).delete("presets", id);
 export const getKv = async <T = unknown>(key: string): Promise<T | undefined> => (await (await openLabDb()).get("kv", key)) as T | undefined;
 export const setKv = async (key: string, value: unknown): Promise<void> => void (await (await openLabDb()).put("kv", value, key));
+
+/** Saved designs, newest `updatedAt` first. No count limit (R22). */
+export const listDesigns = async (): Promise<SavedDesign[]> =>
+  (await (await openLabDb()).getAllFromIndex("designs", "updatedAt")).reverse();
+export const getDesign = async (id: string): Promise<SavedDesign | undefined> => (await openLabDb()).get("designs", id);
+export const putDesign = async (d: SavedDesign): Promise<void> => void (await (await openLabDb()).put("designs", d));
+export const deleteDesign = async (id: string): Promise<void> => (await openLabDb()).delete("designs", id);

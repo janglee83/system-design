@@ -4,7 +4,8 @@ import { isMacPlatform, matches, SHORTCUTS, type ShortcutId } from "./shortcuts"
 
 const TYPING = "input, textarea, select, [contenteditable=''], [contenteditable='true'], [role='combobox'], [role='spinbutton']";
 /** Fire even while typing or in a dialog. */
-const ALWAYS: ReadonlySet<ShortcutId> = new Set(["run", "palette"]);
+// Save and Open also replace the browser's own Mod+S / Mod+O, so they work while typing too.
+const ALWAYS: ReadonlySet<ShortcutId> = new Set(["run", "palette", "save", "open"]);
 /** Edit and view shortcuts act on the canvas, so they need focus on the canvas or on the page itself. */
 const CANVAS_GROUPS: ReadonlySet<string> = new Set(["edit", "view"]);
 const CANVAS = "[data-testid='lab-canvas']";
