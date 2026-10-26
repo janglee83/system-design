@@ -54,10 +54,11 @@ class HoldingWorker implements WorkerLike {
   }
 }
 
-async function setup(worker?: HoldingWorker) {
+async function setup(worker?: HoldingWorker | (() => HoldingWorker)) {
   const h: Partial<Handles> = {};
+  const factory = worker === undefined ? undefined : typeof worker === "function" ? worker : () => worker;
   render(
-    <LabHarness initial={design()} h={h} worker={worker ? () => worker : undefined}>
+    <LabHarness initial={design()} h={h} worker={factory}>
       <Live />
     </LabHarness>,
   );
@@ -134,5 +135,22 @@ describe("useLiveValidation", () => {
     act(() => h.design.getState().apply((d) => ({ ...d, workload: { ...d.workload, clientTimeoutMs: 900 } })));
     expect(h.check.getState().runIssues).toEqual([]);
     await expect.poll(() => h.canRun()).toBe(true);
+  });
+
+  it("validates again after the engine replaces its worker (a timeout or a trap), instead of staying blocked", async () => {
+    const made: HoldingWorker[] = [];
+    const h = await setup(() => {
+      const w = new HoldingWorker();
+      made.push(w);
+      return w;
+    });
+    made[0]!.hold = true;
+    act(() => h.design.getState().apply((d) => updateNode(d, "web-server-1", { replicas: 3 })));
+    await expect.poll(() => made[0]!.held.length).toBe(1); // stuck in the old worker
+    act(() => h.engine().client!.restart());
+    await expect.poll(() => h.check.getState().status).toBe("done");
+    expect(made).toHaveLength(2);
+    expect(made[1]!.validates).toBeGreaterThan(0);
+    expect(h.canRun()).toBe(true);
   });
 });

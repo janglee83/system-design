@@ -50,6 +50,12 @@ export function useLiveValidation(): void {
         });
     };
     run();
+    // The client replaced its worker (a stuck request timed out, or the wasm trapped) while
+    // staying "ready": the check in flight was lost, so check again rather than stay blocked.
+    const offRestart = client.onRestart(() => {
+      check.getState().markStale(); // drops the lost request's failure
+      run(); // queued as the trailing request until the old one settles
+    });
     const unsub = design.subscribe((s, prev) => {
       if (s.design === prev.design) return;
       // The engine's refusal of the last run (workload.invalid, calibration.invalid…) is about the
@@ -65,6 +71,7 @@ export function useLiveValidation(): void {
     return () => {
       disposed = true;
       clearTimeout(timer);
+      offRestart();
       unsub();
     };
   }, [client, design, check]);

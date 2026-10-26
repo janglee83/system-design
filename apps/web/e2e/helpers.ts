@@ -70,6 +70,8 @@ export async function buildFourTier(page: Page, webReplicas = 2) {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("problems")).toHaveText("No problems");
+  // The pill keeps the last result while a re-check is pending; an enabled Run button means it is current.
+  await expect(page.getByTestId("run-bar").getByRole("button", { name: /^Run/ })).toBeEnabled();
 }
 
 export async function runOnce(page: Page): Promise<string> {
