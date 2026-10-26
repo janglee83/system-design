@@ -80,7 +80,7 @@ function overlay(s, geo, c) {
 }
 function controls(s) {
   if (s.option === "a") {
-    const legendOpen = s.mode !== "running";
+    const legendOpen = s.mode === "connect";
     return `<div class="cluster" style="right:16px;bottom:14px"><button class="u-btn" aria-label="Thu nhỏ">${ic("minus")}</button><span class="z">75%</span><button class="u-btn" aria-label="Phóng to">${ic("plus")}</button><button class="u-btn" aria-label="Vừa màn hình">${ic("fit")}</button><span class="sep"></span><button class="u-btn" aria-label="Sắp xếp gọn">${ic("layout")}</button><button class="u-btn" aria-label="Bám lưới">${ic("grid")}</button><span class="sep"></span><button class="u-btn ${legendOpen ? "on" : ""}" aria-expanded="${legendOpen}">${ic("info", 14)} Chú giải</button></div>
       ${legendOpen ? `<div class="pop" style="right:16px;bottom:60px"><h6>Kiểu kết nối trong thiết kế</h6>${LEG.map(([k, l, n]) => `<div class="lg ${n ? "" : "off"}">${sw(k)}<span>${l}</span><small>${n ? n + " đường" : "chưa dùng"}</small></div>`).join("")}</div>` : ""}
       ${s.mode === "connect" ? `<div class="hint-bar">${ic("route", 14)} Thả vào một thành phần để nối · <kbd>Esc</kbd> để huỷ · hoặc bấm <kbd>C</kbd> để chọn từ danh sách</div>` : ""}`;

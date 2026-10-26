@@ -46,22 +46,25 @@
   <p class="lede">Mỗi phần tử giao diện có 2–3 phương án để chọn ngay trên trang: đổi phương án, sáng/tối và đang thiết kế/đang chạy ở thanh đen phía trên mỗi demo. Ba phần tử đầu là quyết định nền tảng; các phần sau sẽ được dựng theo lựa chọn của ba phần này.</p>
   <p class="meta">Nghiên cứu: <a href="../research/completeness.md">completeness.md</a> · <a href="../research/benchmark.md">benchmark.md</a> · <a href="../research/audit.md">audit.md</a> · Bảng quyết định: <a href="../decisions.md">decisions.md</a></p>
 
-  <h2>Đợt 1 · cần chọn</h2>
+  <h2>Đợt 1 · đã chọn 1A · 2A · 3A</h2>
   <div class="grid">
     <a class="card" href="01-node-style/index.html"><div class="thumb"><iframe src="01-node-style/index.html?embed=1&mode=running" loading="lazy" tabindex="-1" title=""></iframe></div>
-      <div class="body"><div class="row"><span class="n">01</span><span class="pill ready">Sẵn sàng · 3 phương án</span></div><div class="title">Kiểu thành phần trên khung vẽ</div><div class="desc">Thẻ minh hoạ, thẻ gọn có dải màu, hay trạm tròn có vòng đo. Kèm đủ trạng thái bận, quá tải, ngừng chạy, đang chọn, bị khoá.</div></div></a>
+      <div class="body"><div class="row"><span class="n">01</span><span class="pill ready">Đã chọn A · thẻ minh hoạ</span></div><div class="title">Kiểu thành phần trên khung vẽ</div><div class="desc">Thẻ minh hoạ được chọn; trang có thêm danh mục 21 loại thành phần ở mọi trạng thái.</div></div></a>
     <a class="card" href="02-colour-type-theme/index.html"><div class="thumb"><iframe src="02-colour-type-theme/index.html?embed=1" loading="lazy" tabindex="-1" title=""></iframe></div>
-      <div class="body"><div class="row"><span class="n">02</span><span class="pill ready">Sẵn sàng · 3 phương án</span></div><div class="title">Màu, chữ và giao diện mặc định</div><div class="desc">Giấy & Mực, Than chì & Chàm, Mực đêm & Chanh, với tỉ lệ tương phản WCAG tính trực tiếp và thang chữ 6 bậc.</div></div></a>
+      <div class="body"><div class="row"><span class="n">02</span><span class="pill ready">Đã chọn A · Giấy &amp; Mực</span></div><div class="title">Màu, chữ và giao diện mặc định</div><div class="desc">Giấy & Mực, Than chì & Chàm, Mực đêm & Chanh, với tỉ lệ tương phản WCAG tính trực tiếp và thang chữ 6 bậc.</div></div></a>
     <a class="card" href="03-app-shell/index.html"><div class="thumb"><iframe src="03-app-shell/index.html?embed=1" loading="lazy" tabindex="-1" title=""></iframe></div>
-      <div class="body"><div class="row"><span class="n">03</span><span class="pill ready">Sẵn sàng · 3 phương án</span></div><div class="title">Khung ứng dụng và nút Chạy</div><div class="desc">Một thanh với một nút Chạy, điều hướng + thanh công cụ, hay khung vẽ tràn màn với bảng nổi.</div></div></a>
+      <div class="body"><div class="row"><span class="n">03</span><span class="pill ready">Đã chọn A · một thanh</span></div><div class="title">Khung ứng dụng và nút Chạy</div><div class="desc">Một thanh với một nút Chạy, điều hướng + thanh công cụ, hay khung vẽ tràn màn với bảng nổi.</div></div></a>
   </div>
 
-  <h2>Đợt 2 · dựng sau khi chọn đợt 1</h2>
+  <h2>Đợt 2 · cần chọn (dựng theo 1A · 2A · 3A)</h2>
   <div class="grid" id="later"></div>
 </main>
 <script>
   const later = ["Bảng thành phần", "Bố cục bảng thuộc tính", "Đường nối, cổng, chú giải và nút điều khiển khung vẽ", "Phản hồi khi chạy: thanh phát lại, kết luận, chấm yêu cầu", "Bảng dưới: chỉ số, sự kiện, nhật ký", "Trạng thái trống, đang tải, lỗi", "Hướng dẫn lần đầu", "Trang Học và Thử thách"];
-  document.getElementById("later").innerHTML = later.map((t, i) => `<div class="card later"><div class="thumb">Chưa dựng</div><div class="body"><div class="row"><span class="n">${String(i + 4).padStart(2, "0")}</span><span class="pill wait">Chờ đợt 1</span></div><div class="title">${t}</div></div></div>`).join("");
+  const dirs = ["04-palette", "05-inspector", "06-edges-controls", "07-run-feedback", "08-bottom-panel", "09-states", "10-onboarding", "11-learn-challenges"];
+  const thumbs = ["", "", "&mode=connect", "&mode=done", "", "&mode=empty", "&mode=mid", ""];
+  const descs = ["21 loại, chia 7 nhóm; loại sắp có hiện mờ. Danh sách, lưới thẻ, hay dải nhóm.", "Thành phần, cả thiết kế, và số liệu trực tiếp khi chạy.", "Báo hợp lệ trước khi thả; gom điều khiển; độ dày theo lưu lượng.", "Kết luận, \"Hỏng ở đâu?\", theo một yêu cầu qua sơ đồ.", "Chỉ số so với lần trước, sự kiện, nhật ký, lưu lượng.", "Mẫu bắt đầu, khởi động có từng bước, lỗi không mất bài.", "Chỉ dẫn gắn vào giao diện, danh sách việc, hay giới thiệu.", "Lộ trình 0→100, bài học từng bước, đề bài có chế độ."];
+  document.getElementById("later").innerHTML = later.map((t, i) => `<a class="card" href="${dirs[i]}/index.html"><div class="thumb"><iframe src="${dirs[i]}/index.html?embed=1${thumbs[i]}" loading="lazy" tabindex="-1" title=""></iframe></div><div class="body"><div class="row"><span class="n">${String(i + 4).padStart(2, "0")}</span><span class="pill wait">Cần chọn · 3 phương án</span></div><div class="title">${t}</div><div class="desc">${descs[i]}</div></div></a>`).join("");
   const root = document.documentElement;
   let t; try { t = localStorage.getItem("sd-demo-theme"); } catch {}
   t = t || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
