@@ -127,3 +127,15 @@
 .node-a .meta2 { margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--text-3); }
 .node-a .meta2 .lv { color: var(--text); font-weight: 600; }
 .node-a.is-busy .meta2 .lv { color: var(--busy); } .node-a.is-over .meta2 .lv { color: var(--over); }
+
+/* edge extras (demo 06+) */
+.edge.sel { stroke-width: 3; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent-text) 50%, transparent)); }
+.edge.ghost { stroke: var(--accent-text) !important; stroke-dasharray: 5 4; stroke-width: 2.2; }
+.ghost-end { fill: var(--surface); stroke: var(--accent-text); stroke-width: 2; }
+.kbadge { position: absolute; transform: translate(-50%, -50%); padding: 0 6px; border-radius: var(--r-xs); font: 600 11px/18px var(--font-sans); background: var(--surface); border: 1px solid; white-space: nowrap; }
+.kbadge.k-http { color: var(--e-http); border-color: color-mix(in srgb, var(--e-http) 40%, var(--border)); }
+.kbadge.k-db { color: var(--e-db); border-color: color-mix(in srgb, var(--e-db) 40%, var(--border)); }
+.node.tgt-valid { outline: 2px solid var(--accent-text); outline-offset: 4px; box-shadow: 0 0 0 8px var(--accent-soft); }
+.node.tgt-invalid { opacity: .35; filter: grayscale(.6); }
+.node.tgt-source .port.out { opacity: 1; background: var(--accent-text); border-color: var(--accent-text); }
+.node.tgt-valid .port.in { opacity: 1; width: 14px; height: 14px; top: 35px; left: -8px; background: var(--accent-text); border-color: var(--surface); box-shadow: 0 0 0 5px var(--accent-soft); }

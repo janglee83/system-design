@@ -26,7 +26,7 @@
     const st = running ? n.run.state : "normal";
     const load = running ? n.run.load : null;
     const k = D.kinds[n.kind];
-    const cls = ["node", "node-" + style, "is-" + st, extra.selected ? "is-selected" : "", extra.locked ? "is-locked" : "", n.replicas > 1 ? "has-replicas" : "", running ? "is-running" : ""].join(" ");
+    const cls = ["node", "node-" + style, extra.target ? "tgt-" + extra.target : "", "is-" + st, extra.selected ? "is-selected" : "", extra.locked ? "is-locked" : "", n.replicas > 1 ? "has-replicas" : "", running ? "is-running" : ""].join(" ");
     const aria = `${n.label}, ${k.label}${running ? ", " + D.stateWords[st] + (load != null && st !== "down" ? " " + load + "%" : "") : ""}${extra.selected ? ", đang chọn" : ""}${extra.locked ? ", đã khoá" : ""}${extra.issues ? ", " + extra.issues + " vấn đề" : ""}`;
     const issue = extra.issues ? `<span class="issue" role="img" aria-label="${extra.issues} vấn đề">${extra.issues}</span>` : "";
     const lock = extra.locked ? `<span class="lock" title="Thử thách đã khóa thành phần này">${icon("lock", 12)}</span>` : "";
@@ -90,11 +90,20 @@
     edges.forEach((e, i) => {
       const a = port(e.from, "out"), b = port(e.to, "in");
       const dx = Math.max(40, (b.x - a.x) / 2);
-      const d = `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+      let d = `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+      if (opts.route === "ortho") {
+        const mx = (a.x + b.x) / 2, r = Math.min(10, Math.abs(b.y - a.y) / 2), sy = b.y > a.y ? 1 : -1;
+        d = Math.abs(b.y - a.y) < 1 ? `M${a.x},${a.y} H${b.x}` : `M${a.x},${a.y} H${mx - r} Q${mx},${a.y} ${mx},${a.y + sy * r} V${b.y - sy * r} Q${mx},${b.y} ${mx + r},${b.y} H${b.x}`;
+      }
       const tgt = byId[e.to], src = byId[e.from];
       const dead = mode === "running" && (tgt.run.state === "down" || src.run.state === "down");
       const hot = mode === "running" && !dead && tgt.run.state === "over";
-      paths += `<path id="e-${opts.uid || ""}${i}" d="${d}" class="edge k-${e.kind} ${dead ? "dead" : ""} ${hot ? "hot" : ""}" marker-end="url(#arrow-${e.kind}${opts.uid || ""})"/>`;
+      const w = opts.weights && mode === "running" ? `style="stroke-width:${dead ? 1.5 : Math.max(1.5, Math.min(7, (e.w || 1) * 6))}px"` : "";
+      paths += `<path id="e-${opts.uid || ""}${i}" d="${d}" class="edge k-${e.kind} ${dead ? "dead" : ""} ${hot ? "hot" : ""} ${e.sel ? "sel" : ""}" ${w} marker-end="url(#arrow-${e.kind}${opts.uid || ""})"/>`;
+      if (opts.badges && mode !== "running") {
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        labels += `<div class="kbadge k-${e.kind}" style="left:${mx}px;top:${my}px">${{ http: "HTTP", db: "CSDL", cache: "Đệm", msg: "Tin" }[e.kind]}</div>`;
+      }
       if (mode === "running" && !dead && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
         for (let j = 0; j < 4; j++) {
           dots += `<circle r="3.2" opacity="0" class="dot k-${e.kind} ${hot && j === 3 ? "rejected" : ""}"><set attributeName="opacity" to="1" begin="${(j * 0.6 + i * 0.17).toFixed(2)}s"/><animateMotion dur="2.4s" repeatCount="indefinite" begin="${(j * 0.6 + i * 0.17).toFixed(2)}s"><mpath href="#e-${opts.uid || ""}${i}"/></animateMotion></circle>`;
@@ -105,11 +114,17 @@
         labels += `<div class="rate ${dead ? "dead" : ""} ${hot ? "hot" : ""}" style="left:${mx}px;top:${my}px">${hot ? icon("alert", 11) + " " : ""}${e.rate}</div>`;
       }
     });
-    const markers = ["http", "db", "cache", "msg"].map((k) => `<marker id="arrow-${k}${opts.uid || ""}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" class="mk k-${k}"/></marker>`).join("");
+    const markers = ["http", "db", "cache", "msg"].map((k) => `<marker id="arrow-${k}${opts.uid || ""}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" class="mk k-${k}"/></marker>`).join("");
+    if (opts.ghost) {
+      const a = port(opts.ghost.from, "out"), b = opts.ghost.to;
+      const gdx = Math.max(40, (b.x - a.x) / 2);
+      paths += `<path d="M${a.x},${a.y} C${a.x + gdx},${a.y} ${b.x - gdx},${b.y} ${b.x},${b.y}" class="edge ghost k-${opts.ghost.kind}"/><circle cx="${b.x}" cy="${b.y}" r="5" class="ghost-end"/>`;
+    }
     el.style.width = W + "px";
     el.style.height = H + "px";
     el.innerHTML = `<svg class="edges" width="${W}" height="${H}" aria-hidden="true"><defs>${markers}</defs>${paths}${dots}</svg>${labels}` +
       nodes.map((n) => `<div class="pos" style="left:${pos[n.id].x}px;top:${pos[n.id].y}px">${render(style, n, mode, (opts.extra || {})[n.id] || {})}</div>`).join("");
+    return { W, H, pos, port };
   }
 
   window.SDNodes = { render, canvas, SIZES };

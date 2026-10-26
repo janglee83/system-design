@@ -75,13 +75,14 @@
   function drawCanvas(cv, mode, opts = {}) {
     const fit = document.createElement("div"); fit.className = "fit";
     const c = document.createElement("div"); c.className = "canvas"; fit.appendChild(c); cv.appendChild(fit);
-    SDNodes.canvas(c, "a", mode, { uid: opts.uid || "s", extra: opts.extra || (mode === "editing" ? { "web-1": { selected: true } } : {}), nodes: opts.nodes, edges: opts.edges, rates: opts.rates });
+    const geo = SDNodes.canvas(c, "a", mode, Object.assign({}, opts, { uid: opts.uid || "s", extra: opts.extra || (mode === "editing" ? { "web-1": { selected: true } } : {}) }));
     requestAnimationFrame(() => {
       const W = parseFloat(c.style.width), H = parseFloat(c.style.height);
       const k = Math.min(1, (cv.clientWidth - (opts.padX || 0)) / W, (cv.clientHeight - (opts.padY || 60)) / H);
       fit.style.transform = `translate(calc(-50% + ${opts.offX || 0}px), calc(-50% + ${opts.offY || 0}px)) scale(${k.toFixed(3)})`;
       cv.querySelectorAll(".z").forEach((z) => (z.textContent = Math.round(k * 100) + "%"));
     });
+    c.geo = geo;
     return c;
   }
 
