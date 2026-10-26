@@ -139,3 +139,7 @@
 .node.tgt-invalid { opacity: .35; filter: grayscale(.6); }
 .node.tgt-source .port.out { opacity: 1; background: var(--accent-text); border-color: var(--accent-text); }
 .node.tgt-valid .port.in { opacity: 1; width: 14px; height: 14px; top: 35px; left: -8px; background: var(--accent-text); border-color: var(--surface); box-shadow: 0 0 0 5px var(--accent-soft); }
+.node.is-dim { opacity: .28; filter: grayscale(.4); }
+.node.on-path { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.edge.off { opacity: .18; }
+.edge.path { stroke: var(--accent-text) !important; stroke-width: 3; stroke-dasharray: none !important; }

@@ -26,7 +26,7 @@
     const st = running ? n.run.state : "normal";
     const load = running ? n.run.load : null;
     const k = D.kinds[n.kind];
-    const cls = ["node", "node-" + style, extra.target ? "tgt-" + extra.target : "", "is-" + st, extra.selected ? "is-selected" : "", extra.locked ? "is-locked" : "", n.replicas > 1 ? "has-replicas" : "", running ? "is-running" : ""].join(" ");
+    const cls = ["node", "node-" + style, extra.target ? "tgt-" + extra.target : "", extra.dim ? "is-dim" : "", extra.onpath ? "on-path" : "", "is-" + st, extra.selected ? "is-selected" : "", extra.locked ? "is-locked" : "", n.replicas > 1 ? "has-replicas" : "", running ? "is-running" : ""].join(" ");
     const aria = `${n.label}, ${k.label}${running ? ", " + D.stateWords[st] + (load != null && st !== "down" ? " " + load + "%" : "") : ""}${extra.selected ? ", đang chọn" : ""}${extra.locked ? ", đã khoá" : ""}${extra.issues ? ", " + extra.issues + " vấn đề" : ""}`;
     const issue = extra.issues ? `<span class="issue" role="img" aria-label="${extra.issues} vấn đề">${extra.issues}</span>` : "";
     const lock = extra.locked ? `<span class="lock" title="Thử thách đã khóa thành phần này">${icon("lock", 12)}</span>` : "";
@@ -99,17 +99,17 @@
       const dead = mode === "running" && (tgt.run.state === "down" || src.run.state === "down");
       const hot = mode === "running" && !dead && tgt.run.state === "over";
       const w = opts.weights && mode === "running" ? `style="stroke-width:${dead ? 1.5 : Math.max(1.5, Math.min(7, (e.w || 1) * 6))}px"` : "";
-      paths += `<path id="e-${opts.uid || ""}${i}" d="${d}" class="edge k-${e.kind} ${dead ? "dead" : ""} ${hot ? "hot" : ""} ${e.sel ? "sel" : ""}" ${w} marker-end="url(#arrow-${e.kind}${opts.uid || ""})"/>`;
+      paths += `<path id="e-${opts.uid || ""}${i}" d="${d}" class="edge k-${e.kind} ${dead ? "dead" : ""} ${hot ? "hot" : ""} ${e.sel ? "sel" : ""} ${opts.path ? (e.path ? "path" : "off") : ""}" ${w} marker-end="url(#arrow-${e.kind}${opts.uid || ""})"/>`;
       if (opts.badges && mode !== "running") {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
         labels += `<div class="kbadge k-${e.kind}" style="left:${mx}px;top:${my}px">${{ http: "HTTP", db: "CSDL", cache: "Đệm", msg: "Tin" }[e.kind]}</div>`;
       }
-      if (mode === "running" && !dead && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (mode === "running" && !dead && !opts.path && !opts.noDots && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
         for (let j = 0; j < 4; j++) {
           dots += `<circle r="3.2" opacity="0" class="dot k-${e.kind} ${hot && j === 3 ? "rejected" : ""}"><set attributeName="opacity" to="1" begin="${(j * 0.6 + i * 0.17).toFixed(2)}s"/><animateMotion dur="2.4s" repeatCount="indefinite" begin="${(j * 0.6 + i * 0.17).toFixed(2)}s"><mpath href="#e-${opts.uid || ""}${i}"/></animateMotion></circle>`;
         }
       }
-      if (mode === "running" && opts.rates !== false) {
+      if (mode === "running" && opts.rates !== false && !opts.path) {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
         labels += `<div class="rate ${dead ? "dead" : ""} ${hot ? "hot" : ""}" style="left:${mx}px;top:${my}px">${hot ? icon("alert", 11) + " " : ""}${e.rate}</div>`;
       }
