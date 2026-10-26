@@ -12,7 +12,12 @@ export const CALIBRATION_GROUPS: readonly { id: "web" | "lb" | "pg" | "network";
 const POSITIVE: ReadonlySet<Field> = new Set(["webRpsPerVcpu", "lbRpsPerReplica", "pgQpsPerInstance"]);
 const UNIT_OPEN: ReadonlySet<Field> = new Set(["lbMaxUtilizationForLatency", "pgMaxUtilizationForLatency"]);
 
-/** Input bounds that match sim-core's invalid_overrides (calibration.rs). */
+/**
+ * Input bounds inside what sim-core's invalid_overrides (calibration.rs) accepts: rates must be
+ * > 0 (we start at 1), the two utilisation limits lie in the open interval (0, 1) (we offer
+ * 0.05–0.99), everything else is >= 0. A number field's bounds are inclusive, so the open ends of
+ * the engine's ranges are replaced by safe values just inside them.
+ */
 export function calibrationBounds(f: Field): { min: number; max: number | null; step: number } {
   if (UNIT_OPEN.has(f)) return { min: 0.05, max: 0.99, step: 0.01 };
   if (POSITIVE.has(f)) return { min: 1, max: null, step: 100 };

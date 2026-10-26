@@ -15,4 +15,18 @@ describe("calibration metadata", () => {
       if (max !== null) expect(() => sim.simulate({ ...base, calibration: { [field]: max } }).free(), `${field} max`).not.toThrow();
     }
   });
+
+  it("every input range lies inside the engine's accepted range (open ends stay open)", () => {
+    for (const field of Object.keys(sim.defaultCalibration())) {
+      const { min, max } = calibrationBounds(field as never);
+      if (field.endsWith("MaxUtilizationForLatency")) {
+        expect(min, field).toBeGreaterThan(0);
+        expect(max, field).toBeLessThan(1);
+      } else if (["webRpsPerVcpu", "lbRpsPerReplica", "pgQpsPerInstance"].includes(field)) {
+        expect(min, field).toBeGreaterThan(0);
+      } else {
+        expect(min, field).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
 });
