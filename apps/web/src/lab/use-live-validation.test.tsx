@@ -117,14 +117,21 @@ describe("useLiveValidation", () => {
     const w = new HoldingWorker();
     const h = await setup(w);
     w.hold = true;
+    const original = h.design.getState().design;
+    // Edit A removes the client: its result would say graph.no-client.
     act(() => h.design.getState().apply((d) => ({ ...d, nodes: d.nodes.filter((n) => n.id !== "client-1"), edges: [] })));
     await expect.poll(() => w.held.length).toBe(1);
-    act(() => h.design.getState().apply((d) => updateNode(d, "web-server-1", { replicas: 2 })));
+    // Edit B puts it back while A is in flight: the right answer is "no problems".
+    act(() => h.design.getState().apply(() => ({ ...original, seed: original.seed + 1 })));
+    w.release(); // A's reply lands now, after B; B's request is still held
+    await new Promise((r) => setTimeout(r, 250));
+    expect(h.check.getState().status).toBe("checking"); // A's answer was not taken
+    expect(h.check.getState().issues.map((i) => i.code)).not.toContain("graph.no-client");
+    await expect.poll(() => w.held.length).toBe(1); // B, the trailing request
     w.hold = false;
-    w.release(); // the old reply lands while the design has already moved on: it must not count
+    w.release();
     await expect.poll(() => h.check.getState().status).toBe("done");
-    expect(h.check.getState().issues.map((i) => i.code)).toContain("graph.no-client");
-    expect(h.design.getState().design.nodes.find((n) => n.id === "web-server-1")!.replicas).toBe(2);
+    expect(h.check.getState().issues.filter((i) => i.blocking)).toEqual([]);
   });
 
   it("clears the engine's run-time refusal on any design change, even one the check ignores", async () => {
