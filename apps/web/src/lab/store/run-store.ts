@@ -1,4 +1,11 @@
-import type { Metrics, SimEvent, SimInput, TimelineView, TraceSummary } from "@sd/sim";
+import type { Metrics, SimEvent, SimInput, TimelineView, TraceSummary, ValidationIssue } from "@sd/sim";
+import type { NamedGraph } from "../issue-text";
+
+/** What the run's logs and events name things by: frozen when the run starts (Phase 3 review). */
+export interface RunSnapshot extends NamedGraph {
+  /** The design's non-blocking issues when it ran. */
+  warnings: ValidationIssue[];
+}
 import { createStore } from "zustand/vanilla";
 
 export const MAX_HISTORY = 10;
@@ -17,6 +24,7 @@ export interface RunRecord {
   timeline: TimelineView;
   traces: TraceSummary[];
   elapsedMs: number;
+  snapshot: RunSnapshot;
 }
 
 export interface RunState {

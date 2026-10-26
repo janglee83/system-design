@@ -3,7 +3,7 @@ import { CircleAlert, Info, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/ui/cn";
 import { displayLabel } from "../labels";
-import { useDesign, usePlayback, usePlaybackApi } from "../store/LabStores";
+import { usePlayback, usePlaybackApi } from "../store/LabStores";
 import type { RunRecord } from "../store/run-store";
 import { useMetas } from "../use-metas";
 import { eventLevel, eventText } from "./event-text";
@@ -15,7 +15,7 @@ const seconds = (ms: number) => (ms / 1000).toFixed(1);
 /** The run's events; the row at the playhead is highlighted, and a row moves the playhead there. */
 export function EventsTab({ run }: { run: RunRecord }) {
   const t = useTranslations();
-  const design = useDesign((s) => s.design);
+  const design = run.snapshot; // names as they were when the run started
   const metas = useMetas();
   const timeMs = usePlayback((s) => s.timeMs);
   const playback = usePlaybackApi();

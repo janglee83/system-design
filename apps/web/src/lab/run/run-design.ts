@@ -35,7 +35,13 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
   const c = check.getState();
   if (hasBlocking(c)) return { kind: "declined", reason: "blocked" };
   if (c.status !== "done") return { kind: "declined", reason: "checking" };
-  const input = buildSimInput(design.getState().design);
+  const d = design.getState().design;
+  const input = buildSimInput(d);
+  const snapshot = {
+    nodes: d.nodes.map(({ id, kind, label }) => ({ id, kind, label })),
+    edges: d.edges.map((e) => ({ ...e })),
+    warnings: c.issues.filter((i) => !i.blocking),
+  };
   runs.getState().begin();
   try {
     const r = await client.request({ type: "run", input });
@@ -50,6 +56,7 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
       timeline: new TimelineView(r.timeline.header, r.timeline.data),
       traces: r.traces,
       elapsedMs: r.elapsedMs,
+      snapshot,
     };
     runs.getState().finish(record);
     check.getState().setRunIssues([]);

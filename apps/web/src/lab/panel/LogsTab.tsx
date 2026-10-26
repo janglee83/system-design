@@ -2,7 +2,6 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { cn } from "@/ui/cn";
-import { useCheck, useDesign } from "../store/LabStores";
 import type { RunRecord } from "../store/run-store";
 import { useMetas } from "../use-metas";
 import { buildLogs, type LogLevel } from "./logs";
@@ -12,15 +11,10 @@ const CHIP = { info: "bg-surface-2 text-info", warn: "bg-busy-soft text-busy", e
 
 export function LogsTab({ run }: { run: RunRecord }) {
   const t = useTranslations();
-  const design = useDesign((s) => s.design);
-  const issues = useCheck((s) => s.issues);
   const metas = useMetas();
   const stamp = (ms: number) => `[${t("run.duration", { seconds: (ms / 1000).toFixed(1).padStart(4, "0") })}]`;
   const [shown, setShown] = useState<ReadonlySet<LogLevel>>(new Set(LEVELS));
-  const lines = useMemo(
-    () => buildLogs(run, { design, metas, t, warnings: issues.filter((i) => !i.blocking) }),
-    [run, design, metas, t, issues],
-  );
+  const lines = useMemo(() => buildLogs(run, { metas, t }), [run, metas, t]);
   return (
     <div className="flex flex-col gap-2">
       <div role="group" aria-label={t("logs.filter")} className="flex gap-1">

@@ -84,4 +84,19 @@ describe("runDesign", () => {
     expect((await first).kind).toBe("ran");
     expect(await runDesign(stores, null)).toEqual({ kind: "declined", reason: "engine" });
   });
+
+  it("snapshots names and warnings at run time, so later edits do not rewrite the run's story", async () => {
+    const { client, stores } = setup();
+    stores.design.getState().apply((d) => ({ ...d, nodes: d.nodes.map((n) => (n.id === "web" ? { ...n, label: "API" } : n)) }));
+    const warning = { code: "node.unreachable", blocking: false, nodeId: "pg", edgeId: null, field: null };
+    const seq = stores.check.getState().begin();
+    stores.check.getState().finish(seq, { issues: [warning], costs: {} });
+    const out = await runDesign(stores, client);
+    if (out.kind !== "ran") throw new Error(out.kind);
+    expect(out.record.snapshot.nodes.find((n) => n.id === "web")).toEqual({ id: "web", kind: "web-server", label: "API" });
+    expect(out.record.snapshot.edges).toHaveLength(3);
+    expect(out.record.snapshot.warnings).toEqual([warning]);
+    stores.design.getState().apply((d) => ({ ...d, nodes: d.nodes.map((n) => (n.id === "web" ? { ...n, label: "Renamed" } : n)) }));
+    expect(out.record.snapshot.nodes.find((n) => n.id === "web")!.label).toBe("API");
+  });
 });

@@ -13,6 +13,7 @@ const rec = (id: number, epoch = 0): RunRecord => ({
   timeline: new TimelineView({ frameMs: 100, frames: 0, nodeIds: [], fields: [] }, new Float32Array()),
   traces: [],
   elapsedMs: 1,
+  snapshot: { nodes: [], edges: [], warnings: [] },
 });
 
 describe("run store", () => {

@@ -1,7 +1,6 @@
-import type { ComponentMeta, ValidationIssue } from "@sd/sim";
+import type { ComponentMeta } from "@sd/sim";
 import { issueText } from "../issue-text";
 import type { Translate } from "../labels";
-import type { Design } from "../model/design";
 import type { RunRecord } from "../store/run-store";
 import { eventLevel, eventText } from "./event-text";
 
@@ -17,8 +16,10 @@ type T = Translate & { has?(key: string): boolean };
 /** The run as log lines: start, the design's warnings, engine events, finish (sorted by time, stable). */
 export function buildLogs(
   run: RunRecord,
-  ctx: { design: Design; metas: ReadonlyMap<string, ComponentMeta>; t: T; warnings: readonly ValidationIssue[] },
+  ctx: { metas: ReadonlyMap<string, ComponentMeta>; t: T },
 ): LogLine[] {
+  // Names and warnings as they were when the run started, not as the design is now.
+  const named = { design: run.snapshot, metas: ctx.metas, t: ctx.t };
   const { input, metrics } = run;
   const lines: LogLine[] = [
     {
@@ -31,12 +32,12 @@ export function buildLogs(
         seconds: input.durationMs / 1000,
       }),
     },
-    ...ctx.warnings.map((w) => ({
+    ...run.snapshot.warnings.map((w) => ({
       atMs: 0,
       level: "warn" as const,
-      text: ctx.t("logs.warning", { text: issueText(w, { design: ctx.design, metas: ctx.metas, t: ctx.t }) }),
+      text: ctx.t("logs.warning", { text: issueText(w, named) }),
     })),
-    ...run.events.map((e) => ({ atMs: e.atMs, level: eventLevel(e.code), text: eventText(e, ctx) })),
+    ...run.events.map((e) => ({ atMs: e.atMs, level: eventLevel(e.code), text: eventText(e, named) })),
     {
       atMs: input.durationMs,
       level: "info",

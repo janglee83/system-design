@@ -1,12 +1,18 @@
 import type { ComponentMeta, ValidationIssue } from "@sd/sim";
 import { displayLabel, type Translate } from "./labels";
-import type { Design } from "./model/design";
+import type { LabEdge, LabNode } from "./model/design";
+
+/** The names a message needs: node ids, kinds and labels, and edge ends (live design or a run's snapshot). */
+export interface NamedGraph {
+  nodes: readonly Pick<LabNode, "id" | "kind" | "label">[];
+  edges: readonly Pick<LabEdge, "id" | "from" | "to" | "kind">[];
+}
 
 // Bivariant (method syntax) so translators typed with the catalog keys fit too; see labels.ts.
 type T = Translate & { has?(key: string): boolean };
 
 export interface IssueContext {
-  design: Design;
+  design: NamedGraph;
   metas: ReadonlyMap<string, ComponentMeta>;
   t: T;
 }

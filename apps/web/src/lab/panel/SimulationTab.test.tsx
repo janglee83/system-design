@@ -10,7 +10,7 @@ import type { RunRecord } from "../store/run-store";
 import { SimulationTab } from "./SimulationTab";
 
 const run = (epoch: number): RunRecord =>
-  ({ id: 3, engineRunId: 1, epoch, startedAt: 0, input: fourTier(), metrics: {}, events: [], traces: [], elapsedMs: 1 }) as unknown as RunRecord;
+  ({ id: 3, engineRunId: 1, epoch, startedAt: 0, input: fourTier(), metrics: {}, events: [], traces: [], elapsedMs: 1, snapshot: { nodes: [], edges: [], warnings: [] } }) as unknown as RunRecord;
 
 function setup(epoch: number, current: number) {
   render(

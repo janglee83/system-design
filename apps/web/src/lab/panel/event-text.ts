@@ -1,6 +1,6 @@
 import type { ComponentMeta, SimEvent } from "@sd/sim";
 import { displayLabel, type Translate } from "../labels";
-import type { Design } from "../model/design";
+import type { NamedGraph } from "../issue-text";
 
 // Bivariant translator (see labels.ts), with next-intl's optional has().
 type T = Translate & { has?(key: string): boolean };
@@ -18,7 +18,7 @@ const LEVELS: Record<string, "info" | "warn" | "error"> = {
 };
 export const eventLevel = (code: string): "info" | "warn" | "error" => LEVELS[code] ?? "info";
 
-export function eventText(e: SimEvent, ctx: { design: Design; metas: ReadonlyMap<string, ComponentMeta>; t: T }): string {
+export function eventText(e: SimEvent, ctx: { design: Pick<NamedGraph, "nodes">; metas: ReadonlyMap<string, ComponentMeta>; t: T }): string {
   const key = `engine.event.${e.code}`;
   if (ctx.t.has && !ctx.t.has(key)) return e.code;
   const n = e.node ? ctx.design.nodes.find((x) => x.id === e.node) : undefined;
