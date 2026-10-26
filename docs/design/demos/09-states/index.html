@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 · Trống, đang tải, lỗi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  html .app.L-a { grid-template-columns: 248px minmax(0, 1fr) 0 !important; }
+  html .app .playback { display: none !important; }
+  .center { position: absolute; z-index: 3; inset: 0; display: grid; place-items: center; padding: 24px; }
+  .empty { text-align: center; max-width: 720px; }
+  .empty .hero { position: relative; height: 112px; margin: 0 auto 14px; width: 360px; }
+  .empty .hero .a { position: absolute; top: 18px; opacity: .9; } .empty .hero svg.link { position: absolute; left: 0; top: 0; }
+  .empty h2 { margin: 0 0 6px; font-size: 20px; line-height: 28px; } .empty p { margin: 0 auto 18px; color: var(--text-2); max-width: 520px; }
+  .tpl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: left; }
+  .tpl .c { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 12px; background: var(--surface); box-shadow: var(--shadow-1); cursor: pointer; transition: box-shadow var(--t-fast), transform var(--t-fast); }
+  .tpl .c:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+  .tpl .c.rec { outline: 2px solid var(--accent-text); outline-offset: -1px; }
+  .tpl .c.off { opacity: .5; cursor: not-allowed; }
+  .tpl .mini { height: 54px; border-radius: var(--r-md); background: var(--canvas); background-image: radial-gradient(var(--grid) 1px, transparent 1.2px); background-size: 10px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; }
+  .tpl .mini span { width: 26px; height: 20px; border-radius: 4px; display: grid; place-items: center; background: color-mix(in srgb, var(--k) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--k) 40%, var(--border)); }
+  .tpl .mini i { width: 10px; border-top: 1.5px solid var(--e-http); }
+  .tpl b { display: block; font-size: 14px; } .tpl small { color: var(--text-3); font-size: 12px; }
+  .tpl .tag { float: right; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); }
+  .kb { margin-top: 14px; font-size: 12.5px; color: var(--text-3); } .kb kbd { font: 500 11px var(--font-mono); padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+  /* skeleton */
+  .sk { background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%); background-size: 200% 100%; animation: sh 1.4s linear infinite; border-radius: var(--r-sm); }
+  @keyframes sh { to { background-position: -200% 0; } }
+  .skrow { display: grid; grid-template-columns: 40px 1fr; gap: 10px; padding: 8px 14px; } .skrow .t { height: 40px; } .skrow .l1 { height: 12px; margin-top: 6px; width: 70%; } .skrow .l2 { height: 10px; margin-top: 8px; width: 90%; }
+  .boot { width: 380px; padding: 20px; border-radius: var(--r-xl); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2); }
+  .boot h3 { margin: 0 0 4px; font-size: 16px; } .boot p { margin: 0 0 14px; font-size: 13px; color: var(--text-2); }
+  .boot .track { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin-bottom: 14px; } .boot .track span { display: block; height: 100%; width: 62%; background: var(--accent); border-radius: 3px; }
+  .steps { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+  .steps div { display: flex; align-items: center; gap: 8px; } .steps .d { color: var(--ok); } .steps .w { color: var(--text-3); }
+  .steps .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--surface-3); border-top-color: var(--accent-text); animation: rot .8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .err { position: relative; z-index: 2; width: 460px; padding: 20px; border-radius: var(--r-xl); background: var(--surface); border: 1px solid color-mix(in srgb, var(--over) 35%, var(--border)); box-shadow: var(--shadow-2); }
+  .err .ih { display: flex; gap: 12px; align-items: flex-start; } .err .ib { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--over-soft); color: var(--over); flex: none; }
+  .err h3 { margin: 0 0 4px; font-size: 16px; } .err p { margin: 0 0 10px; font-size: 13px; color: var(--text-2); }
+  .err .safe { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: var(--r-md); background: var(--ok-soft); color: var(--ok); font-size: 13px; font-weight: 500; margin: 6px 0 14px; }
+  .err details { font-size: 12.5px; color: var(--text-3); margin-top: 12px; } .err details code { display: block; margin-top: 6px; padding: 8px; border-radius: var(--r-sm); background: var(--surface-2); font: 12px var(--font-mono); color: var(--text-2); }
+  .btns { display: flex; gap: 8px; }
+  .btn { height: 34px; padding: 0 14px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; }
+  .btn.pri { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+  /* B: ghost hints */
+  .ghost { position: absolute; width: 172px; height: 148px; border: 2px dashed color-mix(in srgb, var(--accent-text) 55%, var(--border)); border-radius: var(--r-lg); display: grid; place-items: center; text-align: center; color: var(--text-2); font-size: 13px; padding: 12px; background: color-mix(in srgb, var(--accent-soft) 40%, transparent); }
+  .ghost.n2 { opacity: .55; } .ghost b { display: block; color: var(--text); margin-bottom: 4px; }
+  .ghost .num { position: absolute; top: -12px; left: -12px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font: 700 12px var(--font-sans); }
+  .garrow { position: absolute; border-top: 2px dashed color-mix(in srgb, var(--accent-text) 45%, var(--border)); }
+  .pitem.pulse { box-shadow: 0 0 0 2px var(--accent-text); background: var(--accent-soft); }
+  .topline { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--surface-3); overflow: hidden; z-index: 5; } .topline span { display: block; height: 100%; width: 40%; background: var(--accent); animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+  .chipc { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12.5px; box-shadow: var(--shadow-1); z-index: 5; display: flex; gap: 8px; align-items: center; }
+  .banner { position: absolute; z-index: 5; left: 16px; right: 16px; top: 14px; display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-radius: var(--r-md); background: var(--over-soft); color: var(--over); border: 1px solid color-mix(in srgb, var(--over) 35%, transparent); font-size: 13.5px; }
+  .banner b { color: var(--over); } .banner .btns { margin-left: auto; }
+  .greyed .canvas { filter: grayscale(1); opacity: .45; }
+  /* C: minimal */
+  .min { text-align: center; color: var(--text-2); } .min h2 { margin: 0 0 6px; font-size: 16px; color: var(--text); } .min a { color: var(--accent-text); }
+  .spin-lg { width: 28px; height: 28px; margin: 0 auto 10px; border-radius: 50%; border: 3px solid var(--surface-3); border-top-color: var(--accent-text); animation: rot .8s linear infinite; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0"><b>Trống</b>: lần đầu mở Lab. <b>Đang tải</b>: bộ mô phỏng (WebAssembly) đang khởi động. <b>Lỗi</b>: bộ mô phỏng không khởi động được. Nút Chạy luôn nói lý do khi bị khoá; thiết kế của người dùng không bao giờ mất.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, ic = A.ic;
+const mini = (kinds) => kinds.map((k, i) => `${i ? "<i></i>" : ""}<span style="--k:${A.cat(k)}">${SDArt.svg(k, 18, 13)}</span>`).join("");
+function emptyA() {
+  return `<div class="center"><div class="empty">
+    <div class="hero"><svg class="link" width="360" height="112" aria-hidden="true"><path d="M92 56 H150 M214 56 H268" stroke="var(--border-strong)" stroke-width="1.6" stroke-dasharray="4 5"/></svg>
+      <span class="a" style="left:12px;--k:var(--c-entry)">${SDArt.svg("client", 80, 60)}</span><span class="a" style="left:142px;--k:var(--c-compute)">${SDArt.svg("web-server", 80, 60)}</span><span class="a" style="left:268px;--k:var(--c-data)">${SDArt.svg("postgres", 80, 60)}</span></div>
+    <h2>Dựng hệ thống đầu tiên của bạn</h2><p>Chọn một mẫu để chạy thử ngay trong 1 phút, hoặc bắt đầu từ trang trống và kéo thành phần từ bảng bên trái.</p>
+    <div class="tpl">
+      <div class="c rec"><span class="tag">Gợi ý</span><div class="mini">${mini(["client", "lb", "web-server", "postgres"])}</div><b>Web 3 tầng</b><small>5 thành phần · 430 $/tháng · chạy được ngay</small></div>
+      <div class="c"><div class="mini">${mini(["client", "web-server", "postgres"])}</div><b>Cửa hàng nhỏ</b><small>3 thành phần · thử thách đầu tiên</small></div>
+      <div class="c off"><div class="mini">${mini(["client", "web-server", "redis", "postgres"])}</div><b>Thêm bộ nhớ đệm</b><small>Sắp có · cần Redis</small></div>
+    </div>
+    <div class="kb">hoặc bấm <kbd>⌘K</kbd> để tìm thành phần · <kbd>?</kbd> để xem phím tắt</div></div></div>`;
+}
+function loadingA() {
+  return `<div class="center"><div class="boot" role="status"><h3>Đang khởi động bộ mô phỏng</h3><p>Lần đầu mất vài giây; những lần sau mở ngay.</p><div class="track"><span></span></div>
+    <div class="steps"><div class="d">${ic("ok", 14)} Tải lõi mô phỏng</div><div class="d">${ic("ok", 14)} Đọc tham số thế giới</div><div><span class="spin"></span> Chuẩn bị khung vẽ</div><div class="w">${ic("clock", 14)} Mở thiết kế gần nhất</div></div></div></div>`;
+}
+function errorA() {
+  return `<div class="center"><div class="err" role="alert"><div class="ih"><span class="ib">${ic("alert", 18)}</span><div><h3>Không khởi động được bộ mô phỏng</h3><p>Trình duyệt chặn tải tệp mô phỏng. Thường do mất mạng hoặc tiện ích chặn nội dung.</p></div></div>
+    <div class="safe">${ic("ok", 14)} Thiết kế “Cửa hàng trực tuyến” vẫn an toàn trên máy của bạn.</div>
+    <div class="btns"><button class="btn pri">${ic("retry", 14)} Thử lại</button><button class="btn">Sửa thiết kế khi chưa chạy được</button></div>
+    <details><summary>Chi tiết kỹ thuật</summary><code>engine.wasm · 404 · sim-core 0.1.0</code></details></div></div>`;
+}
+function paletteSkeleton() {
+  return `<aside class="palette" aria-label="Thành phần" aria-busy="true"><div class="ph"><div class="sk" style="height:34px"></div></div>${Array.from({ length: 6 }, () => `<div class="skrow"><div class="sk t"></div><div><div class="sk l1"></div><div class="sk l2"></div></div></div>`).join("")}</aside>`;
+}
+function draw(s) {
+  const app = document.getElementById("app");
+  const st = s.mode;
+  document.documentElement.dataset.mode = st === "empty" ? "editing" : st;
+  let pal = A.palette(), cv = "", after = null;
+  const top = A.topbar({ name: st === "empty" ? "Thiết kế chưa đặt tên" : "Cửa hàng trực tuyến", saved: st === "empty" ? "Chưa có gì để lưu" : st === "loading" ? "Đang mở…" : "Đã lưu trên máy", problems: st === "empty" ? 1 : 0, runDisabled: st !== "editing" });
+  if (s.option === "a") {
+    if (st === "empty") cv = emptyA();
+    if (st === "loading") { pal = paletteSkeleton(); cv = loadingA(); }
+    if (st === "error") cv = errorA();
+  } else if (s.option === "b") {
+    if (st === "empty") {
+      cv = `<div class="chipc">${ic("info", 14)} Bước 1/3 · Kéo <b>Người dùng</b> vào ô đầu tiên</div>
+        <div class="ghost" style="left:22%;top:34%"><span class="num">1</span><div><b>Người dùng</b>Nơi yêu cầu xuất phát</div></div>
+        <div class="garrow" style="left:calc(22% + 176px);top:calc(34% + 74px);width:70px"></div>
+        <div class="ghost n2" style="left:calc(22% + 250px);top:34%"><span class="num">2</span><div><b>Máy chủ web</b>Trả lời yêu cầu</div></div>
+        <div class="garrow" style="left:calc(22% + 426px);top:calc(34% + 74px);width:70px;opacity:.55"></div>
+        <div class="ghost n2" style="left:calc(22% + 500px);top:34%"><span class="num">3</span><div><b>Chạy mô phỏng</b>⌘↵</div></div>`;
+      after = () => { const it = [...app.querySelectorAll(".pitem")].find((x) => x.textContent.includes("Người dùng")); it && it.classList.add("pulse"); };
+    }
+    if (st === "loading") cv = `<div class="topline"><span></span></div><div class="chipc"><span class="spin" style="width:12px;height:12px;border-radius:50%;border:2px solid var(--surface-3);border-top-color:var(--accent-text);animation:rot .8s linear infinite;display:inline-block"></span> Đang khởi động bộ mô phỏng · 62%</div>`;
+    if (st === "error") cv = `<div class="banner" role="alert">${ic("alert", 16)}<span><b>Bộ mô phỏng chưa chạy được.</b> Bạn vẫn sửa được thiết kế; Chạy sẽ mở lại khi kết nối được.</span><div class="btns"><button class="btn">${ic("retry", 14)} Thử lại</button></div></div>`;
+  } else {
+    if (st === "empty") cv = `<div class="center"><div class="min"><h2>Chưa có gì ở đây</h2>Kéo một thành phần vào khung vẽ, hoặc bấm ⌘K để tìm.</div></div>`;
+    if (st === "loading") cv = `<div class="center"><div class="min"><div class="spin-lg"></div>Đang khởi động bộ mô phỏng…</div></div>`;
+    if (st === "error") cv = `<div class="center"><div class="min"><h2 style="color:var(--over)">Không khởi động được bộ mô phỏng</h2>Hãy kiểm tra kết nối rồi <a href="#">thử lại</a>.</div></div>`;
+  }
+  app.innerHTML = top + pal + `<div class="cv ${(s.option === "b" && st !== "empty") || (s.option === "a" && st === "error") ? "greyed" : ""}" id="cv">${cv}${A.zoom("right:16px;bottom:14px", "100%")}</div><div></div>` + A.playback +
+    `<div class="status"><span class="${st === "error" ? "" : "dotok"}" style="${st === "error" ? "color:var(--over)" : ""}">${st === "loading" ? "Bộ mô phỏng đang khởi động…" : st === "error" ? "Bộ mô phỏng lỗi" : "Bộ mô phỏng 0.1.0 sẵn sàng"}</span><span>${st === "empty" ? "0 thành phần" : "5 thành phần · 5 kết nối"}</span><div class="r"><span class="num">${st === "empty" ? "0 $/tháng" : "430 $/tháng"}</span><span>Lưu tự động trên máy</span></div></div>`;
+  if ((s.option === "b" && st !== "empty") || (s.option === "a" && st === "error")) A.drawCanvas(document.getElementById("cv"), "editing", { extra: {} });
+  after && after();
+}
+Demo.init({
+  id: "09", title: "09 · Trạng thái trống, đang tải, lỗi", modeLabel: "Trạng thái",
+  modes: [{ id: "empty", label: "Trống" }, { id: "loading", label: "Đang tải" }, { id: "error", label: "Lỗi" }],
+  options: [
+    { id: "a", name: "Minh hoạ + mẫu bắt đầu", recommended: true,
+      summary: "Khung vẽ trống mở bằng hình vẽ của chính sản phẩm, một câu mời và ba mẫu bắt đầu (mẫu chạy được ngay được đánh dấu). Đang tải là khung xương đúng hình bảng thành phần cộng một thẻ tiến độ có từng bước. Lỗi nói nguyên nhân, khẳng định thiết kế an toàn, có Thử lại và chi tiết kỹ thuật thu gọn.",
+      pros: ["Một phút đầu kết thúc bằng một lần chạy thật (nút mẫu)", "Đang tải cho biết còn bao lâu, không chỉ là vòng xoay", "Lỗi không làm người dùng sợ mất bài"],
+      cons: ["Cần duy trì các thiết kế mẫu", "Thẻ lỗi che khung vẽ (có nút sửa thiết kế khi chưa chạy được)"] },
+    { id: "b", name: "Gợi ý ngay trên khung vẽ",
+      summary: "Khung vẽ trống hiện các ô nét đứt đánh số chỉ chỗ đặt thành phần, mục tương ứng trong bảng sáng lên. Đang tải là một vạch chạy dưới thanh trên; lỗi là một dải đỏ trên khung vẽ, sơ đồ mờ nhưng vẫn sửa được.",
+      pros: ["Học bằng làm, không có chữ dài", "Lỗi không chặn việc sửa thiết kế"],
+      cons: ["Chỉ dẫn được một con đường duy nhất", "Ô nét đứt có thể bị nhầm là thành phần thật"] },
+    { id: "c", name: "Tối giản",
+      summary: "Một dòng chữ ở giữa cho mỗi trạng thái, vòng xoay khi tải, liên kết thử lại khi lỗi. Gần với bản hiện tại.",
+      pros: ["Ít việc nhất", "Không gây xao nhãng cho người đã quen"],
+      cons: ["Đây chính là lý do bản hiện tại trông \"chưa xong\"", "Không giúp người mới bắt đầu"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>
