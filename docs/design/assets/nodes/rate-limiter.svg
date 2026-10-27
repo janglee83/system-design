@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Giới hạn tốc độ" data-kind="rate-limiter" data-category="entry">
+  <title>Giới hạn tốc độ</title>
+  <path d="M12 11h40L38 26v9l-12 5V26z" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="18" cy="4" r="1.6" fill="currentColor"/>
+  <circle cx="25" cy="6.5" r="1.6" fill="currentColor"/>
+  <circle cx="32" cy="3.5" r="1.6" fill="currentColor"/>
+  <circle cx="39" cy="6" r="1.6" fill="currentColor"/>
+  <circle cx="46" cy="4" r="1.6" fill="currentColor"/>
+  <circle cx="32" cy="45" r="1.9" fill="currentColor"/>
+</svg>

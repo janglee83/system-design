@@ -1,0 +1,189 @@
+{
+  "viewBox": "0 0 64 48",
+  "categories": [
+    {
+      "id": "entry",
+      "token": "--sd-cat-entry",
+      "labelVi": "Lối vào"
+    },
+    {
+      "id": "compute",
+      "token": "--sd-cat-compute",
+      "labelVi": "Tính toán"
+    },
+    {
+      "id": "data",
+      "token": "--sd-cat-data",
+      "labelVi": "Dữ liệu"
+    },
+    {
+      "id": "cache",
+      "token": "--sd-cat-cache",
+      "labelVi": "Bộ nhớ đệm"
+    },
+    {
+      "id": "msg",
+      "token": "--sd-cat-msg",
+      "labelVi": "Tin nhắn"
+    },
+    {
+      "id": "storage",
+      "token": "--sd-cat-storage",
+      "labelVi": "Lưu trữ tệp"
+    },
+    {
+      "id": "external",
+      "token": "--sd-cat-external",
+      "labelVi": "Bên ngoài"
+    }
+  ],
+  "kinds": [
+    {
+      "kind": "client",
+      "file": "client.svg",
+      "category": "entry",
+      "status": "ready",
+      "labelVi": "Người dùng"
+    },
+    {
+      "kind": "mobile",
+      "file": "mobile.svg",
+      "category": "entry",
+      "status": "later",
+      "labelVi": "Ứng dụng di động"
+    },
+    {
+      "kind": "dns",
+      "file": "dns.svg",
+      "category": "entry",
+      "status": "later",
+      "labelVi": "DNS"
+    },
+    {
+      "kind": "cdn",
+      "file": "cdn.svg",
+      "category": "entry",
+      "status": "planned",
+      "labelVi": "CDN"
+    },
+    {
+      "kind": "api-gateway",
+      "file": "api-gateway.svg",
+      "category": "entry",
+      "status": "planned",
+      "labelVi": "Cổng API"
+    },
+    {
+      "kind": "lb",
+      "file": "lb.svg",
+      "category": "entry",
+      "status": "ready",
+      "labelVi": "Cân bằng tải"
+    },
+    {
+      "kind": "rate-limiter",
+      "file": "rate-limiter.svg",
+      "category": "entry",
+      "status": "later",
+      "labelVi": "Giới hạn tốc độ"
+    },
+    {
+      "kind": "web-server",
+      "file": "web-server.svg",
+      "category": "compute",
+      "status": "ready",
+      "labelVi": "Máy chủ web"
+    },
+    {
+      "kind": "worker",
+      "file": "worker.svg",
+      "category": "compute",
+      "status": "planned",
+      "labelVi": "Worker nền"
+    },
+    {
+      "kind": "scheduler",
+      "file": "scheduler.svg",
+      "category": "compute",
+      "status": "later",
+      "labelVi": "Lịch chạy (cron)"
+    },
+    {
+      "kind": "postgres",
+      "file": "postgres.svg",
+      "category": "data",
+      "status": "ready",
+      "labelVi": "PostgreSQL"
+    },
+    {
+      "kind": "read-replica",
+      "file": "read-replica.svg",
+      "category": "data",
+      "status": "later",
+      "labelVi": "Bản sao đọc"
+    },
+    {
+      "kind": "kv-store",
+      "file": "kv-store.svg",
+      "category": "data",
+      "status": "planned",
+      "labelVi": "Kho khoá–giá trị"
+    },
+    {
+      "kind": "search",
+      "file": "search.svg",
+      "category": "data",
+      "status": "later",
+      "labelVi": "Chỉ mục tìm kiếm"
+    },
+    {
+      "kind": "redis",
+      "file": "redis.svg",
+      "category": "cache",
+      "status": "planned",
+      "labelVi": "Redis (bộ nhớ đệm)"
+    },
+    {
+      "kind": "memcached",
+      "file": "memcached.svg",
+      "category": "cache",
+      "status": "planned",
+      "labelVi": "Memcached (bộ nhớ đệm)"
+    },
+    {
+      "kind": "queue",
+      "file": "queue.svg",
+      "category": "msg",
+      "status": "planned",
+      "labelVi": "Hàng đợi"
+    },
+    {
+      "kind": "rabbitmq",
+      "file": "rabbitmq.svg",
+      "category": "msg",
+      "status": "later",
+      "labelVi": "Hàng đợi kiểu RabbitMQ"
+    },
+    {
+      "kind": "stream",
+      "file": "stream.svg",
+      "category": "msg",
+      "status": "later",
+      "labelVi": "Luồng sự kiện kiểu Kafka"
+    },
+    {
+      "kind": "object-storage",
+      "file": "object-storage.svg",
+      "category": "storage",
+      "status": "planned",
+      "labelVi": "Kho tệp (object storage)"
+    },
+    {
+      "kind": "third-party",
+      "file": "third-party.svg",
+      "category": "external",
+      "status": "later",
+      "labelVi": "API bên ngoài"
+    }
+  ]
+}

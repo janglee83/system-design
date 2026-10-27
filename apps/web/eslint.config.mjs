@@ -1,0 +1,78 @@
+import { FlatCompat } from "@eslint/eslintrc";
+import i18next from "eslint-plugin-i18next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.dirname(fileURLToPath(import.meta.url));
+const compat = new FlatCompat({ baseDirectory: root });
+
+// User-facing attributes; every other attribute is technical (class names, ids, roles…).
+// The plugin anchors string patterns itself (^…$) and uses RegExp objects as given.
+const TEXT_ATTRIBUTES = [
+  "aria-label",
+  "aria-description",
+  "aria-roledescription",
+  "aria-valuetext",
+  "aria-placeholder",
+  "title",
+  "placeholder",
+  "alt",
+  "label",
+];
+
+const config = [
+  { ignores: [".next/**", "playwright-report/**", "test-results/**", "blob-report/**", "next-env.d.ts"] },
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["app/**/*.tsx", "src/**/*.tsx"],
+    ignores: ["**/*.test.tsx"],
+    plugins: { i18next },
+    rules: {
+      "i18next/no-literal-string": [
+        "error",
+        {
+          mode: "jsx-only",
+          "jsx-attributes": { include: TEXT_ATTRIBUTES, exclude: [".*"] },
+          "jsx-components": { include: [], exclude: [] },
+          // Pure punctuation/symbols/digits and ALL-CAPS tokens (HTTP, VI, EN) are not prose.
+          // RegExp objects, because the plugin compiles strings without the `u` flag.
+          words: { exclude: [/^[\s\d\p{P}\p{S}]+$/u, /^[A-Z0-9_-]+$/] },
+        },
+      ],
+    },
+  },
+  {
+    // Type-aware rules. An unhandled promise hides engine and storage failures.
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: {
+          // Virtual files linted by src/i18n/lint-rule.test.ts (they do not exist on disk).
+          allowDefaultProject: [
+            "src/lab/Fixture.tsx",
+            "src/lab/Fixture.test.tsx",
+            "src/lab/model/x.ts",
+            "src/lab/model/x.test.ts",
+            "src/test/x.ts",
+            "app/x.tsx",
+          ],
+        },
+        tsconfigRootDir: root,
+      },
+    },
+    rules: { "@typescript-eslint/no-floating-promises": "error" },
+  },
+  {
+    // The Node build of the engine is for tests only; the app uses @sd/sim/web in the worker.
+    files: ["**/*.{ts,tsx,mjs}"],
+    ignores: ["**/*.test.{ts,tsx}", "src/test/**", "e2e/**", "scripts/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { paths: [{ name: "@sd/sim/node", message: "Tests only. Runtime code uses @sd/sim/web inside the engine worker." }] },
+      ],
+    },
+  },
+];
+
+export default config;

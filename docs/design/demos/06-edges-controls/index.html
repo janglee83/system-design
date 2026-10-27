@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 · Đường nối và điều khiển khung vẽ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  .app.L-a { grid-template-columns: 248px minmax(0, 1fr) 0; }
+  [data-mode="running"] .app.L-a { grid-template-columns: 64px minmax(0, 1fr) 0; }
+  .tip { position: absolute; z-index: 5; transform: translate(-50%, -100%); padding: 6px 10px; border-radius: var(--r-sm); font-size: 12.5px; font-weight: 500; white-space: nowrap; box-shadow: var(--shadow-2); }
+  .tip.ok { background: var(--accent); color: var(--on-accent); }
+  .tip.no { background: var(--text); color: var(--bg); }
+  .tip::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; margin-left: -5px; background: inherit; transform: rotate(45deg); }
+  .cluster { position: absolute; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2); }
+  .cluster .u-btn { height: 30px; min-width: 30px; padding: 0 8px; }
+  .cluster .z { font: 500 12px var(--font-mono); color: var(--text-2); padding: 0 6px; }
+  .cluster .sep { height: 18px; margin: 0 2px; }
+  .cluster .u-btn.on { background: var(--accent-soft); color: var(--accent-text); }
+  .pop { position: absolute; z-index: 6; width: 250px; padding: 12px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-3); font-size: 13px; }
+  .pop h6 { margin: 0 0 8px; font-size: 12px; color: var(--text-3); font-weight: 600; }
+  .lg { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; padding: 3px 0; color: var(--text-2); }
+  .lg svg { width: 30px; height: 8px; } .lg small { font: 500 11.5px var(--font-mono); color: var(--text-3); }
+  .lg.off { opacity: .45; }
+  .stack { position: absolute; display: flex; flex-direction: column; gap: 2px; padding: 3px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-1); }
+  .stack .u-btn { height: 30px; width: 30px; padding: 0; }
+  .stack .z { font: 500 11px var(--font-mono); color: var(--text-2); text-align: center; padding: 2px 0; }
+  .status .lgs { display: flex; gap: 14px; align-items: center; } .status .lgs svg { width: 22px; height: 6px; vertical-align: middle; margin-right: 4px; }
+  .mini { position: absolute; width: 168px; height: 104px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2); overflow: hidden; }
+  .mini i { position: absolute; height: 9px; border-radius: 2px; background: color-mix(in srgb, var(--text-3) 45%, transparent); }
+  .mini .vp { position: absolute; border: 1.5px solid var(--accent-text); border-radius: 3px; background: color-mix(in srgb, var(--accent-text) 6%, transparent); }
+  .card { position: absolute; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-1); font-size: 13px; min-width: 210px; }
+  .card h6 { margin: 0 0 6px; font-size: 12px; color: var(--text-3); font-weight: 600; display: flex; justify-content: space-between; }
+  .hint-bar { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12.5px; color: var(--text-2); box-shadow: var(--shadow-1); white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+  .hint-bar kbd { font: 500 11px var(--font-mono); padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0"><b>Đang nối</b>: kéo từ cổng ra của Máy chủ web 1; chỗ thả hợp lệ (PostgreSQL) sáng lên kèm kiểu kết nối, chỗ không hợp lệ (Người dùng) mờ đi và nói lý do <i>trước khi</i> thả. <b>Đã nối</b>: một đường đang chọn. <b>Đang chạy</b>: đường mang lưu lượng.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, ic = A.ic, D = SDData;
+const sw = (k) => {
+  const dash = { http: "", db: 'stroke-dasharray="7 4"', cache: 'stroke-dasharray="2 4"', msg: 'stroke-dasharray="9 4 2 4"' }[k];
+  return `<svg viewBox="0 0 30 8"><line x1="0" y1="4" x2="30" y2="4" stroke="var(--e-${k})" stroke-width="2" ${dash}/></svg>`;
+};
+const LEG = [["http", "HTTP", 3], ["db", "Cơ sở dữ liệu", 2], ["cache", "Bộ nhớ đệm", 0], ["msg", "Tin nhắn", 0]];
+function edgesFor(mode) {
+  const base = D.design.edges.map((e) => Object.assign({}, e, { w: e.rate === "0/s" ? 0 : 1 }));
+  if (mode === "connect") return base.filter((e) => !(e.from === "web-1" && e.to === "pg-1"));
+  if (mode === "editing") return base.map((e) => (e.from === "web-1" && e.to === "pg-1" ? Object.assign({}, e, { sel: true }) : e));
+  return base;
+}
+function overlay(s, geo, c) {
+  let h = "";
+  if (s.mode === "connect") {
+    const b = geo.port("pg-1", "in"), cl = geo.pos["client-1"];
+    h += `<div class="tip ok" style="left:${b.x + 86}px;top:${b.y - 52}px">Thả để nối · Cơ sở dữ liệu</div>`;
+    h += `<div class="tip no" style="left:${cl.x + 86}px;top:${cl.y - 12}px">Người dùng không nhận kết nối đi vào</div>`;
+  }
+  if (s.mode === "editing" && s.option !== "b") {
+    const a = geo.port("web-1", "out"), b = geo.port("pg-1", "in");
+    const pg = geo.pos["pg-1"];
+    h += `<div class="pop" style="left:${pg.x - 24}px;top:${pg.y + 168}px;width:220px"><h6>Kết nối đang chọn</h6><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Máy chủ web 1 → PostgreSQL 1</span></div><div class="lg">${sw("db")}<span>Cơ sở dữ liệu</span><small>0,8 ms</small></div><div style="display:flex;gap:6px;margin-top:8px"><button class="u-btn outline" style="height:28px">Đảo chiều</button><button class="u-btn outline" style="height:28px;color:var(--over)">Xoá</button></div></div>`;
+  }
+  c.insertAdjacentHTML("beforeend", h);
+}
+function controls(s) {
+  if (s.option === "a") {
+    const legendOpen = s.mode === "connect";
+    return `<div class="cluster" style="right:16px;bottom:14px"><button class="u-btn" aria-label="Thu nhỏ">${ic("minus")}</button><span class="z">75%</span><button class="u-btn" aria-label="Phóng to">${ic("plus")}</button><button class="u-btn" aria-label="Vừa màn hình">${ic("fit")}</button><span class="sep"></span><button class="u-btn" aria-label="Sắp xếp gọn">${ic("layout")}</button><button class="u-btn" aria-label="Bám lưới">${ic("grid")}</button><span class="sep"></span><button class="u-btn ${legendOpen ? "on" : ""}" aria-expanded="${legendOpen}">${ic("info", 14)} Chú giải</button></div>
+      ${legendOpen ? `<div class="pop" style="right:16px;bottom:60px"><h6>Kiểu kết nối trong thiết kế</h6>${LEG.map(([k, l, n]) => `<div class="lg ${n ? "" : "off"}">${sw(k)}<span>${l}</span><small>${n ? n + " đường" : "chưa dùng"}</small></div>`).join("")}</div>` : ""}
+      ${s.mode === "connect" ? `<div class="hint-bar">${ic("route", 14)} Thả vào một thành phần để nối · <kbd>Esc</kbd> để huỷ · hoặc bấm <kbd>C</kbd> để chọn từ danh sách</div>` : ""}`;
+  }
+  if (s.option === "b") {
+    return `<div class="stack" style="left:16px;bottom:14px"><button class="u-btn" aria-label="Phóng to">${ic("plus")}</button><span class="z">75%</span><button class="u-btn" aria-label="Thu nhỏ">${ic("minus")}</button><button class="u-btn" aria-label="Vừa màn hình">${ic("fit")}</button><button class="u-btn" aria-label="Sắp xếp gọn">${ic("layout")}</button></div>`;
+  }
+  return `<div class="card" style="left:16px;top:14px"><h6>Chú giải <span>${ic("chev", 14)}</span></h6>${LEG.map(([k, l, n]) => `<div class="lg ${n ? "" : "off"}">${sw(k)}<span>${l}</span><small>${n || "—"}</small></div>`).join("")}${s.mode === "running" ? `<div class="hint" style="font-size:12px;color:var(--text-3);margin-top:6px">Độ dày đường = số yêu cầu mỗi giây</div>` : ""}</div>
+    <div class="mini" style="right:16px;bottom:60px"><i style="left:14px;top:46px;width:22px"></i><i style="left:48px;top:46px;width:22px"></i><i style="left:84px;top:28px;width:22px"></i><i style="left:84px;top:64px;width:22px"></i><i style="left:120px;top:46px;width:22px"></i><span class="vp" style="left:8px;top:16px;width:148px;height:72px"></span></div>
+    <div class="cluster" style="right:16px;bottom:14px"><button class="u-btn" aria-label="Thu nhỏ">${ic("minus")}</button><span class="z">75%</span><button class="u-btn" aria-label="Phóng to">${ic("plus")}</button><button class="u-btn" aria-label="Vừa màn hình">${ic("fit")}</button></div>`;
+}
+function draw(s) {
+  const running = s.mode === "running";
+  document.documentElement.dataset.mode = s.mode;
+  const app = document.getElementById("app");
+  const status = s.option === "b"
+    ? `<div class="status"><span class="dotok">Bộ mô phỏng 0.1.0 sẵn sàng</span><span class="lgs">${LEG.filter((x) => x[2]).map(([k, l]) => `<span>${sw(k)}${l}</span>`).join("")}</span><div class="r"><span class="num">430 $/tháng</span></div></div>`
+    : A.status();
+  app.innerHTML = A.topbar() + A.palette() + `<div class="cv" id="cv">${controls(s)}</div><div></div>` + A.playback + status;
+  const extra = s.mode === "connect" ? { "web-1": { target: "source", selected: true }, "pg-1": { target: "valid" }, "client-1": { target: "invalid" } } : {};
+  const opts = { extra, edges: edgesFor(s.mode), route: s.option === "b" ? "ortho" : "bezier", badges: s.option === "b", weights: s.option === "c", rates: s.option !== "c" };
+  if (s.mode === "connect") opts.ghost = { from: "web-1", kind: "db", to: null };
+  const cv = document.getElementById("cv");
+  // ghost end needs geometry: draw once, then redraw with the target point
+  let c = A.drawCanvas(cv, running ? "running" : "editing", Object.assign({}, opts, { ghost: undefined }));
+  if (s.mode === "connect") {
+    const b = c.geo.port("pg-1", "in");
+    cv.querySelector(".fit").remove();
+    c = A.drawCanvas(cv, "editing", Object.assign({}, opts, { ghost: { from: "web-1", kind: "db", to: { x: b.x - 6, y: b.y + 2 } } }));
+  }
+  overlay(s, c.geo, c);
+}
+Demo.init({
+  id: "06", title: "06 · Đường nối, cổng, chú giải, điều khiển",
+  modes: [{ id: "connect", label: "Đang nối" }, { id: "editing", label: "Đã nối" }, { id: "running", label: "Đang chạy" }],
+  options: [
+    { id: "a", name: "Đường cong + một cụm điều khiển", recommended: true,
+      summary: "Đường cong mềm, kiểu kết nối phân biệt bằng màu VÀ kiểu nét (liền, gạch, chấm), mũi tên nhỏ. Mọi điều khiển khung vẽ (thu phóng, vừa màn, sắp xếp, bám lưới, chú giải) gom vào một cụm duy nhất ở góc phải dưới; chú giải là một nút mở bảng nhỏ đếm số đường mỗi kiểu. Khi nối, chỗ thả hợp lệ sáng lên và nói kiểu kết nối, chỗ không hợp lệ mờ đi và nói lý do trước khi thả.",
+      pros: ["Thay năm \"hòn đảo\" nổi rời rạc của bản hiện tại bằng một cụm", "Báo lỗi nối trước khi thả, không phải sau", "Không dựa vào màu: mỗi kiểu có nét riêng"],
+      cons: ["Chú giải ẩn sau một nút (mặc định mở cho người mới)", "Đường cong có thể chồng nhau khi sơ đồ rất dày"] },
+    { id: "b", name: "Đường vuông góc có nhãn kiểu",
+      summary: "Đường đi ngang–dọc với góc bo, có nhãn nhỏ ở giữa (HTTP, CSDL). Chú giải nằm ở dải trạng thái dưới đáy; nút thu phóng xếp dọc bên trái.",
+      pros: ["Sơ đồ ngăn nắp như bản vẽ kỹ thuật", "Nhãn nói thẳng kiểu kết nối, không cần chú giải"],
+      cons: ["Nhãn trên mọi đường làm sơ đồ ồn", "Đường vuông góc dễ trùng nhau khi nhiều nhánh"] },
+    { id: "c", name: "Độ dày theo lưu lượng + bản đồ nhỏ",
+      summary: "Khi chạy, độ dày đường tỉ lệ với số yêu cầu mỗi giây (đọc được dòng chảy chính ngay lập tức). Chú giải là thẻ mở sẵn ở góc trái trên; góc phải có bản đồ nhỏ và thu phóng.",
+      pros: ["Thấy ngay đường nào gánh nhiều nhất", "Bản đồ nhỏ có ích với thiết kế lớn"],
+      cons: ["Thẻ chú giải và bản đồ chiếm chỗ cố định", "Độ dày dễ nhầm với \"quan trọng hơn\" lúc thiết kế"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>

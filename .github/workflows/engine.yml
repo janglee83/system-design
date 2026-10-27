@@ -40,9 +40,13 @@ on:
       - "dev"
       - ".github/workflows/engine.yml"
 
+# The jobs only read the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: engine-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -53,8 +57,16 @@ jobs:
       - uses: actions/checkout@v4
 
       # The same container developers use locally; every command runs through ./dev.
-      - name: Build dev image
-        run: docker compose build dev
+      # Cached layers (shared with the web workflow); the image includes Chromium since R4.
+      - uses: docker/setup-buildx-action@v3
+      - name: Build dev image (layer cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: system-design-dev:2
+          cache-from: type=gha,scope=dev-image
+          cache-to: type=gha,mode=max,scope=dev-image
 
       - name: Install JS dependencies
         run: ./dev pnpm install --frozen-lockfile

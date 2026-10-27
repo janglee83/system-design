@@ -17,5 +17,13 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && npm install -g pnpm@10
 
 ENV npm_config_store_dir=/pnpm-store \
-    CARGO_TERM_COLOR=always
+    CARGO_TERM_COLOR=always \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Playwright's Chromium and its system libraries, for the e2e tests (plan ruling R4). The
+# version must equal @playwright/test in apps/web/package.json (checked by
+# apps/web/src/test/toolchain.test.ts).
+RUN npx -y playwright@1.63.0 install --with-deps chromium \
+ && rm -rf /root/.npm /var/lib/apt/lists/*
 WORKDIR /work

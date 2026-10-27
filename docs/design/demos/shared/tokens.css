@@ -1,0 +1,153 @@
+/* System Design Lab, design-direction tokens for the demos.
+   Three palettes (A/B/C) × light/dark. Demo 02 chooses the palette; demos 01 and 03 follow it.
+   Everything here is original to this project. */
+
+:root,
+[data-palette="a"] {
+  --font-sans: "Be Vietnam Pro", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px;
+}
+[data-palette="b"] {
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 10px;
+}
+[data-palette="c"] {
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --r-xs: 6px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
+}
+
+/* ---------- A · Giấy & Mực (paper and ink, deep teal) ---------- */
+:root,
+[data-palette="a"][data-theme="light"] {
+  color-scheme: light;
+  --bg: #F3F1EB; --canvas: #F9F7F2; --grid: #D8D2C4;
+  --surface: #FFFFFF; --surface-2: #F4F1EA; --surface-3: #EAE6DC;
+  --border: #E1DCD0; --border-strong: #8A8374;
+  --text: #191C20; --text-2: #474C54; --text-3: #61666E;
+  --accent: #0B6870; --accent-hover: #08545B; --accent-soft: #DDEEEE; --on-accent: #FFFFFF; --accent-text: #0B6870;
+  --ok: #1D7849; --ok-soft: #DDF1E5;
+  --busy: #9A5A00; --busy-line: #C47A0A; --busy-soft: #FBEED5;
+  --over: #BF3328; --over-soft: #FBE2DE;
+  --down: #5E636D; --down-soft: #ECECEE;
+  --k-client: #4F57C9; --k-lb: #0B7671; --k-web: #2C66C7; --k-pg: #7542B3;
+  --e-http: #2F5FD0; --e-db: #7F44C4; --e-cache: #0B8460; --e-msg: #B8387D;
+  --shadow-1: 0 1px 2px rgb(25 28 32 / .06), 0 1px 1px rgb(25 28 32 / .04);
+  --shadow-2: 0 6px 16px rgb(25 28 32 / .08), 0 2px 4px rgb(25 28 32 / .05);
+  --shadow-3: 0 18px 40px rgb(25 28 32 / .16);
+}
+[data-palette="a"][data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0E1215; --canvas: #0B0F12; --grid: #1E262D;
+  --surface: #151B20; --surface-2: #1B2329; --surface-3: #232D35;
+  --border: #283239; --border-strong: #5F6C78;
+  --text: #E8ECEF; --text-2: #B2BCC5; --text-3: #8E99A4;
+  --accent: #3FC3CB; --accent-hover: #66D2D8; --accent-soft: #0F3438; --on-accent: #041A1C; --accent-text: #5BD0D7;
+  --ok: #4CC68B; --ok-soft: #12301F;
+  --busy: #F2AA3E; --busy-line: #F2AA3E; --busy-soft: #34270F;
+  --over: #FF6F62; --over-soft: #3B1916;
+  --down: #848D98; --down-soft: #1D232A;
+  --k-client: #9AA2FF; --k-lb: #45CFC6; --k-web: #79A6FF; --k-pg: #BE97F6;
+  --e-http: #7C9DFF; --e-db: #BB94F5; --e-cache: #45CC9E; --e-msg: #F07FBB;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / .5);
+  --shadow-2: 0 8px 20px rgb(0 0 0 / .45);
+  --shadow-3: 0 18px 44px rgb(0 0 0 / .6);
+}
+
+/* ---------- B · Than chì & Chàm (graphite and indigo, technical) ---------- */
+[data-palette="b"][data-theme="light"] {
+  color-scheme: light;
+  --bg: #EEF0F3; --canvas: #F7F8FA; --grid: #CFD4DC;
+  --surface: #FFFFFF; --surface-2: #F2F4F7; --surface-3: #E6E9EE;
+  --border: #D9DDE4; --border-strong: #7D8592;
+  --text: #15181D; --text-2: #424852; --text-3: #5D6470;
+  --accent: #4B3FCF; --accent-hover: #3B30B0; --accent-soft: #E7E5FB; --on-accent: #FFFFFF; --accent-text: #4B3FCF;
+  --ok: #19774A; --ok-soft: #DDF0E5;
+  --busy: #965700; --busy-line: #C27908; --busy-soft: #F9EDD6;
+  --over: #BE2F2F; --over-soft: #F9E0E0;
+  --down: #5D636E; --down-soft: #EBECEF;
+  --k-client: #2F6BBE; --k-lb: #0E7A70; --k-web: #4B3FCF; --k-pg: #A2396E;
+  --e-http: #2F6BBE; --e-db: #A2396E; --e-cache: #0E7A70; --e-msg: #B35C00;
+  --shadow-1: 0 1px 0 rgb(21 24 29 / .06);
+  --shadow-2: 0 4px 10px rgb(21 24 29 / .08), 0 0 0 1px rgb(21 24 29 / .03);
+  --shadow-3: 0 14px 32px rgb(21 24 29 / .16);
+}
+[data-palette="b"][data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111317; --canvas: #0D0F12; --grid: #22262D;
+  --surface: #181B20; --surface-2: #1E2228; --surface-3: #262B32;
+  --border: #2B3038; --border-strong: #646C78;
+  --text: #ECEEF1; --text-2: #B6BCC6; --text-3: #949BA6;
+  --accent: #9C93FF; --accent-hover: #B4ADFF; --accent-soft: #26224A; --on-accent: #130F33; --accent-text: #ABA4FF;
+  --ok: #50C68C; --ok-soft: #13301F;
+  --busy: #F0A93C; --busy-line: #F0A93C; --busy-soft: #33270F;
+  --over: #FF7070; --over-soft: #3A1818;
+  --down: #848B96; --down-soft: #1E2228;
+  --k-client: #7FB0FF; --k-lb: #49C9BA; --k-web: #A69EFF; --k-pg: #F08DBE;
+  --e-http: #7FB0FF; --e-db: #F08DBE; --e-cache: #49C9BA; --e-msg: #F2A85A;
+  --shadow-1: 0 1px 0 rgb(0 0 0 / .4);
+  --shadow-2: 0 6px 16px rgb(0 0 0 / .45);
+  --shadow-3: 0 16px 40px rgb(0 0 0 / .6);
+}
+
+/* ---------- C · Mực đêm & Chanh (ink navy and lime, energetic) ---------- */
+[data-palette="c"][data-theme="light"] {
+  color-scheme: light;
+  --bg: #F2F3EE; --canvas: #FAFAF7; --grid: #D3D6CB;
+  --surface: #FFFFFF; --surface-2: #F3F4EF; --surface-3: #E8EAE2;
+  --border: #DEE1D6; --border-strong: #7F8577;
+  --text: #121A2B; --text-2: #3F4859; --text-3: #5A6273;
+  --accent: #C4EE3A; --accent-hover: #B2DE22; --accent-soft: #F0FAD2; --on-accent: #121A2B; --accent-text: #4A7000;
+  --ok: #16794B; --ok-soft: #DCF1E5;
+  --busy: #985900; --busy-line: #C47B0A; --busy-soft: #FAEED6;
+  --over: #B82E26; --over-soft: #FBE1DD;
+  --down: #5E646F; --down-soft: #ECEDEF;
+  --k-client: #3D5BD9; --k-lb: #0E7C74; --k-web: #121A2B; --k-pg: #8A3FC1;
+  --e-http: #3D5BD9; --e-db: #8A3FC1; --e-cache: #0E7C74; --e-msg: #C2410C;
+  --shadow-1: 0 1px 2px rgb(18 26 43 / .07);
+  --shadow-2: 0 10px 24px rgb(18 26 43 / .08), 0 2px 6px rgb(18 26 43 / .05);
+  --shadow-3: 0 24px 48px rgb(18 26 43 / .18);
+}
+[data-palette="c"][data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0E1320; --canvas: #0A0F1A; --grid: #1E2638;
+  --surface: #151C2C; --surface-2: #1B2335; --surface-3: #242D42;
+  --border: #29324A; --border-strong: #64708C;
+  --text: #EDF0F7; --text-2: #B7BED0; --text-3: #949DB3;
+  --accent: #C8F04A; --accent-hover: #D7F772; --accent-soft: #283312; --on-accent: #0E1320; --accent-text: #CFF25E;
+  --ok: #52C98E; --ok-soft: #12301F;
+  --busy: #F2AB40; --busy-line: #F2AB40; --busy-soft: #33280F;
+  --over: #FF7468; --over-soft: #3A1A18;
+  --down: #858DA0; --down-soft: #1D2435;
+  --k-client: #8EA2FF; --k-lb: #4CD1C4; --k-web: #E2E7F2; --k-pg: #C99AF7;
+  --e-http: #8EA2FF; --e-db: #C99AF7; --e-cache: #4CD1C4; --e-msg: #FF9B5E;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / .5);
+  --shadow-2: 0 10px 24px rgb(0 0 0 / .45);
+  --shadow-3: 0 20px 48px rgb(0 0 0 / .6);
+}
+
+/* Shared type scale: 6 steps plus mono numbers. */
+:root {
+  --fs-caption: 12px; --lh-caption: 16px;
+  --fs-label: 13px; --lh-label: 18px;
+  --fs-body: 14px; --lh-body: 20px;
+  --fs-heading: 16px; --lh-heading: 22px;
+  --fs-title: 20px; --lh-title: 28px;
+  --fs-display: 28px; --lh-display: 36px;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --t-fast: 120ms; --t-panel: 200ms; --t-overlay: 320ms;
+}
+
+/* Category accents for component illustrations (all palettes; tuned for palette A).
+   entry · compute · data · cache · messaging · storage · external */
+:root {
+  --c-entry: #4F57C9; --c-compute: #2C66C7; --c-data: #7542B3; --c-cache: #0B7A6E;
+  --c-msg: #B0397A; --c-storage: #3D6C8A; --c-external: #5D6470;
+}
+[data-theme="dark"] {
+  --c-entry: #9AA2FF; --c-compute: #79A6FF; --c-data: #BE97F6; --c-cache: #45CFB8;
+  --c-msg: #F07FBB; --c-storage: #8DB8D6; --c-external: #A3ABB6;
+}
