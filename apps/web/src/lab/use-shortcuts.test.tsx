@@ -83,4 +83,17 @@ describe("useLabShortcuts", () => {
     expect(a).not.toHaveBeenCalled();
     expect(b).toHaveBeenCalledOnce();
   });
+
+  it("runs once per press (no key repeat), while typing too, but not behind an open dialog", () => {
+    dom();
+    const run = vi.fn();
+    renderHook(() => useLabShortcuts({ run }));
+    press(document.body, { key: "Enter", ctrlKey: true, repeat: true });
+    expect(run).not.toHaveBeenCalled();
+    press($("search"), { key: "Enter", ctrlKey: true });
+    expect(run).toHaveBeenCalledOnce();
+    $("closed-dialog").setAttribute("data-state", "open");
+    press(document.body, { key: "Enter", ctrlKey: true });
+    expect(run).toHaveBeenCalledOnce();
+  });
 });

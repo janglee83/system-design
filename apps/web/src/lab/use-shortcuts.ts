@@ -26,6 +26,7 @@ export function useLabShortcuts(handlers: Partial<Record<ShortcutId, () => void>
       for (const s of SHORTCUTS) {
         const h = ref.current[s.id];
         if (!h || !s.keys.some((k) => matches(e, k, mac))) continue;
+        if (s.id === "run" && (e.repeat || inDialog)) return; // one run per press, never behind a modal
         if (ALWAYS.has(s.id)) {
           // fall through: always handled
         } else if (typing || inDialog) {

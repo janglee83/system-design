@@ -99,4 +99,26 @@ describe("runDesign", () => {
     stores.design.getState().apply((d) => ({ ...d, nodes: d.nodes.map((n) => (n.id === "web" ? { ...n, label: "Renamed" } : n)) }));
     expect(out.record.snapshot.nodes.find((n) => n.id === "web")!.label).toBe("API");
   });
+
+  it("a design that cannot be turned into input fails cleanly, without a stuck 'running' state", async () => {
+    const { client, stores } = setup();
+    stores.design.setState((s) => ({ design: { ...s.design, workload: { ...s.design.workload, params: { bad: (() => 1) as never } } } }));
+    const out = await runDesign(stores, client);
+    expect(out.kind).toBe("failed");
+    expect(stores.runs.getState().status).toBe("idle");
+  });
+
+  it("records the epoch the request was sent in, even if it changes before the reply is handled", async () => {
+    const { client, stores } = setup();
+    const epoch = vi.spyOn(client, "epoch", "get").mockReturnValue(41);
+    const send = client.request.bind(client);
+    vi.spyOn(client, "request").mockImplementation((...a: Parameters<typeof send>) => {
+      epoch.mockReturnValue(42); // the engine moves on while the request is out
+      return send(...a);
+    });
+    const out = await runDesign(stores, client);
+    if (out.kind !== "ran") throw new Error(out.kind);
+    expect(out.record.epoch).toBe(41);
+    epoch.mockRestore();
+  });
 });
