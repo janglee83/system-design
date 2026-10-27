@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Chỉ mục tìm kiếm" data-kind="search" data-category="data">
+  <title>Chỉ mục tìm kiếm</title>
+  <rect x="6" y="5" width="30" height="38" rx="2.5" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M11 12h18M11 18h20M11 24h14M11 30h16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="40" cy="26" r="10" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M47.5 33.5L57 43" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+  <path d="M36 26a4 4 0 0 1 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

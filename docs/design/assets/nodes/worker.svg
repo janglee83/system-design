@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Worker nền" data-kind="worker" data-category="compute">
+  <title>Worker nền</title>
+  <rect x="6" y="14" width="34" height="26" rx="2.5" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="12" cy="20" r="1.6" fill="currentColor"/>
+  <circle cx="18" cy="20" r="1.6" fill="currentColor"/>
+  <path d="M11 30h14M11 35h20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="46" cy="16" r="9" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="46" cy="16" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M46 4.5v3M46 24.5v3M34.5 16h3M54.5 16h3M37.9 7.9l2.1 2.1M52 22l2.1 2.1M37.9 24.1l2.1-2.1M52 10l2.1-2.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
