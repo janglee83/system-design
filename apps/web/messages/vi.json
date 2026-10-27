@@ -497,7 +497,8 @@
     "export": "Xuất lần chạy (JSON)",
     "copy": "Sao chép dữ liệu vào",
     "copied": "Đã sao chép dữ liệu vào bộ nhớ tạm.",
-    "copyFailed": "Không sao chép được. Hãy bôi đen rồi tự sao chép."
+    "copyFailed": "Không sao chép được. Hãy bôi đen rồi tự sao chép.",
+    "exportFailed": "Không xuất được lần chạy: {message}"
   },
   "designs": {
     "menu": "Thiết kế",

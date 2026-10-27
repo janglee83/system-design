@@ -29,20 +29,32 @@ export function SimulationTab({
   const exportRun = async () => {
     if (!client || !available) return;
     setExporting(true);
+    let resultJson: string;
     try {
-      const resultJson = await client.request({ type: "resultJson", runId: run.engineRunId });
-      downloadText(`sd-lab-run-${run.id}.json`, runExportFile({ engineVersion, input: run.input, resultJson }));
+      resultJson = await client.request({ type: "resultJson", runId: run.engineRunId });
     } catch {
+      // The worker no longer holds the run (a restart, or it was evicted).
       toast(t("run.unavailable"), "warn");
+      setExporting(false);
+      return;
+    }
+    try {
+      downloadText(`sd-lab-run-${run.id}.json`, runExportFile({ engineVersion, input: run.input, resultJson }));
+    } catch (e) {
+      toast(t("simulation.exportFailed", { message: e instanceof Error ? e.message : String(e) }), "error");
     } finally {
       setExporting(false);
     }
   };
-  const copyInput = () =>
-    navigator.clipboard.writeText(inputText).then(
-      () => toast(t("simulation.copied"), "info"),
-      () => toast(t("simulation.copyFailed"), "warn"),
-    );
+  const copyInput = async () => {
+    try {
+      // navigator.clipboard is missing outside secure contexts; writeText can also reject.
+      await navigator.clipboard.writeText(inputText);
+      toast(t("simulation.copied"), "info");
+    } catch {
+      toast(t("simulation.copyFailed"), "warn");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-2">

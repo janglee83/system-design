@@ -497,7 +497,8 @@
     "export": "Export run (JSON)",
     "copy": "Copy input",
     "copied": "Input copied to the clipboard.",
-    "copyFailed": "Could not copy. Select the text and copy it by hand."
+    "copyFailed": "Could not copy. Select the text and copy it by hand.",
+    "exportFailed": "The run could not be exported: {message}"
   },
   "designs": {
     "menu": "Design",
