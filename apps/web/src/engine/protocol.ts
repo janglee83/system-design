@@ -14,6 +14,9 @@ import type {
   ValidationIssue,
 } from "@sd/sim";
 
+/** Runs the worker keeps handles for (trace, export), and runs the Lab lists in its history (R18). */
+export const MAX_KEPT_RUNS = 10;
+
 /** Messages the main thread sends to the engine worker (spec §6). */
 export type EngineRequest =
   | { type: "engineVersion" }

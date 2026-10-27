@@ -1,5 +1,7 @@
 import { TimelineView } from "@sd/sim";
 import { describe, expect, it } from "vitest";
+import { MAX_KEPT_RUNS } from "../../engine/protocol";
+import { MAX_RUNS } from "../../engine/worker-core";
 import { createRunStore, currentRun, MAX_HISTORY, previousRun, runAvailable, type RunRecord } from "./run-store";
 
 const rec = (id: number, epoch = 0): RunRecord => ({
@@ -50,5 +52,10 @@ describe("run store", () => {
     expect(s.getState().runs.map((r) => r.id)).toEqual([1, 2]);
     expect(runAvailable(s.getState().runs[0]!, 1)).toBe(false);
     expect(runAvailable(s.getState().runs[1]!, 1)).toBe(true);
+  });
+
+  it("keeps exactly as many runs as the worker keeps handles for", () => {
+    expect(MAX_HISTORY).toBe(MAX_KEPT_RUNS);
+    expect(MAX_RUNS).toBe(MAX_KEPT_RUNS);
   });
 });

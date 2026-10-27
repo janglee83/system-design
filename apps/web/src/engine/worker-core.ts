@@ -7,10 +7,10 @@ import {
   type SimInput,
   type SimRun,
 } from "@sd/sim";
-import type { EngineError, EngineRequest, Envelope, Reply, RunResult, ValidateResult } from "./protocol";
+import { MAX_KEPT_RUNS, type EngineError, type EngineRequest, type Envelope, type Reply, type RunResult, type ValidateResult } from "./protocol";
 
 /** Runs whose handles the worker keeps for trace(i) and JSON export (R18). */
-export const MAX_RUNS = 10;
+export const MAX_RUNS = MAX_KEPT_RUNS;
 const COST_CLIENT = "__cost-client";
 const COST_EDGE = "__cost-edge";
 

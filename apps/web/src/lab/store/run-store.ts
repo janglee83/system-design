@@ -7,8 +7,10 @@ export interface RunSnapshot extends NamedGraph {
   warnings: ValidationIssue[];
 }
 import { createStore } from "zustand/vanilla";
+import { MAX_KEPT_RUNS } from "@/engine/protocol";
 
-export const MAX_HISTORY = 10;
+/** The same limit as the worker's kept runs, so every listed run can be inspected (until a restart). */
+export const MAX_HISTORY = MAX_KEPT_RUNS;
 
 export interface RunRecord {
   /** The Lab's run number: increases for the whole session, also across engine restarts. */
