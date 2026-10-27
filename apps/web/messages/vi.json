@@ -533,5 +533,27 @@
       "target-missing": "Một sự cố nhắm vào {node}, thành phần này không còn trong thiết kế. Sự cố sẽ nhắm vào bất kỳ thành phần phù hợp nào.",
       "after-end": "Một sự cố lúc {time} giây xảy ra sau khi lần chạy kết thúc, nên không bao giờ xảy ra."
     }
+  },
+  "importIssue": {
+    "title": "Không mở được tệp này",
+    "description": "Hãy sửa các lỗi dưới đây trong tệp, hoặc xuất lại một tệp mới từ lab.",
+    "root": "(cả tệp)",
+    "invalid_json": "không phải JSON hợp lệ",
+    "unsupported_version": "dùng định dạng thiết kế mà lab không biết",
+    "invalid_type": "sai kiểu dữ liệu",
+    "too_big": "quá lớn hoặc quá dài",
+    "too_small": "quá nhỏ hoặc quá ngắn",
+    "invalid_format": "không đúng định dạng",
+    "not_multiple_of": "không đúng bước nhảy",
+    "unrecognized_keys": "có trường mà lab không biết",
+    "invalid_union": "không khớp dạng nào được phép",
+    "invalid_key": "có tên không hợp lệ",
+    "invalid_element": "có phần tử không hợp lệ",
+    "invalid_value": "không thuộc các giá trị cho phép",
+    "custom": "không hợp lệ",
+    "dangling_ref": "trỏ tới thứ không tồn tại",
+    "duplicate_id": "lặp lại một mã đã dùng",
+    "line": "{path}: {reason}",
+    "imported": "Đã nhập “{name}”."
   }
 }

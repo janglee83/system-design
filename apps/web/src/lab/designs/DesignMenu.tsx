@@ -2,12 +2,13 @@
 import * as DM from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MENU_ITEM_CLASS } from "@/shell/HelpMenu";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { formatCombo } from "../shortcuts";
 import { useDesign, useDoc, useUiApi } from "../store/LabStores";
 import { useIsMac } from "../use-shortcuts";
+import { ImportExport, type ImportExportHandle } from "./ImportExport";
 import { useDocActions } from "./use-doc-actions";
 
 const CONTENT = "z-50 min-w-52 rounded-md border border-border bg-surface p-1 shadow-2";
@@ -22,6 +23,7 @@ export function DesignMenu({ templates }: { templates?: React.ReactNode }) {
   const mac = useIsMac();
   const saveCombo = formatCombo("Mod+S", mac);
   const openCombo = formatCombo("Mod+O", mac);
+  const io = useRef<ImportExportHandle>(null);
   const [confirmNew, setConfirmNew] = useState<(() => void) | null>(null);
   /** Replacing the design asks first when there are unsaved changes. */
   const guarded = (fn: () => void) => () => (dirty ? setConfirmNew(() => fn) : fn());
@@ -66,9 +68,17 @@ export function DesignMenu({ templates }: { templates?: React.ReactNode }) {
             <DM.Item className={MENU_ITEM_CLASS} onSelect={() => ui.getState().set({ saveDialog: "saveAs" })}>
               {t("designs.saveAs")}
             </DM.Item>
+            <DM.Separator className="my-1 h-px bg-border" />
+            <DM.Item className={MENU_ITEM_CLASS} onSelect={() => io.current?.openImport()}>
+              {t("designs.import")}
+            </DM.Item>
+            <DM.Item className={MENU_ITEM_CLASS} onSelect={() => io.current?.exportCurrent()}>
+              {t("designs.export")}
+            </DM.Item>
           </DM.Content>
         </DM.Portal>
       </DM.Root>
+      <ImportExport ref={io} />
       <ConfirmDialog
         open={confirmNew !== null}
         onOpenChange={(o) => {

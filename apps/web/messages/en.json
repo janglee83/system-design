@@ -533,5 +533,27 @@
       "target-missing": "A fault targets {node}, which is no longer in the design. It will hit any matching component.",
       "after-end": "A fault at {time} s comes after the run ends, so it never happens."
     }
+  },
+  "importIssue": {
+    "title": "This file cannot be opened",
+    "description": "Fix these problems in the file, or export a fresh one from the lab.",
+    "root": "(whole file)",
+    "invalid_json": "is not valid JSON",
+    "unsupported_version": "uses a design format this lab does not know",
+    "invalid_type": "has the wrong type",
+    "too_big": "is too large or too long",
+    "too_small": "is too small or too short",
+    "invalid_format": "is not in the expected format",
+    "not_multiple_of": "is not a whole step",
+    "unrecognized_keys": "has fields this lab does not know",
+    "invalid_union": "does not match any allowed shape",
+    "invalid_key": "has an invalid name",
+    "invalid_element": "has an invalid entry",
+    "invalid_value": "is not one of the allowed values",
+    "custom": "is not valid",
+    "dangling_ref": "points to something that does not exist",
+    "duplicate_id": "repeats an id that is already used",
+    "line": "{path}: {reason}",
+    "imported": "Imported “{name}”."
   }
 }

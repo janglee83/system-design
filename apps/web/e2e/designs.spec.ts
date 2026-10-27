@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { expect, test } from "@playwright/test";
 import { buildFourTier, openLab } from "./helpers";
 
@@ -43,4 +44,33 @@ test("opening over unsaved changes asks first", async ({ page }) => {
   await page.getByRole("button", { name: "Open", exact: true }).click();
   await expect(page.getByTestId("node-web-server-1")).toHaveCount(0);
   await expect(page.getByTestId("node-client-1")).toBeVisible();
+});
+
+test("export a design and import it again; a broken file lists its problems", async ({ page }, info) => {
+  await openLab(page);
+  await buildFourTier(page);
+  await page.getByRole("button", { name: "Design" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Export" }).click();
+  const file = await download;
+  const saved = info.outputPath("export.sdlab.json");
+  await file.saveAs(saved);
+
+  await page.evaluate(() => indexedDB.deleteDatabase("sd-lab"));
+  await openLab(page, "en");
+  await page.getByRole("button", { name: "Design" }).click();
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("menuitem", { name: "Import…" }).click();
+  await (await chooser).setFiles(saved);
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+
+  const broken = info.outputPath("broken.sdlab.json");
+  const doc = JSON.parse(fs.readFileSync(saved, "utf8"));
+  doc.nodes[0].replicas = "many";
+  fs.writeFileSync(broken, JSON.stringify(doc));
+  await page.getByRole("button", { name: "Design" }).click();
+  const chooser2 = page.waitForEvent("filechooser");
+  await page.getByRole("menuitem", { name: "Import…" }).click();
+  await (await chooser2).setFiles(broken);
+  await expect(page.getByRole("dialog", { name: "This file cannot be opened" })).toContainText("nodes.0.replicas: has the wrong type");
 });
