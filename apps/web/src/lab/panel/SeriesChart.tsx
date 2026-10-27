@@ -38,8 +38,10 @@ export function SeriesChart({ run, nodeId, label }: { run: RunRecord; nodeId: st
     let disposed = false;
     const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const draw = async () => {
-      const { default: UPlot } = await import("uplot");
-      if (disposed) return;
+      // A chunk that fails to load leaves the summary table below, which still describes the data.
+      const loaded = await import("uplot").catch(() => null);
+      if (!loaded || disposed) return;
+      const UPlot = loaded.default;
       plot?.destroy();
       const num = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
       const values = (_u: unknown, splits: number[]) => splits.map((v) => num.format(v));
@@ -63,7 +65,10 @@ export function SeriesChart({ run, nodeId, label }: { run: RunRecord; nodeId: st
       );
     };
     void draw();
-    const resize = new ResizeObserver(() => plot?.setSize({ width: el.clientWidth, height: 180 }));
+    const resize = new ResizeObserver(() => {
+      // A hidden tab has no width; uPlot would draw a zero-width chart.
+      if (el.clientWidth > 0) plot?.setSize({ width: el.clientWidth, height: 180 });
+    });
     resize.observe(el);
     // Re-read the colour tokens when the theme changes.
     const theme = new MutationObserver(() => void draw());

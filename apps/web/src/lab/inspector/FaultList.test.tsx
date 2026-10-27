@@ -100,4 +100,11 @@ describe("FaultList", () => {
     expect(faults()).toHaveLength(2);
     expect(screen.getByTestId("fault-0")).toBe(second);
   });
+
+  it("offers fault times up to the run length, on whole tenths of a second", async () => {
+    setup();
+    act(() => api.getState().apply((d) => ({ ...d, durationMs: 12_345 })));
+    await userEvent.click(screen.getByRole("button", { name: "Add fault" }));
+    expect(screen.getByRole("spinbutton", { name: "At (s)" })).toHaveAttribute("aria-valuemax", "12.3");
+  });
 });

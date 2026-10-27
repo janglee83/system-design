@@ -24,7 +24,8 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
   const api = useDesignApi();
   const faults = useDesign((s) => s.design.faults);
   const design = useDesign((s) => s.design);
-  const durationS = design.durationMs / 1000;
+  // The latest time on the 0.1 s grid of the time field (a run can be 12.345 s long).
+  const durationS = Math.floor(design.durationMs / 100) / 10;
   // Faults carry no id: keep a parallel list of row keys so removing a row does not shift the
   // other rows' elements (and their focus and input state).
   const keys = useRef<{ list: number[]; next: number }>({ list: [], next: 0 });

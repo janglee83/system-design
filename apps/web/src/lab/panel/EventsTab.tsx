@@ -52,7 +52,10 @@ export function EventsTab({ run }: { run: RunRecord }) {
               title={t("events.jump", { time: seconds(e.atMs) })}
               onClick={jump}
               onKeyDown={(k) => {
-                if (k.key === "Enter") jump();
+                if (k.key === "Enter" || k.key === " ") {
+                  k.preventDefault();
+                  jump();
+                }
               }}
               className={cn("cursor-pointer border-t border-border hover:bg-surface-2", i === current && "bg-accent-soft")}
             >

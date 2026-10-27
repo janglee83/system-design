@@ -1,6 +1,7 @@
 "use client";
 import { BarChart3 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import { useEngineStore } from "@/engine/EngineProvider";
 import { ResizeHandle } from "@/ui/ResizeHandle";
 import { Select } from "@/ui/Select";
@@ -31,7 +32,7 @@ export function BottomPanel() {
   const epoch = useEngineStore((s) => s.epoch);
   const engineVersion = useEngineStore((s) => s.info?.version ?? "");
   const client = useEngineStore((s) => (s.status === "ready" ? s.client : null));
-  const max = typeof window === "undefined" ? 600 : Math.round(window.innerHeight * 0.6);
+  const max = useMaxPanelHeight();
   const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   return (
@@ -84,4 +85,16 @@ export function BottomPanel() {
       </Tabs>
     </section>
   );
+}
+
+/** 60% of the window height (R: panel height limit), kept current on resize; not read during render. */
+function useMaxPanelHeight(): number {
+  const [max, setMax] = useState(600);
+  useEffect(() => {
+    const update = () => setMax(Math.round(window.innerHeight * 0.6));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return max;
 }
