@@ -1,9 +1,10 @@
 "use client";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { cn } from "@/ui/cn";
 import type { RunRecord } from "../store/run-store";
 import { useMetas } from "../use-metas";
+import { formatNumber } from "../format";
 import { buildLogs, type LogLevel } from "./logs";
 
 const LEVELS: LogLevel[] = ["info", "warn", "error"];
@@ -11,8 +12,9 @@ const CHIP = { info: "bg-surface-2 text-info", warn: "bg-busy-soft text-busy", e
 
 export function LogsTab({ run }: { run: RunRecord }) {
   const t = useTranslations();
+  const locale = useLocale();
   const metas = useMetas();
-  const stamp = (ms: number) => `[${t("run.duration", { seconds: (ms / 1000).toFixed(1).padStart(4, "0") })}]`;
+  const stamp = (ms: number) => `[${t("run.duration", { seconds: formatNumber(ms / 1000, locale, 1) })}]`;
   const [shown, setShown] = useState<ReadonlySet<LogLevel>>(new Set(LEVELS));
   const lines = useMemo(() => buildLogs(run, { metas, t }), [run, metas, t]);
   return (

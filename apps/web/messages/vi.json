@@ -470,7 +470,8 @@
     "breakdown": "Các yêu cầu đã đi đâu",
     "series": "Theo thời gian",
     "node": "Thành phần",
-    "noComparison": "Lần chạy đầu tiên: chưa có gì để so."
+    "noComparison": "Lần chạy đầu tiên: chưa có gì để so.",
+    "points": "{value} điểm %"
   },
   "events": {
     "time": "Thời điểm",

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/Field";
 import { Select } from "@/ui/Select";
-import { formatMetric } from "../format";
+import { formatMetric, formatSignedPercent, formatSignedPoints } from "../format";
 import { displayLabel } from "../labels";
 import { useDesign } from "../store/LabStores";
 import type { RunRecord } from "../store/run-store";
@@ -71,7 +71,11 @@ export function MetricsTab({ run, previous }: { run: RunRecord; previous: RunRec
                     cmp.verdict === "better" ? "text-ok" : cmp.verdict === "worse" ? "text-over" : "text-text-3",
                   )}
                 >
-                  {cmp.ratio !== null ? `${cmp.ratio >= 0 ? "+" : ""}${(cmp.ratio * 100).toFixed(1)}%` : formatMetric(key, cmp.delta, locale)}{" "}
+                  {key === "availability"
+                    ? t("panel.points", { value: formatSignedPoints(cmp.delta, locale) })
+                    : cmp.ratio !== null
+                      ? formatSignedPercent(cmp.ratio, locale)
+                      : formatMetric(key, cmp.delta, locale)}{" "}
                   {t("panel.vsPrevious")}
                   {cmp.verdict !== "same" ? <span className="sr-only"> {t(`panel.${cmp.verdict}`)}</span> : null}
                 </p>

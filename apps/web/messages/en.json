@@ -470,7 +470,8 @@
     "breakdown": "What happened to the requests",
     "series": "Over time",
     "node": "Component",
-    "noComparison": "First run: nothing to compare yet."
+    "noComparison": "First run: nothing to compare yet.",
+    "points": "{value} pp"
   },
   "events": {
     "time": "Time",

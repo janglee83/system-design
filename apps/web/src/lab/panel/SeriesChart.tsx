@@ -1,7 +1,8 @@
 "use client";
 import "uplot/dist/uPlot.min.css";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef } from "react";
+import { formatNumber } from "../format";
 import type { RunRecord } from "../store/run-store";
 
 /** Per-frame series of one node, as plain arrays (x in seconds; busy in percent). */
@@ -26,6 +27,7 @@ const stats = (v: number[]) =>
 /** uPlot chart of busy / waiting / rejected over time, themed from the CSS tokens. */
 export function SeriesChart({ run, nodeId, label }: { run: RunRecord; nodeId: string; label: string }) {
   const t = useTranslations();
+  const locale = useLocale();
   const box = useRef<HTMLDivElement>(null);
   const data = useMemo(() => nodeSeries(run, nodeId), [run, nodeId]);
 
@@ -39,7 +41,9 @@ export function SeriesChart({ run, nodeId, label }: { run: RunRecord; nodeId: st
       const { default: UPlot } = await import("uplot");
       if (disposed) return;
       plot?.destroy();
-      const axis = { stroke: css("--sd-text-3"), grid: { stroke: css("--sd-border"), width: 1 }, ticks: { stroke: css("--sd-border") } };
+      const num = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+      const values = (_u: unknown, splits: number[]) => splits.map((v) => num.format(v));
+      const axis = { values, stroke: css("--sd-text-3"), grid: { stroke: css("--sd-border"), width: 1 }, ticks: { stroke: css("--sd-border") } };
       plot = new UPlot(
         {
           width: el.clientWidth || 600,
@@ -70,7 +74,7 @@ export function SeriesChart({ run, nodeId, label }: { run: RunRecord; nodeId: st
       theme.disconnect();
       plot?.destroy();
     };
-  }, [data, t]);
+  }, [data, t, locale]);
 
   const rows = [
     ["busy", stats(data.busy)],
@@ -85,9 +89,9 @@ export function SeriesChart({ run, nodeId, label }: { run: RunRecord; nodeId: st
           {rows.map(([k, s]) => (
             <tr key={k}>
               <th scope="row">{t(`timelineField.${k}`)}</th>
-              <td>{s.min.toFixed(1)}</td>
-              <td>{s.max.toFixed(1)}</td>
-              <td>{s.mean.toFixed(1)}</td>
+              <td>{formatNumber(s.min, locale, 1)}</td>
+              <td>{formatNumber(s.max, locale, 1)}</td>
+              <td>{formatNumber(s.mean, locale, 1)}</td>
             </tr>
           ))}
         </tbody>

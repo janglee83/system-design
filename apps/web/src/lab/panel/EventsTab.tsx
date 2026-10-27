@@ -1,7 +1,8 @@
 "use client";
 import { CircleAlert, Info, TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/ui/cn";
+import { formatNumber } from "../format";
 import { displayLabel } from "../labels";
 import { usePlayback, usePlaybackApi } from "../store/LabStores";
 import type { RunRecord } from "../store/run-store";
@@ -10,11 +11,12 @@ import { eventLevel, eventText } from "./event-text";
 
 const ICON = { info: Info, warn: TriangleAlert, error: CircleAlert } as const;
 const TONE = { info: "text-info", warn: "text-busy", error: "text-over" } as const;
-const seconds = (ms: number) => (ms / 1000).toFixed(1);
 
 /** The run's events; the row at the playhead is highlighted, and a row moves the playhead there. */
 export function EventsTab({ run }: { run: RunRecord }) {
   const t = useTranslations();
+  const locale = useLocale();
+  const seconds = (ms: number) => formatNumber(ms / 1000, locale, 1);
   const design = run.snapshot; // names as they were when the run started
   const metas = useMetas();
   const timeMs = usePlayback((s) => s.timeMs);
