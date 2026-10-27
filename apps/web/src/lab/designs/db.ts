@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Design } from "../model/design";
-import type { Preset } from "../model/presets";
+import { parsePreset, type Preset } from "../model/presets";
 
 export interface SavedDesign {
   id: string;
@@ -33,7 +33,9 @@ export function openLabDb(): Promise<IDBPDatabase<LabDb>> {
   return dbp;
 }
 
-export const listPresets = async (): Promise<Preset[]> => (await openLabDb()).getAll("presets");
+/** Saved presets; entries that are not valid presets are skipped, not trusted. */
+export const listPresets = async (): Promise<Preset[]> =>
+  (await (await openLabDb()).getAll("presets")).map(parsePreset).filter((p): p is Preset => p !== null);
 export const putPreset = async (p: Preset): Promise<void> => void (await (await openLabDb()).put("presets", p));
 export const deletePreset = async (id: string): Promise<void> => (await openLabDb()).delete("presets", id);
 export const getKv = async <T = unknown>(key: string): Promise<T | undefined> => (await (await openLabDb()).get("kv", key)) as T | undefined;

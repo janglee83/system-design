@@ -36,3 +36,17 @@ describe("saved designs", () => {
     expect(await getDesign("d119")).toBeUndefined();
   });
 });
+
+describe("stored presets are checked on load", () => {
+  it("skips entries that are not valid presets", async () => {
+    const db = await openLabDb();
+    await db.put("presets", { id: "bad1", name: "Broken", workload: { baseRps: "lots" } } as never);
+    await db.put("presets", { id: "bad2" } as never);
+    const w = { profile: "mixed" as const, baseRps: 300, writeRatio: 0.2, clients: 10, clientTimeoutMs: 1000, surge: null };
+    await putPreset({ id: "ok", name: "Fine", workload: w });
+    const ids = (await listPresets()).map((p) => p.id);
+    expect(ids).toContain("ok");
+    expect(ids).not.toContain("bad1");
+    expect(ids).not.toContain("bad2");
+  });
+});

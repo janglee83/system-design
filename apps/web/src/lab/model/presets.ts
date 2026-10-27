@@ -1,4 +1,6 @@
 import type { Workload } from "@sd/sim";
+import { z } from "zod";
+import { ARRIVALS, PROFILES } from "@/i18n/engine-codes";
 import type { Design } from "./design";
 
 export type PresetWorkload = Omit<Workload, "params">;
@@ -37,4 +39,26 @@ export function presetWorkload(w: Workload): PresetWorkload {
   const copy: Partial<Workload> = structuredClone(w);
   delete copy.params;
   return copy as PresetWorkload;
+}
+
+const PresetSchema = z.object({
+  id: z.string().min(1),
+  nameKey: z.string().optional(),
+  name: z.string().optional(),
+  workload: z.object({
+    profile: z.enum(PROFILES),
+    baseRps: z.number().finite().min(0),
+    writeRatio: z.number().min(0).max(1),
+    clients: z.number().int().min(1),
+    clientTimeoutMs: z.number().finite().positive(),
+    surge: z.object({ factor: z.number().finite().min(0), atMs: z.number().finite().min(0), durationMs: z.number().finite().min(0) }).nullable(),
+    trafficEndMs: z.number().finite().min(0).optional(),
+    arrivals: z.enum(ARRIVALS).optional(),
+  }),
+});
+
+/** A stored preset, or null when the stored value is not one (another version, or a damaged entry). */
+export function parsePreset(value: unknown): Preset | null {
+  const r = PresetSchema.safeParse(value);
+  return r.success ? (r.data as Preset) : null;
 }
