@@ -11,7 +11,18 @@ describe("design from a challenge (R24)", () => {
     expect(d.locked).toEqual(["users"]);
     expect(d.workload).toEqual({ profile: "mixed", baseRps: 3000, writeRatio: 0.2, clients: 1000, clientTimeoutMs: 1000, surge: null, params: {} });
     expect([d.seed, d.durationMs]).toEqual([1, 10_000]);
-    expect(d.challenge).toEqual({ id: "c-l0-first-launch", mode: "standard", limits: { maxNodes: 5, maxInstances: 8, allowedKinds: ["client", "web-server", "postgres"] } });
+    expect(d.challenge).toEqual({
+      id: "c-l0-first-launch",
+      mode: "standard",
+      limits: { maxNodes: 5, maxInstances: 8, allowedKinds: ["client", "web-server", "postgres"] },
+      // The challenge's goals, then the mode's budget as a cost goal.
+      goals: [
+        { id: "fast", metric: "p95", op: "<=", value: 50 },
+        { id: "no-drops", metric: "requestsRejected", op: "<=", value: 0 },
+        { id: "up", metric: "availability", op: ">=", value: 0.98 },
+        { id: "budget", metric: "costPerMonth", op: "<=", value: 300 },
+      ],
+    });
     expect(buildSimInput(d).seed).toBe(1);
   });
 

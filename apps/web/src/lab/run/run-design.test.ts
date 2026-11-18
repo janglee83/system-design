@@ -135,4 +135,16 @@ describe("runDesign", () => {
     if (next.kind !== "ran") throw new Error(next.kind);
     expect(next.record.id).toBe(1);
   });
+
+  it("sends the challenge's goals and keeps the engine's verdict on the record", async () => {
+    const { client, stores } = setup();
+    expect(((await runDesign(stores, client)) as { record: { verdict: unknown } }).record.verdict).toBeNull();
+    const goals = [{ id: "impossible", metric: "p95", op: "<=" as const, value: 0 }];
+    stores.design.setState((s) => ({ design: { ...s.design, challenge: { id: "c-x", mode: "standard", limits: { maxNodes: null, maxInstances: null, allowedKinds: null }, goals } } }));
+    const out = await runDesign(stores, client);
+    if (out.kind !== "ran") throw new Error(out.kind);
+    expect(out.record.goals).toEqual(goals);
+    expect(out.record.verdict!.goals).toEqual([{ id: "impossible", passed: false, measured: expect.any(Number) }]);
+  });
 });
+

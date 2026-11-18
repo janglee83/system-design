@@ -1,18 +1,4 @@
-import type {
-  Calibration,
-  CalibrationOverrides,
-  Capabilities,
-  ComponentMeta,
-  Graph,
-  GraphLimits,
-  Metrics,
-  SimEvent,
-  SimInput,
-  TimelineHeader,
-  Trace,
-  TraceSummary,
-  ValidationIssue,
-} from "@sd/sim";
+import type { Calibration, CalibrationOverrides, Capabilities, ComponentMeta, Goal, Graph, GraphLimits, Metrics, SimEvent, SimInput, TimelineHeader, Trace, TraceSummary, ValidationIssue, Verdict } from "@sd/sim";
 
 /** Runs the worker keeps handles for (trace, export), and runs the Lab lists in its history (R18). */
 export const MAX_KEPT_RUNS = 10;
@@ -24,7 +10,8 @@ export type EngineRequest =
   | { type: "defaultCalibration" }
   | { type: "capabilities" }
   | { type: "validate"; graph: Graph; limits: GraphLimits | null; calibration: CalibrationOverrides }
-  | { type: "run"; input: SimInput }
+  /** `goals`: grade the run with the engine (a challenge's goals); no goals, no verdict. */
+  | { type: "run"; input: SimInput; goals?: Goal[] }
   | { type: "trace"; runId: number; index: number }
   | { type: "resultJson"; runId: number }
   | { type: "dropRun"; runId: number };
@@ -41,6 +28,8 @@ export interface RunResult {
   events: SimEvent[];
   timeline: { header: TimelineHeader; data: Float32Array };
   traces: TraceSummary[];
+  /** The engine's grade against the request's goals, or null without goals. */
+  verdict: Verdict | null;
   /** Time the worker spent in simulate() and copying results out. */
   elapsedMs: number;
 }

@@ -51,6 +51,8 @@ test("connecting into Users is refused with a message", async ({ page }) => {
   await expect(page.getByTestId("handle-in-client-1")).toHaveCount(0);
   await connectToCard(page, "web-server-1", "client-1");
   await expect(page.getByTestId("toast")).toHaveText("Users 1 does not take incoming connections.");
+  // In the Lab, messages sit in the status strip's lane, never over the canvas or panels.
+  await expect(page.getByTestId("toast-lane").getByTestId("toast")).toBeVisible();
   await expect(page.getByTestId("edge-e1")).toHaveCount(0);
 });
 

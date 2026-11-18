@@ -167,3 +167,16 @@ html {
     animation: none;
   }
 }
+@keyframes sd-live {
+  50% {
+    opacity: 0.35;
+  }
+}
+.sd-live-dot {
+  animation: sd-live 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-live-dot {
+    animation: none;
+  }
+}

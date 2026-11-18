@@ -66,6 +66,17 @@ const schema = z.strictObject({
         maxInstances: z.number().int().min(1).nullable(),
         allowedKinds: z.array(z.string().regex(/^[a-z0-9-]{1,40}$/)).max(100).nullable(),
       }),
+      goals: z
+        .array(
+          z.strictObject({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            metric: z.string().regex(/^[a-zA-Z0-9]{1,40}$/),
+            op: z.enum(["<=", ">=", "=="]),
+            value: num,
+          }),
+        )
+        .max(20)
+        .optional(),
     })
     .nullable(),
 });

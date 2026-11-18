@@ -7,6 +7,8 @@ import { createRunStore, currentRun, MAX_HISTORY, previousRun, runAvailable, typ
 const rec = (id: number, epoch = 0): RunRecord => ({
   id,
   engineRunId: id,
+  goals: [],
+  verdict: null,
   epoch,
   startedAt: id,
   input: {} as never,

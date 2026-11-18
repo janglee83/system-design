@@ -50,7 +50,9 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
     };
     // The worker the request goes to; a restart while it is out makes the run uninspectable.
     const epoch = client.epoch;
-    const r = await client.request({ type: "run", input });
+    const goals = d.challenge?.goals ?? [];
+    // Goals only when there are some: the free Lab's request stays exactly the input.
+    const r = await client.request(goals.length > 0 ? { type: "run", input, goals } : { type: "run", input });
     if (stopped()) return { kind: "stopped" };
     const record: RunRecord = {
       id: runs.getState().nextId(),
@@ -62,6 +64,8 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
       events: r.events,
       timeline: new TimelineView(r.timeline.header, r.timeline.data),
       traces: r.traces,
+      goals,
+      verdict: r.verdict,
       elapsedMs: r.elapsedMs,
       snapshot,
     };

@@ -121,6 +121,7 @@ export function createHandler(sim: Sim, now: () => number = () => performance.no
               data: tl.data,
             },
             traces: run.traceSummaries(),
+            verdict: r.goals && r.goals.length > 0 ? sim.grade(run, r.goals) : null,
             elapsedMs: 0,
           };
         } catch (e) {

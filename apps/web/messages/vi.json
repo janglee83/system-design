@@ -765,5 +765,25 @@
       "name": "Bên ngoài",
       "description": "Dịch vụ không do bạn vận hành."
     }
+  },
+  "verdict": {
+    "fail": "Chưa đạt · {met}/{total}",
+    "pass": "Đạt · {met}/{total}",
+    "neutral": "Lần chạy #{run} xong",
+    "why": "Hỏng ở đâu?",
+    "again": "Chạy lại",
+    "moreMet": "+{count} đạt",
+    "close": "Đóng kết quả",
+    "announceFail": "Chưa đạt {met} trên {total} mục tiêu.",
+    "announcePass": "Đạt cả {total} mục tiêu.",
+    "announceNeutral": "Lần chạy #{run} xong.",
+    "calloutTitle": "Đây là chỗ gãy",
+    "callout": "{goal}: đo được {measured}, cần {op} {target}. {node} bận tới {busy}% lúc cao nhất.",
+    "goalLabel": {
+      "p50": "Độ trễ p50",
+      "p95": "Độ trễ p95",
+      "p99": "Độ trễ p99"
+    },
+    "live": "Đang mô phỏng {seconds} giây"
   }
 }

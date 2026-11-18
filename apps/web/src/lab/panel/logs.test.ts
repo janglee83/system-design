@@ -16,6 +16,8 @@ function record(warnings: RunRecord["snapshot"]["warnings"] = []) {
     id: 7,
     engineRunId: 1,
     epoch: 0,
+    goals: [],
+    verdict: null,
     startedAt: 0,
     input,
     metrics: run.metrics,

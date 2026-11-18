@@ -1,4 +1,4 @@
-import type { Metrics, SimEvent, SimInput, TimelineView, TraceSummary, ValidationIssue } from "@sd/sim";
+import type { Goal, Metrics, SimEvent, SimInput, TimelineView, TraceSummary, ValidationIssue, Verdict } from "@sd/sim";
 import type { NamedGraph } from "../issue-text";
 
 /** What the run's logs and events name things by: frozen when the run starts (Phase 3 review). */
@@ -25,6 +25,9 @@ export interface RunRecord {
   events: SimEvent[];
   timeline: TimelineView;
   traces: TraceSummary[];
+  /** What the run was graded against (empty in the free Lab), and the engine's verdict. */
+  goals: Goal[];
+  verdict: Verdict | null;
   elapsedMs: number;
   snapshot: RunSnapshot;
 }

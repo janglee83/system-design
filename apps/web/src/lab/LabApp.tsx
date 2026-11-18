@@ -45,7 +45,9 @@ import { BottomPanel } from "./panel/BottomPanel";
 import { Problems } from "./Problems";
 import { StatusStrip } from "./StatusStrip";
 import { UndoRedo } from "./UndoRedo";
+import { LiveChip } from "./run/LiveChip";
 import { RunButton } from "./run/RunButton";
+import { Verdict } from "./run/Verdict";
 import { useRunDesign } from "./run/use-run-design";
 import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useRuns, useRunsApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
@@ -94,6 +96,7 @@ export function LabApp({
               <div className="absolute top-3 left-1/2 -translate-x-1/2">
                 <EngineErrorBanner />
               </div>
+              <RunFeedback />
             </section>
             <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
               <Inspector />
@@ -175,6 +178,17 @@ function LabShortcuts() {
     escape: () => (runs.getState().status === "running" ? runs.getState().stop() : api.getState().clearSelection()),
   });
   return null;
+}
+
+/** The live chip while running and the verdict when a run ends (design-system §7.1, §7.3). */
+function RunFeedback() {
+  const run = useRunDesign();
+  return (
+    <>
+      <LiveChip />
+      <Verdict onRunAgain={run} />
+    </>
+  );
 }
 
 function RunPane() {

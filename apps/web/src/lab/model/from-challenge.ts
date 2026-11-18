@@ -1,11 +1,11 @@
 import type { Challenge } from "@sd/content";
-import type { Fault, GraphLimits, Workload } from "@sd/sim";
+import type { Fault, Goal, GraphLimits, Workload } from "@sd/sim";
 import { defaultWorkload, emptyDesign, type Design, type LabNode } from "./design";
 
 type RawNode = { id: string; kind: string; label?: string; replicas?: number; config?: Record<string, never> };
 type RawEdge = { id: string; from: string; to: string; kind: Design["edges"][number]["kind"] };
 type RawStart = { graph: { nodes: RawNode[]; edges: RawEdge[] }; workload?: Partial<Workload>; faults?: Fault[]; durationMs?: number; seed?: number; calibration?: Design["calibration"] };
-type RawMode = { id: string; faults?: Fault[]; workloadOverride?: Record<string, unknown> };
+type RawMode = { id: string; faults?: Fault[]; workloadOverride?: Record<string, unknown>; budgetPerMonth?: number };
 
 /** Columns by distance from the clients (no layout engine on the server). */
 function positions(nodes: RawNode[], edges: RawEdge[]): Map<string, { x: number; y: number }> {
@@ -70,6 +70,10 @@ export function designFromChallenge(c: Challenge, modeId?: string): Design | nul
       id: c.id,
       mode: mode.id,
       limits: { maxNodes: limits.maxNodes ?? null, maxInstances: limits.maxInstances ?? null, allowedKinds: limits.allowedKinds ?? null },
+      goals: [
+        ...((c.goals as Goal[] | undefined) ?? []).map((g) => ({ id: g.id, metric: g.metric, op: g.op, value: g.value })),
+        ...(typeof mode.budgetPerMonth === "number" ? [{ id: "budget", metric: "costPerMonth", op: "<=" as const, value: mode.budgetPerMonth }] : []),
+      ],
     },
   };
 }

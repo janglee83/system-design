@@ -765,5 +765,25 @@
       "name": "External services",
       "description": "Services you do not run yourself."
     }
+  },
+  "verdict": {
+    "fail": "Not yet · {met}/{total}",
+    "pass": "Passed · {met}/{total}",
+    "neutral": "Run #{run} done",
+    "why": "Where did it break?",
+    "again": "Run again",
+    "moreMet": "+{count} met",
+    "close": "Close the result",
+    "announceFail": "Not passed: {met} of {total} goals met.",
+    "announcePass": "Passed: all {total} goals met.",
+    "announceNeutral": "Run #{run} done.",
+    "calloutTitle": "This is where it broke",
+    "callout": "{goal}: measured {measured}, needed {op} {target}. {node} peaked at {busy}% busy.",
+    "goalLabel": {
+      "p50": "p50 latency",
+      "p95": "p95 latency",
+      "p99": "p99 latency"
+    },
+    "live": "Simulating {seconds} s"
   }
 }

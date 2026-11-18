@@ -1,4 +1,4 @@
-import type { CalibrationOverrides, ConfigValue, EdgeKind, Fault, GraphLimits, Workload } from "@sd/sim";
+import type { CalibrationOverrides, ConfigValue, EdgeKind, Fault, GraphLimits, Workload, Goal } from "@sd/sim";
 
 export const DESIGN_FORMAT_VERSION = 1 as const;
 /** Layout size of a node card (R14). */
@@ -40,6 +40,8 @@ export interface ChallengeRef {
   id: string;
   mode: string;
   limits: GraphLimits;
+  /** What a run is graded against (the challenge's goals plus the mode's budget); absent in older files. */
+  goals?: Goal[];
 }
 
 export interface Design {

@@ -70,6 +70,21 @@ describe("worker-core", () => {
     expect(value.elapsedMs).toBe(0);
   });
 
+  it("grades a run against goals with the engine, and gives no verdict without goals", () => {
+    const { call } = setup();
+    expect(call({ type: "run", input: fourTier() }).value.verdict).toBeNull();
+    const goals = [
+      { id: "ok", metric: "availability", op: ">=" as const, value: 0.5 },
+      { id: "impossible", metric: "p95", op: "<=" as const, value: 0 },
+    ];
+    const v = call({ type: "run", input: fourTier(), goals }).value.verdict!;
+    expect(v.goals.map((g) => [g.id, g.passed])).toEqual([
+      ["ok", true],
+      ["impossible", false],
+    ]);
+    expect(v.passed).toBe(false);
+  });
+
   it("serves traces and JSON of kept runs, and frees runs beyond the last 10", () => {
     const { call } = setup();
     for (let i = 0; i < MAX_RUNS + 1; i++) call({ type: "run", input: fourTier(500) });

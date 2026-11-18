@@ -1,5 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
+import { useToastLane } from "@/ui/Toaster";
 import { useEngineStore } from "@/engine/EngineProvider";
 import { cn } from "@/ui/cn";
 import { useCheck, useDesign } from "./store/LabStores";
@@ -12,6 +14,8 @@ export function StatusStrip() {
   const nodes = useDesign((s) => s.design.nodes.length);
   const edges = useDesign((s) => s.design.edges.length);
   const costs = useCheck((s) => s.costs);
+  const setLane = useToastLane((s) => s.setLane);
+  useEffect(() => () => setLane(null), [setLane]);
   const total = Object.values(costs).reduce<number>((sum, c) => sum + (c ?? 0), 0);
 
   return (
@@ -34,7 +38,9 @@ export function StatusStrip() {
         )}
       </span>
       <span data-testid="design-counts">{t("status.counts", { nodes, edges })}</span>
-      <span className="ml-auto num">{t("status.cost", { cost: Math.round(total) })}</span>
+      {/* The toast lane: messages appear here instead of over the canvas or panels. */}
+      <div ref={setLane} data-testid="toast-lane" className="flex h-full min-w-0 flex-1 justify-center" />
+      <span className="num">{t("status.cost", { cost: Math.round(total) })}</span>
       <span>{t("status.autosave")}</span>
     </footer>
   );
