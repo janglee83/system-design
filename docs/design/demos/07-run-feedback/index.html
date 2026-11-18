@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 · Phản hồi khi chạy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  html .app.L-a { grid-template-columns: 64px minmax(0, 1fr) var(--rw, 0px) !important; }
+  .verdict { position: absolute; z-index: 4; left: 16px; right: 16px; top: 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; padding: 12px 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid color-mix(in srgb, var(--over) 40%, var(--border)); box-shadow: var(--shadow-2); }
+  .verdict .big { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--over); }
+  .verdict .big .badge { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--over-soft); }
+  .verdict .goals { display: flex; flex-wrap: wrap; gap: 6px; }
+  .g { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border-radius: 999px; font-size: 12.5px; font-weight: 500; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+  .g.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; } .g.no { background: var(--over-soft); color: var(--over); border-color: transparent; }
+  .g b { font: 600 12px var(--font-mono); }
+  .acts { display: flex; gap: 8px; }
+  .btn { height: 34px; padding: 0 14px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .btn.pri { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+  .callout { position: absolute; z-index: 5; width: 280px; padding: 12px 14px; border-radius: var(--r-md); background: var(--text); color: var(--bg); font-size: 13px; line-height: 19px; box-shadow: var(--shadow-3); }
+  .callout b { display: block; margin-bottom: 2px; }
+  .callout::before { content: ""; position: absolute; left: -6px; top: 22px; width: 12px; height: 12px; background: inherit; transform: rotate(45deg); }
+  .callout.below::before { left: 128px; top: -6px; }
+  .livebar { position: absolute; z-index: 4; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 7px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2); font-size: 13px; white-space: nowrap; }
+  .livebar .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-text); animation: pl 1.2s ease-in-out infinite; }
+  @keyframes pl { 50% { opacity: .3; } }
+  .livebar .bad { color: var(--over); font-weight: 600; }
+  /* B: right panel */
+  .rp { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+  .rp .hd { padding: 16px; border-bottom: 1px solid var(--border); }
+  .rp .hd .big { font-size: 20px; font-weight: 700; color: var(--over); display: flex; align-items: center; gap: 8px; }
+  .rp .hd p { margin: 4px 0 12px; color: var(--text-2); font-size: 13px; }
+  .goal { padding: 12px 16px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 10px; align-items: center; }
+  .goal .st { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; }
+  .goal.ok .st { background: var(--ok-soft); color: var(--ok); } .goal.no .st { background: var(--over-soft); color: var(--over); } .goal.wait .st { background: var(--surface-3); color: var(--text-3); }
+  .goal .nm { font-size: 14px; font-weight: 500; } .goal .ms { font: 600 14px var(--font-mono); } .goal.no .ms { color: var(--over); } .goal.ok .ms { color: var(--ok); }
+  .goal .bar { grid-column: 2 / -1; height: 6px; border-radius: 3px; background: var(--surface-3); position: relative; }
+  .goal .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+  .goal .bar i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); }
+  .goal .why { grid-column: 2 / -1; font-size: 12px; color: var(--text-3); }
+  /* C: floating result card */
+  .scrim { position: absolute; inset: 0; z-index: 3; background: color-mix(in srgb, var(--canvas) 55%, transparent); }
+  .rcard { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 460px; padding: 22px; border-radius: var(--r-xl); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-3); text-align: center; }
+  .ring { width: 112px; height: 112px; margin: 0 auto 8px; position: relative; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring b { position: absolute; inset: 0; display: grid; place-items: center; font: 700 26px var(--font-mono); }
+  .ring small { position: absolute; left: 0; right: 0; bottom: 26px; font-size: 11px; color: var(--text-3); }
+  .rcard h3 { margin: 6px 0 2px; font-size: 20px; color: var(--over); } .rcard p { margin: 0 0 14px; color: var(--text-2); font-size: 13px; }
+  .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .three div { padding: 10px; border-radius: var(--r-md); background: var(--surface-2); text-align: left; }
+  .three small { display: block; font-size: 12px; color: var(--text-3); } .three b { font: 600 17px var(--font-mono); }
+  .three .no b { color: var(--over); } .three .ok b { color: var(--ok); }
+  .rcard .acts { justify-content: center; }
+  /* trace panel */
+  .trace { position: absolute; z-index: 4; right: 16px; top: 14px; width: 330px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2); }
+  .trace .th { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .trace .th b { font-size: 14px; } .trace .th small { color: var(--text-3); font: 500 12px var(--font-mono); }
+  .hop { display: grid; grid-template-columns: 18px 1fr auto; gap: 2px 10px; padding: 8px 14px; position: relative; font-size: 13px; }
+  .hop::before { content: ""; position: absolute; left: 22px; top: 22px; bottom: -8px; width: 2px; background: var(--border); }
+  .hop:last-child::before { display: none; }
+  .hop .dt { width: 10px; height: 10px; border-radius: 50%; margin: 4px 0 0 4px; background: var(--accent-text); position: relative; z-index: 1; }
+  .hop.bad .dt { background: var(--over); }
+  .hop small { grid-column: 2; color: var(--text-3); font-size: 12px; } .hop .t { font: 500 12px var(--font-mono); color: var(--text-2); }
+  .hop.bad b { color: var(--over); }
+  .trace .tf { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-2); }
+  [data-phase="done"] .running-ctl, [data-phase="trace"] .running-ctl { display: none !important; }
+  [data-phase="done"] .run, [data-phase="trace"] .run { display: inline-flex !important; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0">Kịch bản: 12.000 yêu cầu/giây, Máy chủ web 2 ngừng ở giây 3, PostgreSQL 1 quá tải. Mục tiêu của thử thách: p95 ≤ 100 ms, trả lời được ≥ 99,9%, chi phí ≤ 500 $/tháng, không có điểm hỏng là sập, không lộ máy chủ ra ngoài. Kết quả: đạt 2/5.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, ic = A.ic;
+const GOALS = [
+  { nm: "Độ trễ p95", tgt: "≤ 100 ms", ms: "184 ms", ok: false, pct: 92, mark: 50, why: "Truy vấn xếp hàng ở PostgreSQL 1 từ giây 3,4" },
+  { nm: "Tỉ lệ trả lời được", tgt: "≥ 99,9%", ms: "83,4%", ok: false, pct: 83, mark: 99, why: "2.000 yêu cầu/giây bị từ chối tại PostgreSQL 1" },
+  { nm: "Chi phí mỗi tháng", tgt: "≤ 500 $", ms: "430 $", ok: true, pct: 86, mark: 100 },
+  { nm: "Điểm hỏng là sập", tgt: "= 0", ms: "1", ok: false, pct: 100, mark: 0, why: "Cân bằng tải 1 chỉ có một nút" },
+  { nm: "Máy chủ lộ ra ngoài", tgt: "= 0", ms: "0", ok: true, pct: 0, mark: 0 },
+];
+const chip = (g) => `<span class="g ${g.ok ? "ok" : "no"}">${ic(g.ok ? "ok" : "x", 12)}${g.nm} <b>${g.ms}</b></span>`;
+function verdictA(phase) {
+  if (phase === "running") return `<div class="livebar"><span class="pulse"></span><b class="num">giây 4,2 / 10</b><span>·</span><span>2 sự kiện</span><span>·</span><span class="bad">p95 đang 184 ms</span></div>`;
+  if (phase === "trace") return "";
+  return `<div class="verdict" role="status"><div class="big"><span class="badge">${ic("x", 16)}</span>Chưa đạt · 2/5</div><div class="goals">${GOALS.map(chip).join("")}</div><div class="acts"><button class="btn pri">${ic("alert", 14)} Hỏng ở đâu?</button><button class="btn">${ic("retry", 14)} Chạy lại</button></div></div>`;
+}
+function panelB(phase) {
+  if (phase === "trace") return traceList(true);
+  const live = phase === "running";
+  const head = live
+    ? `<div class="hd"><div class="big" style="color:var(--text)">Đang chạy · <span class="num">4,2 / 10 giây</span></div><p>Mục tiêu được chấm khi lần chạy kết thúc. Đây là số liệu tạm tính.</p></div>`
+    : `<div class="hd"><div class="big">${ic("x", 18)} Chưa đạt · 2/5 mục tiêu</div><p>Lần chạy #3 · 10 giây · 120.000 yêu cầu · seed 1</p><div class="acts"><button class="btn pri">${ic("alert", 14)} Hỏng ở đâu?</button><button class="btn">${ic("retry", 14)} Chạy lại</button></div></div>`;
+  return `<aside class="rp" aria-label="Kết quả">${head}${GOALS.map((g) => {
+    const cls = live && g.nm.startsWith("Chi phí") ? "ok" : live ? "wait" : g.ok ? "ok" : "no";
+    const fill = cls === "ok" ? "var(--ok)" : cls === "no" ? "var(--over)" : "var(--text-3)";
+    return `<div class="goal ${cls}"><span class="st">${ic(cls === "ok" ? "ok" : cls === "no" ? "x" : "clock", 12)}</span><span class="nm">${g.nm} <span style="color:var(--text-3);font-weight:400">${g.tgt}</span></span><span class="ms">${g.ms}</span>
+      ${g.pct ? `<span class="bar"><span style="width:${g.pct}%;background:${fill}"></span>${g.mark ? `<i style="left:${g.mark}%"></i>` : ""}</span>` : ""}${!live && g.why ? `<span class="why">${g.why}</span>` : ""}</div>`;
+  }).join("")}</aside>`;
+}
+function cardC(phase) {
+  if (phase !== "done") return "";
+  const C = 2 * Math.PI * 48;
+  return `<div class="scrim"></div><div class="rcard" role="dialog" aria-label="Kết quả lần chạy"><div class="ring"><svg viewBox="0 0 112 112"><circle cx="56" cy="56" r="48" fill="none" stroke="var(--surface-3)" stroke-width="10"/><circle cx="56" cy="56" r="48" fill="none" stroke="var(--over)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C * 0.4} ${C}"/></svg><b>2/5</b><small>mục tiêu</small></div>
+    <h3>Chưa đạt</h3><p>PostgreSQL 1 không gánh nổi khi Máy chủ web 2 ngừng.</p>
+    <div class="three"><div class="no"><small>p95</small><b>184 ms</b></div><div class="no"><small>Trả lời được</small><b>83,4%</b></div><div class="ok"><small>Chi phí</small><b>430 $</b></div></div>
+    <div class="acts"><button class="btn pri">${ic("alert", 14)} Hỏng ở đâu?</button><button class="btn">${ic("play", 14)} Xem lại</button><button class="btn">Sửa thiết kế</button></div></div>`;
+}
+function traceList(asPanel) {
+  const hops = [
+    ["Gửi đi", "Người dùng 1", "00:04,200", false, "yêu cầu đọc #48.211"],
+    ["Được xử lý", "Cân bằng tải 1", "+0,5 ms", false, "chọn Máy chủ web 1 (lần lượt)"],
+    ["Được xử lý", "Máy chủ web 1", "+4,0 ms", false, "chờ 0 ms trong hàng"],
+    ["Bị từ chối", "PostgreSQL 1", "+0,8 ms", true, "hàng đợi đầy (5.000 truy vấn/giây mỗi máy)"],
+  ];
+  const body = hops.map(([a, n, t, bad, sub]) => `<div class="hop ${bad ? "bad" : ""}"><span class="dt"></span><b>${a} · ${n}</b><span class="t">${t}</span><small>${sub}</small></div>`).join("");
+  const inner = `<div class="th"><b>Theo một yêu cầu</b><small>#48.211</small></div>${body}<div class="tf">Kết quả: <b style="color:var(--over)">bị từ chối</b> sau 5,3 ms. ${ic("chevr", 12)} Yêu cầu tiếp theo cùng loại</div>`;
+  return asPanel ? `<aside class="rp" aria-label="Theo một yêu cầu">${inner}</aside>` : `<div class="trace">${inner}</div>`;
+}
+function draw(s) {
+  const phase = s.mode;
+  const root = document.documentElement;
+  root.dataset.mode = "running"; root.dataset.phase = phase;
+  const app = document.getElementById("app");
+  app.style.setProperty("--rw", s.option === "b" ? "360px" : "0px");
+  const right = s.option === "b" ? panelB(phase) : "<div></div>";
+  let overlay = "";
+  if (s.option === "a") overlay = verdictA(phase) + (phase === "trace" ? traceList(false) : "");
+  if (s.option === "c") overlay = (phase === "running" ? verdictA("running") : "") + cardC(phase) + (phase === "trace" ? traceList(false) : "");
+  app.innerHTML = A.topbar({ saved: phase === "running" ? "Đang chạy lần #3" : "Lần chạy #3 xong · 2 phút trước" }) + A.palette() + `<div class="cv" id="cv">${overlay}${A.zoom("right:16px;bottom:14px")}</div>` + right + A.playback + A.status();
+  const path = phase === "trace";
+  const extra = path ? { "web-2": { dim: true }, "client-1": { onpath: true }, "lb-1": { onpath: true }, "web-1": { onpath: true }, "pg-1": { onpath: true } } : {};
+  const edges = SDData.design.edges.map((e) => Object.assign({}, e, { path: path && ["client-1>lb-1", "lb-1>web-1", "web-1>pg-1"].includes(e.from + ">" + e.to) }));
+  const c = A.drawCanvas(document.getElementById("cv"), "running", { extra, edges, path, noDots: phase !== "running", padY: s.option === "a" && phase === "done" ? 160 : 60, offY: s.option === "a" && phase === "done" ? 36 : 0, padX: phase === "trace" && s.option !== "b" ? 360 : 0, offX: phase === "trace" && s.option !== "b" ? -170 : 0 });
+  if (s.option === "a" && phase === "done") {
+    const p = c.geo.pos["pg-1"];
+    c.insertAdjacentHTML("beforeend", `<div class="callout below" style="left:${p.x - 54}px;top:${p.y + 172}px"><b>Đây là chỗ gãy</b>PostgreSQL 1 nhận 12.000 truy vấn/giây nhưng hai máy chỉ chịu 10.000. Thử thêm bản sao đọc hoặc một bộ nhớ đệm phía trước.</div>`);
+  }
+}
+Demo.init({
+  id: "07", title: "07 · Phản hồi khi chạy",
+  modes: [{ id: "running", label: "Đang chạy" }, { id: "done", label: "Đã xong" }, { id: "trace", label: "Theo một yêu cầu" }],
+  options: [
+    { id: "a", name: "Kết luận trên khung vẽ", recommended: true,
+      summary: "Khi chạy xong, một dải kết luận nằm ngay trên sơ đồ: Đạt/Chưa đạt + số mục tiêu, từng mục tiêu là một chip (đạt xanh, trượt đỏ, kèm số đo). Nút \"Hỏng ở đâu?\" chỉ thẳng vào thành phần gãy với một lời giải thích ngắn. Sơ đồ giữ nguyên trạng thái cuối nên người học nhìn thấy nguyên nhân cạnh kết luận.",
+      pros: ["Kết luận trước, chi tiết sau (khác Syscraft mở đầu bằng cả đoạn tham số)", "Không che sơ đồ: thấy được chỗ gãy ngay", "Một cú bấm từ kết luận tới nguyên nhân"],
+      cons: ["Chip mục tiêu dài có thể xuống hai dòng ở 1280 px", "Ít chỗ cho giải thích dài"] },
+    { id: "b", name: "Bảng kết quả bên phải",
+      summary: "Kết quả và danh sách mục tiêu nằm trong bảng bên phải; mỗi mục tiêu có thanh so sánh số đo với ngưỡng và một dòng lý do. Khung vẽ sạch.",
+      pros: ["Đủ chỗ cho lý do từng mục tiêu", "Trong lúc chạy, các mục tiêu \"chờ chấm\" cho biết điều gì đang được kiểm tra"],
+      cons: ["Mắt phải đi qua lại giữa bảng và sơ đồ", "Chiếm chỗ của bảng thuộc tính"] },
+    { id: "c", name: "Thẻ kết quả nổi",
+      summary: "Một thẻ ở giữa với vòng điểm, ba con số chính và ba hành động; sơ đồ phía sau mờ đi nhưng vẫn thấy. Gần với cảm giác \"màn kết quả\" của trò chơi.",
+      pros: ["Khoảnh khắc kết quả rõ ràng, có cảm xúc", "Ba hành động tiếp theo rất rõ"],
+      cons: ["Che sơ đồ đúng lúc cần xem nó (lỗi của Syscraft)", "Thêm một lần đóng thẻ"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>

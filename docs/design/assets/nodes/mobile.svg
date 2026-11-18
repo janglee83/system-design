@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Ứng dụng di động" data-kind="mobile" data-category="entry">
+  <title>Ứng dụng di động</title>
+  <rect x="20" y="4" width="24" height="40" rx="4" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M29 8h6M30 40h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="24.5" y="13" width="6" height="6" rx="1.5" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="33.5" y="13" width="6" height="6" rx="1.5" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="24.5" y="22" width="6" height="6" rx="1.5" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="33.5" y="22" width="6" height="6" rx="1.5" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M50 12a8 8 0 0 1 0 12M54 8a14 14 0 0 1 0 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

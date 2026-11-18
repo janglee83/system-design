@@ -32,6 +32,7 @@ export interface WasmBinding {
   grade(run: RawRun, goals: unknown): unknown;
   listComponents(): unknown;
   defaultCalibration(): unknown;
+  capabilities(): unknown;
   checkFixture(json: string): unknown;
   engineVersion(): string;
 }

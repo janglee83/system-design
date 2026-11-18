@@ -1,0 +1,182 @@
+@import "tailwindcss";
+@import "./tokens.css";
+@import "../lab/canvas/node.css";
+@import "@fontsource/be-vietnam-pro/400.css";
+@import "@fontsource/be-vietnam-pro/500.css";
+@import "@fontsource/be-vietnam-pro/600.css";
+@import "@fontsource/be-vietnam-pro/700.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-bg: var(--sd-bg);
+  --color-canvas: var(--sd-canvas);
+  --color-grid: var(--sd-grid);
+  --color-surface: var(--sd-surface);
+  --color-surface-2: var(--sd-surface-2);
+  --color-surface-3: var(--sd-surface-3);
+  --color-border: var(--sd-border);
+  --color-border-strong: var(--sd-border-strong);
+  --color-text: var(--sd-text);
+  --color-text-2: var(--sd-text-2);
+  --color-text-3: var(--sd-text-3);
+  --color-accent: var(--sd-accent);
+  --color-accent-hover: var(--sd-accent-hover);
+  --color-accent-soft: var(--sd-accent-soft);
+  --color-accent-text: var(--sd-accent-text);
+  --color-on-accent: var(--sd-on-accent);
+  --color-ok: var(--sd-ok);
+  --color-ok-soft: var(--sd-ok-soft);
+  --color-busy: var(--sd-busy);
+  --color-busy-soft: var(--sd-busy-soft);
+  --color-busy-line: var(--sd-busy-line);
+  --color-over: var(--sd-over);
+  --color-over-soft: var(--sd-over-soft);
+  --color-down: var(--sd-down);
+  --color-down-soft: var(--sd-down-soft);
+  --color-info: var(--sd-info);
+  --color-edge-http: var(--sd-edge-http);
+  --color-edge-db: var(--sd-edge-db);
+  --color-edge-cache: var(--sd-edge-cache);
+  --color-edge-msg: var(--sd-edge-msg);
+  --color-cat-entry: var(--sd-cat-entry);
+  --color-cat-compute: var(--sd-cat-compute);
+  --color-cat-data: var(--sd-cat-data);
+  --color-cat-cache: var(--sd-cat-cache);
+  --color-cat-msg: var(--sd-cat-msg);
+  --color-cat-storage: var(--sd-cat-storage);
+  --color-cat-external: var(--sd-cat-external);
+  --color-scrim: var(--sd-scrim);
+
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  /* The six type roles of design-system §1.2; Tailwind's default sizes are removed. */
+  --text-*: initial;
+  --text-display: 28px;
+  --text-display--line-height: 36px;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 700;
+  --text-title: 20px;
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 600;
+  --text-heading: 16px;
+  --text-heading--line-height: 22px;
+  --text-heading--font-weight: 600;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-label--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-reading: 16px;
+  --text-reading--line-height: 26px;
+
+  --radius-xs: var(--sd-r-xs);
+  --radius-sm: var(--sd-r-sm);
+  --radius-md: var(--sd-r-md);
+  --radius-lg: var(--sd-r-lg);
+  --radius-xl: var(--sd-r-xl);
+
+  --shadow-1: var(--sd-shadow-1);
+  --shadow-2: var(--sd-shadow-2);
+  --shadow-3: var(--sd-shadow-3);
+  --ease-sd: var(--sd-ease-out);
+  --ease-sd-in: var(--sd-ease-in);
+}
+
+html {
+  background: var(--sd-bg);
+  color: var(--sd-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* In the base layer so utilities (outline-none on an input inside a ringed control) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--sd-accent-text);
+    outline-offset: 2px;
+  }
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section headers: sentence case at 13/600 (§1.2); the uppercase 11 px labels are retired. */
+.section-label {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--sd-text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+
+@keyframes sd-pulse {
+  50% {
+    border-color: color-mix(in srgb, var(--sd-over) 45%, transparent);
+  }
+}
+
+/* An indeterminate progress bar (the Run button while the engine works). */
+@keyframes sd-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.sd-indeterminate {
+  animation: sd-indeterminate 1.2s var(--sd-ease-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+@keyframes sd-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+.sd-grow {
+  animation: sd-grow 4s var(--sd-ease-out) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-grow {
+    animation: none;
+  }
+}
+@keyframes sd-live {
+  50% {
+    opacity: 0.35;
+  }
+}
+.sd-live-dot {
+  animation: sd-live 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-live-dot {
+    animation: none;
+  }
+}

@@ -1,0 +1,90 @@
+import type { Goal, Metrics, SimEvent, SimInput, TimelineView, TraceSummary, ValidationIssue, Verdict } from "@sd/sim";
+import type { NamedGraph } from "../issue-text";
+
+/** What the run's logs and events name things by: frozen when the run starts (Phase 3 review). */
+export interface RunSnapshot extends NamedGraph {
+  /** The design's non-blocking issues when it ran. */
+  warnings: ValidationIssue[];
+}
+import { createStore } from "zustand/vanilla";
+import { MAX_KEPT_RUNS } from "@/engine/protocol";
+
+/** The same limit as the worker's kept runs, so every listed run can be inspected (until a restart). */
+export const MAX_HISTORY = MAX_KEPT_RUNS;
+
+export interface RunRecord {
+  /** The Lab's run number: increases for the whole session, also across engine restarts. */
+  id: number;
+  /** The worker's run id, used for trace and export requests while `epoch` is current. */
+  engineRunId: number;
+  /** The engine epoch the run was made in (EngineClient.epoch). */
+  epoch: number;
+  startedAt: number;
+  input: SimInput;
+  metrics: Metrics;
+  events: SimEvent[];
+  timeline: TimelineView;
+  traces: TraceSummary[];
+  /** What the run was graded against (empty in the free Lab), and the engine's verdict. */
+  goals: Goal[];
+  verdict: Verdict | null;
+  elapsedMs: number;
+  snapshot: RunSnapshot;
+}
+
+export interface RunState {
+  runs: RunRecord[];
+  currentId: number | null;
+  status: "idle" | "running";
+  error: string | null;
+  /** Bumped by every begin and stop: a result for an older attempt is dropped. */
+  attempt: number;
+  /** Starts an attempt and returns its number. */
+  begin(): number;
+  /** Stops the current attempt (Esc or Dừng); its result, when it arrives, is dropped. */
+  stop(): void;
+  finish(r: RunRecord): void;
+  fail(message: string | null): void;
+  select(id: number): void;
+  /** The next local run id. */
+  nextId(): number;
+}
+
+export function createRunStore() {
+  let ids = 0;
+  return createStore<RunState>()((set, get) => ({
+    nextId: () => ++ids,
+    runs: [],
+    currentId: null,
+    status: "idle",
+    error: null,
+    attempt: 0,
+    begin: () => {
+      const attempt = get().attempt + 1;
+      set({ status: "running", error: null, attempt });
+      return attempt;
+    },
+    stop: () => {
+      if (get().status === "running") set({ status: "idle", attempt: get().attempt + 1 });
+    },
+    finish: (r) => set({ runs: [...get().runs, r].slice(-MAX_HISTORY), currentId: r.id, status: "idle" }),
+    fail: (message) => set({ status: "idle", error: message }),
+    select: (id) => {
+      if (get().runs.some((r) => r.id === id)) set({ currentId: id });
+    },
+  }));
+}
+
+export const currentRun = (s: Pick<RunState, "runs" | "currentId">): RunRecord | null =>
+  s.runs.find((r) => r.id === s.currentId) ?? null;
+
+export function previousRun(s: Pick<RunState, "runs" | "currentId">): RunRecord | null {
+  const i = s.runs.findIndex((r) => r.id === s.currentId);
+  return i > 0 ? s.runs[i - 1]! : null;
+}
+
+/**
+ * Whether the worker still holds this run (trace, JSON export). After an engine restart older runs
+ * stay in the history with their metrics, events and timeline, but say "run again to inspect".
+ */
+export const runAvailable = (r: Pick<RunRecord, "epoch">, epoch: number): boolean => r.epoch === epoch;

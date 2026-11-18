@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="DNS" data-kind="dns" data-category="entry">
+  <title>DNS</title>
+  <circle cx="22" cy="24" r="15" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M7 24h30M22 9c-5 4-6 26 0 30M22 9c5 4 6 26 0 30M10 16h24M10 32h24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="40" y="11" width="20" height="9" rx="2" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M43.5 15.5h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="40" y="28" width="20" height="9" rx="2" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M43.5 32.5h4M50 32.5h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M50 20v8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2.5"/>
+</svg>

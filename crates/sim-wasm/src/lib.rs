@@ -50,6 +50,19 @@ struct TraceSummary<'a> {
     latency_ms: f64,
 }
 
+/// `sim_core::Capabilities` as JS sees it. Kept here so sim-core needs no Serialize derive.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilitiesJs<'a> {
+    components: &'a [String],
+    faults: &'a [sim_core::FaultKind],
+    metrics: &'a [String],
+    workload_params: &'a [String],
+    calibration_fields: &'a [String],
+    config_keys: &'a std::collections::BTreeMap<String, Vec<String>>,
+    node_override_keys: &'a [String],
+}
+
 #[wasm_bindgen]
 impl SimRun {
     pub fn metrics(&self) -> Result<JsValue, JsValue> {
@@ -172,4 +185,20 @@ pub fn check_fixture(json: &str) -> Result<JsValue, JsValue> {
 #[wasm_bindgen(js_name = engineVersion)]
 pub fn engine_version() -> String {
     sim_core::engine_version().to_string()
+}
+
+/// What this engine build supports. The UI disables what is not built yet (fault kinds,
+/// workload params) instead of letting a run fail.
+#[wasm_bindgen]
+pub fn capabilities() -> Result<JsValue, JsValue> {
+    let c = sim_core::capabilities();
+    to_js(&CapabilitiesJs {
+        components: &c.components,
+        faults: &c.faults,
+        metrics: &c.metrics,
+        workload_params: &c.workload_params,
+        calibration_fields: &c.calibration_fields,
+        config_keys: &c.config_keys,
+        node_override_keys: &c.node_override_keys,
+    })
 }
