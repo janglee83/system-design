@@ -19,7 +19,7 @@ test("save, reload, open", async ({ page }) => {
   await expect(page.getByTestId("node-postgres-1")).toBeVisible(); // draft restored
   await expect(page.getByTestId("design-menu")).toContainText("Shop v1");
 
-  await page.getByRole("button", { name: "Design" }).click();
+  await page.getByRole("button", { name: "Design", exact: true }).click();
   await page.getByRole("menuitem", { name: "New" }).hover();
   await page.getByRole("menuitem", { name: "Empty" }).click();
   await expect(page.getByTestId("node-postgres-1")).toHaveCount(0);
@@ -37,7 +37,7 @@ test("opening over unsaved changes asks first", async ({ page }) => {
   await page.getByRole("dialog").getByRole("textbox", { name: "Design name" }).fill("One");
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
   await page.getByRole("button", { name: "Add Web server" }).click(); // now unsaved
-  await expect(page.getByRole("img", { name: "Unsaved changes" })).toBeVisible();
+  await expect(page.getByTestId("save-line").getByText("Unsaved changes")).toBeVisible();
   await page.keyboard.press(`${mod}+o`);
   await page.getByRole("button", { name: "Open “One”" }).click();
   await expect(page.getByText("Your unsaved changes will be lost. Continue?")).toBeVisible();
@@ -49,7 +49,7 @@ test("opening over unsaved changes asks first", async ({ page }) => {
 test("export a design and import it again; a broken file lists its problems", async ({ page }, info) => {
   await openLab(page);
   await buildFourTier(page);
-  await page.getByRole("button", { name: "Design" }).click();
+  await page.getByRole("button", { name: "Design", exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Export" }).click();
   const file = await download;
@@ -58,7 +58,7 @@ test("export a design and import it again; a broken file lists its problems", as
 
   await page.evaluate(() => indexedDB.deleteDatabase("sd-lab"));
   await openLab(page, "en");
-  await page.getByRole("button", { name: "Design" }).click();
+  await page.getByRole("button", { name: "Design", exact: true }).click();
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("menuitem", { name: "Import…" }).click();
   await (await chooser).setFiles(saved);
@@ -68,7 +68,7 @@ test("export a design and import it again; a broken file lists its problems", as
   const doc = JSON.parse(fs.readFileSync(saved, "utf8"));
   doc.nodes[0].replicas = "many";
   fs.writeFileSync(broken, JSON.stringify(doc));
-  await page.getByRole("button", { name: "Design" }).click();
+  await page.getByRole("button", { name: "Design", exact: true }).click();
   const chooser2 = page.waitForEvent("filechooser");
   await page.getByRole("menuitem", { name: "Import…" }).click();
   await (await chooser2).setFiles(broken);

@@ -1,10 +1,16 @@
-export function Mark({ size = 20 }: { size?: number }) {
+/** The brand mark: a 26 px accent square with three linked nodes (design-system §2.1). */
+export function Mark({ size = 26 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden className="text-accent">
-      <path d="M6 6 L14 10 L6 14" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      <rect x="2" y="3" width="6" height="6" rx="1.5" fill="currentColor" />
-      <rect x="12" y="7" width="6" height="6" rx="1.5" fill="currentColor" />
-      <rect x="2" y="11" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.55" />
+    <svg width={size} height={size} viewBox="0 0 26 26" aria-hidden>
+      <rect width="26" height="26" rx="7" fill="var(--sd-accent)" />
+      <g stroke="var(--sd-on-accent)" strokeWidth="1.6" strokeLinecap="round" fill="none">
+        <path d="M9 13 L17 8.5 M9 13 L17 17.5" />
+      </g>
+      <g fill="var(--sd-on-accent)">
+        <circle cx="8" cy="13" r="2.6" />
+        <circle cx="18" cy="8" r="2.6" />
+        <circle cx="18" cy="18" r="2.6" />
+      </g>
     </svg>
   );
 }

@@ -131,13 +131,13 @@ test("the inspector edits a node and its cost follows", async ({ page }) => {
   await expect(page.getByTestId("node-web-server-1")).toContainText("× 2");
 });
 
-test("the engine chip does not cover the minimap", async ({ page }) => {
+test("the engine state and the design's size live in the status strip", async ({ page }) => {
   await openLab(page);
-  await addAt(page, "Users", 120, 200); // the minimap shows once there is something to map
-  const chip = (await page.getByTestId("engine-status").boundingBox())!;
-  const map = (await page.getByRole("img", { name: "Overview map" }).boundingBox())!;
-  const overlap = chip.x < map.x + map.width && map.x < chip.x + chip.width && chip.y < map.y + map.height && map.y < chip.y + chip.height;
-  expect(overlap).toBe(false);
+  const strip = page.getByRole("contentinfo", { name: "Status" });
+  await expect(strip.getByTestId("engine-status")).toContainText(/Simulator \d+\.\d+\.\d+ ready/);
+  await addAt(page, "Users", 120, 200);
+  await expect(strip).toContainText("1 component · 0 connections");
+  await expect(strip).toContainText("Autosaved in this browser");
 });
 
 test("clicking Add twice places the second node beside the first and announces each add", async ({ page }) => {

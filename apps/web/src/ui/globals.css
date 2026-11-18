@@ -130,3 +130,39 @@ html {
     border-color: color-mix(in srgb, var(--sd-over) 45%, transparent);
   }
 }
+
+/* An indeterminate progress bar (the Run button while the engine works). */
+@keyframes sd-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.sd-indeterminate {
+  animation: sd-indeterminate 1.2s var(--sd-ease-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+@keyframes sd-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+.sd-grow {
+  animation: sd-grow 4s var(--sd-ease-out) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-grow {
+    animation: none;
+  }
+}

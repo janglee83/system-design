@@ -3,21 +3,21 @@ import * as DM from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
-import { MENU_ITEM_CLASS } from "@/shell/HelpMenu";
+import { MENU_ITEM_CLASS } from "@/shell/menu-styles";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { TEMPLATES } from "../model/templates";
 import { formatCombo } from "../shortcuts";
-import { useDesign, useDoc, useUiApi } from "../store/LabStores";
+import { useDoc, useUiApi } from "../store/LabStores";
 import { useIsMac } from "../use-shortcuts";
 import { ImportExport, type ImportExportHandle } from "./ImportExport";
+import { DesignTitle } from "./DesignTitle";
 import { useDocActions } from "./use-doc-actions";
 
 const CONTENT = "z-50 min-w-52 rounded-md border border-border bg-surface p-1 shadow-2";
 
-/** The design's name and the Design menu, at the top of the palette column. */
+/** The design's name, its save line and the Design menu, in the top bar. */
 export function DesignMenu() {
   const t = useTranslations();
-  const name = useDesign((s) => s.design.name);
   const dirty = useDoc((s) => s.dirty);
   const ui = useUiApi();
   const actions = useDocActions();
@@ -30,17 +30,15 @@ export function DesignMenu() {
   const guarded = (fn: () => void) => () => (dirty ? setConfirmNew(() => fn) : fn());
 
   return (
-    <div className="flex items-center gap-2 border-b border-border px-3 py-2" data-testid="design-menu">
-      <p className="min-w-0 flex-1 truncate text-body font-semibold" title={dirty ? t("designs.unsaved") : undefined}>
-        {name || t("inspector.untitled")}
-        {dirty ? (
-          <span role="img" aria-label={t("designs.unsaved")} className="ml-1.5 inline-block size-1.5 rounded-full bg-busy align-middle" />
-        ) : null}
-      </p>
+    <div className="flex min-w-0 items-center gap-0.5" data-testid="design-menu">
+      <DesignTitle />
       <DM.Root modal={false}>
-        <DM.Trigger className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-label font-medium text-text-2 hover:bg-surface-2">
-          {t("designs.menu")}
-          <ChevronDown size={14} aria-hidden />
+        <DM.Trigger
+          aria-label={t("designs.menu")}
+          title={t("designs.menu")}
+          className="inline-flex size-7 shrink-0 items-center justify-center self-start rounded-sm text-text-2 hover:bg-surface-2 hover:text-text"
+        >
+          <ChevronDown size={16} aria-hidden />
         </DM.Trigger>
         <DM.Portal>
           <DM.Content align="end" sideOffset={4} className={CONTENT}>

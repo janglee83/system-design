@@ -3,14 +3,16 @@ import * as Popover from "@radix-ui/react-popover";
 import type { ValidationIssue } from "@sd/sim";
 import { useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
+import { Check, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
+import { cn } from "@/ui/cn";
 import { issueText } from "./issue-text";
 import { faultIssues } from "./model/faults";
 import { allIssues } from "./store/check-store";
 import { useCheck, useDesign, useDesignApi } from "./store/LabStores";
 import { useMetas } from "./use-metas";
 
-/** The "N problems" pill over the canvas, with the translated list in a popover. */
+/** The top bar's "N problems" pill, with the translated list in a popover. */
 export function Problems() {
   const t = useTranslations();
   const issues = useCheck((s) => s.issues);
@@ -25,7 +27,9 @@ export function Problems() {
   const all = useMemo(() => [...allIssues({ issues, runIssues }), ...faultChecks], [issues, runIssues, faultChecks]);
   const blocking = all.filter((i) => i.blocking);
   const warnings = all.filter((i) => !i.blocking);
-  const dot = all.length === 0 ? "var(--sd-ok)" : blocking.length > 0 ? "var(--sd-over)" : "var(--sd-busy)";
+  // §2.1: ok when clear, over with blocking problems; warnings alone use busy (they do not stop a run).
+  const tone = all.length === 0 ? "bg-ok-soft text-ok" : blocking.length > 0 ? "bg-over-soft text-over" : "bg-busy-soft text-busy";
+  const Icon = all.length === 0 ? Check : TriangleAlert;
 
   const show = (issue: ValidationIssue) => {
     if (issue.nodeId) {
@@ -71,16 +75,17 @@ export function Problems() {
         <button
           type="button"
           data-testid="problems"
-          className="inline-flex h-8 items-center gap-2 rounded-full border border-border bg-surface px-3 text-label font-medium shadow-2"
+          className={cn("inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] leading-4 font-medium whitespace-nowrap", tone)}
         >
-          <span aria-hidden className="size-2 rounded-full" style={{ background: dot }} />
+          <Icon size={14} aria-hidden />
           {all.length === 0 ? t("problems.none") : t("problems.count", { count: all.length })}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           aria-label={t("problems.title")}
-          side="top"
+          side="bottom"
+          align="end"
           sideOffset={8}
           className="z-50 max-h-80 w-96 overflow-y-auto rounded-lg border border-border bg-surface p-2 shadow-2"
         >

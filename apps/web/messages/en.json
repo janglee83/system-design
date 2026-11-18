@@ -460,7 +460,24 @@
     "tookMs": "{ms} ms",
     "unavailable": "Run again to inspect: the simulator restarted after this run.",
     "stale": "run again to inspect",
-    "checking": "Still checking the design. Try again in a moment."
+    "checking": "Still checking the design. Try again in a moment.",
+    "go": "Run simulation",
+    "more": "Run settings",
+    "stop": "Stop",
+    "progress": "Running",
+    "simulated": "{seconds} s simulated",
+    "why": {
+      "engine": "The simulator is starting",
+      "needsNodes": "Add Users and a server to run",
+      "problems": "{count, plural, one {# problem} other {# problems}} left to fix",
+      "checking": "Checking the design…"
+    },
+    "settings": {
+      "duration": "Duration",
+      "seed": "Random seed",
+      "faults": "{count, plural, =0 {No faults} one {# fault} other {# faults}}",
+      "open": "Open the design settings"
+    }
   },
   "panel": {
     "label": "Results",
@@ -591,5 +608,27 @@
       "newEmpty": "New empty design",
       "newWebDb": "New design: users → web server → database"
     }
+  },
+  "designTitle": {
+    "saved": "Saved in this browser · {ago}",
+    "unsaved": "Unsaved changes",
+    "never": "Not saved yet",
+    "ran": "Run #{run} done · {ago}",
+    "justNow": "just now",
+    "rename": "Rename the design",
+    "nameField": "Design name"
+  },
+  "status": {
+    "label": "Status",
+    "engineReady": "Simulator {version} ready",
+    "engineLoading": "Starting the simulator…",
+    "engineError": "Simulator error",
+    "counts": "{nodes, plural, one {# component} other {# components}} · {edges, plural, one {# connection} other {# connections}}",
+    "autosave": "Autosaved in this browser",
+    "cost": "${cost}/mo"
+  },
+  "edit": {
+    "undo": "Undo",
+    "redo": "Redo"
   }
 }

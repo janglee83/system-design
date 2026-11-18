@@ -22,7 +22,9 @@ export type RunOutcome =
   | { kind: "declined"; reason: DeclineReason }
   /** The engine refused the input; its issues are in check.runIssues. */
   | { kind: "refused" }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; message: string }
+  /** Stopped before the result arrived; the result was dropped. */
+  | { kind: "stopped" };
 
 /**
  * The single run gate (R11, Phase 3 review): the button and Mod+Enter both come here.
@@ -35,7 +37,8 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
   const c = check.getState();
   if (hasBlocking(c)) return { kind: "declined", reason: "blocked" };
   if (c.status !== "done") return { kind: "declined", reason: "checking" };
-  runs.getState().begin();
+  const attempt = runs.getState().begin();
+  const stopped = () => runs.getState().attempt !== attempt;
   try {
     // Inside the try: a design that cannot become input fails this run, it does not hang it.
     const d = design.getState().design;
@@ -48,6 +51,7 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
     // The worker the request goes to; a restart while it is out makes the run uninspectable.
     const epoch = client.epoch;
     const r = await client.request({ type: "run", input });
+    if (stopped()) return { kind: "stopped" };
     const record: RunRecord = {
       id: runs.getState().nextId(),
       engineRunId: r.runId,
@@ -66,6 +70,7 @@ export async function runDesign(stores: RunStores, client: EngineClient | null):
     stores.onRun?.(record);
     return { kind: "ran", record };
   } catch (e) {
+    if (stopped()) return { kind: "stopped" };
     if (e instanceof EngineRequestError && e.error.kind === "validation") {
       check.getState().setRunIssues(e.error.issues);
       runs.getState().fail(null);

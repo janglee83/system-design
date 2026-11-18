@@ -34,7 +34,12 @@ export interface RunState {
   currentId: number | null;
   status: "idle" | "running";
   error: string | null;
-  begin(): void;
+  /** Bumped by every begin and stop: a result for an older attempt is dropped. */
+  attempt: number;
+  /** Starts an attempt and returns its number. */
+  begin(): number;
+  /** Stops the current attempt (Esc or Dừng); its result, when it arrives, is dropped. */
+  stop(): void;
   finish(r: RunRecord): void;
   fail(message: string | null): void;
   select(id: number): void;
@@ -50,7 +55,15 @@ export function createRunStore() {
     currentId: null,
     status: "idle",
     error: null,
-    begin: () => set({ status: "running", error: null }),
+    attempt: 0,
+    begin: () => {
+      const attempt = get().attempt + 1;
+      set({ status: "running", error: null, attempt });
+      return attempt;
+    },
+    stop: () => {
+      if (get().status === "running") set({ status: "idle", attempt: get().attempt + 1 });
+    },
     finish: (r) => set({ runs: [...get().runs, r].slice(-MAX_HISTORY), currentId: r.id, status: "idle" }),
     fail: (message) => set({ status: "idle", error: message }),
     select: (id) => {

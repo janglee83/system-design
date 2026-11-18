@@ -9,7 +9,8 @@ import type { SearchItem } from "@/shell/search";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { downloadText } from "@/ui/download";
 import { useEngineStart, useEngineStore } from "@/engine/EngineProvider";
-import { EngineStatus } from "@/engine/EngineStatus";
+import { EngineErrorBanner } from "@/engine/EngineErrorBanner";
+import { TopBarPortal } from "@/shell/top-bar-slot";
 import { Canvas } from "./canvas/Canvas";
 import { ConnectDialog } from "./canvas/ConnectDialog";
 import {
@@ -41,9 +42,11 @@ import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
 import { BottomPanel } from "./panel/BottomPanel";
 import { Problems } from "./Problems";
-import { RunBar } from "./run/RunBar";
+import { StatusStrip } from "./StatusStrip";
+import { UndoRedo } from "./UndoRedo";
+import { RunButton } from "./run/RunButton";
 import { useRunDesign } from "./run/use-run-design";
-import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useUiApi } from "./store/LabStores";
+import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useRunsApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
 import { useMetas } from "./use-metas";
@@ -65,35 +68,37 @@ export function LabApp({
     <LabStoresProvider initial={initial}>
       <ReactFlowProvider>
         <h1 className="sr-only">{t("heading")}</h1>
-        <div data-testid="lab-page" className="grid min-h-0 flex-1 grid-cols-[256px_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_auto]">
-          <aside aria-label={t("palette")} className="row-span-2 min-h-0 border-r border-border bg-bg" data-tour="palette">
-            <div className="flex h-full min-h-0 flex-col">
-              <DesignMenu />
-              <div className="min-h-0 flex-1">
-                <PalettePane />
-              </div>
-            </div>
-          </aside>
-          <section className="relative min-h-0" data-tour="canvas">
-            <Canvas />
-            {/* Bottom-left, beside the canvas controls: clear of the minimap at any width. */}
-            <div className="absolute bottom-3 left-16">
-              <Problems />
-            </div>
-            <div className="absolute top-3 left-1/2 -translate-x-1/2">
-              <RunPane />
-            </div>
-            {/* Top-right: the minimap is bottom-right, controls bottom-left, the legend top-left. */}
-            <div className="absolute top-3 right-3">
-              <EngineStatus />
-            </div>
-          </section>
-          <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
-            <Inspector />
-          </aside>
-          <div className="col-span-2 min-w-0" data-tour="panel">
-            <BottomPanel />
+        <TopBarPortal name="main">
+          <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
+          <DesignMenu />
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <UndoRedo />
+            <span aria-hidden className="h-5 w-px bg-border" />
+            <Problems />
           </div>
+        </TopBarPortal>
+        <TopBarPortal name="end">
+          <RunPane />
+        </TopBarPortal>
+        <div data-testid="lab-page" className="flex min-h-0 flex-1 flex-col">
+          <div className="grid min-h-0 flex-1 grid-cols-[256px_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_auto]">
+            <aside aria-label={t("palette")} className="row-span-2 min-h-0 border-r border-border bg-bg" data-tour="palette">
+              <PalettePane />
+            </aside>
+            <section className="relative min-h-0" data-tour="canvas">
+              <Canvas />
+              <div className="absolute top-3 left-1/2 -translate-x-1/2">
+                <EngineErrorBanner />
+              </div>
+            </section>
+            <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
+              <Inspector />
+            </aside>
+            <div className="col-span-2 min-w-0" data-tour="panel">
+              <BottomPanel />
+            </div>
+          </div>
+          <StatusStrip />
         </div>
         <ConnectPane />
         <LiveValidation />
@@ -136,6 +141,7 @@ function LabShortcuts() {
   const layout = useAutoLayout();
   const run = useRunDesign();
   const docActions = useDocActions();
+  const runs = useRunsApi();
   useLabShortcuts({
     save: docActions.save,
     open: () => ui.getState().set({ designsOpen: true }),
@@ -159,13 +165,14 @@ function LabShortcuts() {
     layout,
     group: () => groupSelection(api),
     ungroup: () => ungroupSelection(api),
-    escape: () => api.getState().clearSelection(),
+    // Esc stops a run first (§2.2); otherwise it clears the selection.
+    escape: () => (runs.getState().status === "running" ? runs.getState().stop() : api.getState().clearSelection()),
   });
   return null;
 }
 
 function RunPane() {
-  return <RunBar onRun={useRunDesign()} />;
+  return <RunButton onRun={useRunDesign()} />;
 }
 
 /** Autosaves the draft, and restores it once when the Lab opens without a design from the URL (R22). */

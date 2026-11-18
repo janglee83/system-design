@@ -460,7 +460,24 @@
     "tookMs": "{ms} ms",
     "unavailable": "Hãy chạy lại để xem chi tiết: bộ mô phỏng đã khởi động lại sau lần chạy này.",
     "stale": "chạy lại để xem",
-    "checking": "Đang kiểm tra thiết kế. Thử lại sau giây lát."
+    "checking": "Đang kiểm tra thiết kế. Thử lại sau giây lát.",
+    "go": "Chạy mô phỏng",
+    "more": "Cài đặt lần chạy",
+    "stop": "Dừng",
+    "progress": "Đang chạy",
+    "simulated": "{seconds} giây mô phỏng",
+    "why": {
+      "engine": "Bộ mô phỏng đang khởi động",
+      "needsNodes": "Thêm Người dùng và một máy chủ để chạy",
+      "problems": "Còn {count, plural, other {# vấn đề}} cần sửa",
+      "checking": "Đang kiểm tra thiết kế…"
+    },
+    "settings": {
+      "duration": "Thời lượng",
+      "seed": "Hạt giống ngẫu nhiên",
+      "faults": "{count, plural, =0 {Không có sự cố} other {# sự cố}}",
+      "open": "Mở cài đặt thiết kế"
+    }
   },
   "panel": {
     "label": "Kết quả",
@@ -591,5 +608,27 @@
       "newEmpty": "Thiết kế trống mới",
       "newWebDb": "Thiết kế mới: người dùng → máy chủ web → cơ sở dữ liệu"
     }
+  },
+  "designTitle": {
+    "saved": "Đã lưu trên trình duyệt này · {ago}",
+    "unsaved": "Có thay đổi chưa lưu",
+    "never": "Chưa lưu",
+    "ran": "Lần chạy #{run} xong · {ago}",
+    "justNow": "vừa xong",
+    "rename": "Đổi tên thiết kế",
+    "nameField": "Tên thiết kế"
+  },
+  "status": {
+    "label": "Trạng thái",
+    "engineReady": "Bộ mô phỏng {version} sẵn sàng",
+    "engineLoading": "Bộ mô phỏng đang khởi động…",
+    "engineError": "Bộ mô phỏng lỗi",
+    "counts": "{nodes, plural, other {# thành phần}} · {edges, plural, other {# kết nối}}",
+    "autosave": "Lưu tự động trên trình duyệt này",
+    "cost": "{cost} $/tháng"
+  },
+  "edit": {
+    "undo": "Hoàn tác",
+    "redo": "Làm lại"
   }
 }

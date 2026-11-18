@@ -71,13 +71,13 @@ export async function buildFourTier(page: Page, webReplicas = 2) {
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("problems")).toHaveText("No problems");
   // The pill keeps the last result while a re-check is pending; an enabled Run button means it is current.
-  await expect(page.getByTestId("run-bar").getByRole("button", { name: /^Run/ })).toBeEnabled();
+  await expect(page.getByTestId("run-bar").getByRole("button", { name: /^Run simulation/ })).toBeEnabled();
 }
 
 export async function runOnce(page: Page): Promise<string> {
   const bar = page.getByTestId("run-bar");
   const before = await bar.getAttribute("data-run-id");
-  await bar.getByRole("button", { name: /^Run/ }).click();
+  await bar.getByRole("button", { name: /^Run simulation/ }).click();
   await expect(bar).not.toHaveAttribute("data-run-id", before ?? "");
   await expect(bar).toHaveAttribute("data-status", "idle");
   return (await bar.getAttribute("data-run-id"))!;

@@ -58,4 +58,15 @@ describe("run store", () => {
     expect(MAX_HISTORY).toBe(MAX_KEPT_RUNS);
     expect(MAX_RUNS).toBe(MAX_KEPT_RUNS);
   });
+
+  it("stop ends a run without a result and does nothing when idle", () => {
+    const s = createRunStore();
+    const a = s.getState().begin();
+    s.getState().stop();
+    expect(s.getState().status).toBe("idle");
+    expect(s.getState().attempt).not.toBe(a);
+    const idle = s.getState().attempt;
+    s.getState().stop();
+    expect(s.getState().attempt).toBe(idle);
+  });
 });

@@ -9,12 +9,13 @@ import { useMetas } from "@/lab/use-metas";
 import { CommandPalette } from "./CommandPalette";
 import { CommandRegistryProvider, usePaletteOpen, useRegisteredCommands } from "./command-registry";
 import type { SearchItem } from "./search";
+import { TopBarSlotsProvider } from "./top-bar-slot";
 
 /** The command palette for every shell page: content and components here, page commands registered by the page. */
 export function ShellClient({ index, children }: { index: ContentIndex; children: React.ReactNode }) {
   return (
     <CommandRegistryProvider>
-      {children}
+      <TopBarSlotsProvider>{children}</TopBarSlotsProvider>
       <Palette index={index} />
     </CommandRegistryProvider>
   );

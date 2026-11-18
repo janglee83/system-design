@@ -1,4 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function pickTheme(page: Page, name: string) {
+  await page.getByRole("button", { name: "Theme" }).click();
+  await page.getByRole("menuitemradio", { name }).click();
+}
 
 test("the top bar reaches every section", async ({ page }) => {
   await page.goto("/en/lab");
@@ -12,7 +17,8 @@ test("the top bar reaches every section", async ({ page }) => {
 
 test("switching language keeps the page and is remembered", async ({ page }) => {
   await page.goto("/en/challenges");
-  await page.getByRole("radio", { name: "VI" }).click();
+  await page.getByRole("button", { name: "Language" }).click();
+  await page.getByRole("menuitemradio", { name: "Tiếng Việt" }).click();
   await expect(page).toHaveURL(/\/vi\/challenges$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Thử thách");
   await page.goto("/");
@@ -21,12 +27,12 @@ test("switching language keeps the page and is remembered", async ({ page }) => 
 
 test("the theme choice survives a reload, and system follows the OS", async ({ page }) => {
   await page.goto("/en/lab");
-  await page.getByRole("radio", { name: "Dark" }).click();
+  await pickTheme(page, "Dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await page.getByRole("radio", { name: "Follow the system" }).click();
+  await pickTheme(page, "Follow the system");
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.emulateMedia({ colorScheme: "light" });
@@ -60,9 +66,9 @@ test("⌘K / Ctrl+K adds a component in the Lab and finds a challenge in Vietnam
 test("Design v2 tokens: the 2A accent in both themes", async ({ page }) => {
   const accent = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--sd-accent").trim().toUpperCase());
   await page.goto("/en/lab");
-  await page.getByRole("radio", { name: "Light" }).click();
+  await pickTheme(page, "Light");
   expect(await accent()).toBe("#0B6870");
-  await page.getByRole("radio", { name: "Dark" }).click();
+  await pickTheme(page, "Dark");
   expect(await accent()).toBe("#3FC3CB");
 });
 
@@ -78,4 +84,24 @@ test("focus rings show for the keyboard only", async ({ page }) => {
   await page.keyboard.press("Tab");
   await expect(pill).toBeFocused();
   expect(await outline()).toEqual({ style: "solid", width: "2px" });
+});
+
+test("at 1280 px nothing in the Lab's top bar overflows", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/vi/lab");
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  const bar = page.getByTestId("top-bar");
+  const overflow = await bar.evaluate((el) =>
+    [el, ...el.querySelectorAll<HTMLElement>("*")].filter((e) => e.clientWidth > 1 && e.scrollWidth > e.clientWidth + 1).map((e) => e.outerHTML.slice(0, 80)),
+  );
+  expect(overflow).toEqual([]);
+  const box = (await bar.boundingBox())!;
+  for (const el of await bar.locator("button, a").all()) {
+    const b = await el.boundingBox();
+    if (b) expect(b.x + b.width).toBeLessThanOrEqual(box.x + box.width);
+  }
+  // The language button folds into Help at this width.
+  await expect(page.getByRole("button", { name: "Ngôn ngữ" })).toBeHidden();
+  await page.getByRole("button", { name: "Trợ giúp" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "English" })).toBeVisible();
 });

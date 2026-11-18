@@ -121,4 +121,18 @@ describe("runDesign", () => {
     expect(out.record.epoch).toBe(41);
     epoch.mockRestore();
   });
+
+  it("a stopped run is dropped: no record, no run number, and the Lab is idle at once", async () => {
+    const { client, stores } = setup();
+    const pending = runDesign(stores, client);
+    expect(stores.runs.getState().status).toBe("running");
+    stores.runs.getState().stop();
+    expect(stores.runs.getState().status).toBe("idle");
+    const out = await pending;
+    expect(out.kind).toBe("stopped");
+    expect(stores.runs.getState().runs).toEqual([]);
+    const next = await runDesign(stores, client);
+    if (next.kind !== "ran") throw new Error(next.kind);
+    expect(next.record.id).toBe(1);
+  });
 });
