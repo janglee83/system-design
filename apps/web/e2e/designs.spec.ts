@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { expect, test } from "@playwright/test";
-import { buildFourTier, openLab } from "./helpers";
+import { buildFourTier, openLab, paletteItem } from "./helpers";
 
 // Linux Chromium in the container: Mod is Control.
 const mod = process.platform === "darwin" ? "Meta" : "Control";
@@ -32,11 +32,11 @@ test("save, reload, open", async ({ page }) => {
 
 test("opening over unsaved changes asks first", async ({ page }) => {
   await openLab(page);
-  await page.getByRole("button", { name: "Add Users" }).click();
+  await (await paletteItem(page, "Users")).click();
   await page.keyboard.press(`${mod}+s`);
   await page.getByRole("dialog").getByRole("textbox", { name: "Design name" }).fill("One");
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
-  await page.getByRole("button", { name: "Add Web server" }).click(); // now unsaved
+  await (await paletteItem(page, "Web server")).click(); // now unsaved
   await expect(page.getByTestId("save-line").getByText("Unsaved changes")).toBeVisible();
   await page.keyboard.press(`${mod}+o`);
   await page.getByRole("button", { name: "Open “One”" }).click();

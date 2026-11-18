@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addAt, connectByDrag, runOnce } from "./helpers";
+import { addAt, connectByDrag, runOnce, paletteItem } from "./helpers";
 
 test("open c-l0-first-launch from the challenges list, check the locked node, run", async ({ page }) => {
   await page.goto("/en/challenges");
@@ -16,9 +16,10 @@ test("open c-l0-first-launch from the challenges list, check the locked node, ru
   await expect(inspector.getByText("The challenge locks this component.")).toBeVisible();
   await expect(inspector.getByRole("spinbutton", { name: "Replicas" })).toBeDisabled();
 
-  await expect(page.getByRole("button", { name: "Add Load balancer" })).toHaveAttribute("aria-disabled", "true");
-  await addAt(page, "Web server", 420, 220);
-  await addAt(page, "PostgreSQL", 700, 220);
+  await expect(await paletteItem(page, "Load balancer")).toHaveAttribute("aria-disabled", "true");
+  // Below the challenge's Users tile (the start design is zoomed to fit).
+  await addAt(page, "Web server", 150, 470);
+  await addAt(page, "PostgreSQL", 600, 470);
   await connectByDrag(page, "users", "web-server-1");
   await connectByDrag(page, "web-server-1", "postgres-1");
   await page.keyboard.press("Escape");

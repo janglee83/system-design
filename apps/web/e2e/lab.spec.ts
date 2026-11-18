@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { addAt, connectByDrag, connectToCard, openLab } from "./helpers";
+import { addAt, connectByDrag, connectToCard, openLab, paletteItem } from "./helpers";
 
 test("the Lab shows an empty canvas with the edge legend", async ({ page }) => {
   await page.goto("/en/lab");
@@ -12,13 +12,13 @@ test("the Lab shows an empty canvas with the edge legend", async ({ page }) => {
 test("components are added by click (centre) and by drag (drop point)", async ({ page }) => {
   await page.goto("/en/lab");
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
-  await page.getByRole("button", { name: "Add Web server" }).click();
+  await (await paletteItem(page, "Web server")).click();
   await expect(page.getByTestId("node-web-server-1")).toBeVisible();
   await expect(page.getByTestId("node-web-server-1")).toContainText("Web server 1");
 
   const canvas = page.getByTestId("lab-canvas");
   const box = (await canvas.boundingBox())!;
-  await page.getByRole("button", { name: "Add PostgreSQL" }).dragTo(canvas, { targetPosition: { x: box.width - 200, y: 120 } });
+  await (await paletteItem(page, "PostgreSQL")).dragTo(canvas, { targetPosition: { x: box.width - 200, y: 120 } });
   const pg = page.getByTestId("node-postgres-1");
   await expect(pg).toBeVisible();
   const pgBox = (await pg.boundingBox())!;
@@ -36,7 +36,7 @@ test("dragging from a port to a port creates a typed edge", async ({ page }) => 
   await page.goto("/en/lab");
   await addAt(page, "Users", 120, 200);
   await addAt(page, "Web server", 420, 200);
-  await addAt(page, "PostgreSQL", 720, 200);
+  await addAt(page, "PostgreSQL", 690, 200);
   await connectByDrag(page, "client-1", "web-server-1");
   await connectByDrag(page, "web-server-1", "postgres-1");
   await expect(page.getByTestId("edge-e1")).toHaveAttribute("data-kind", "http");
@@ -74,7 +74,8 @@ test("problems update live and nodes show their monthly cost", async ({ page }) 
 test("a dropped component lands where it was dropped", async ({ page }) => {
   await openLab(page);
   const canvas = (await page.getByTestId("lab-canvas").boundingBox())!;
-  await addAt(page, "PostgreSQL", 500, 300);
+  // Dragged directly (not addAt): the drawer stays open, so the canvas does not move after the drop.
+  await (await paletteItem(page, "PostgreSQL")).dragTo(page.getByTestId("lab-canvas"), { targetPosition: { x: 500, y: 300 } });
   const pg = (await page.getByTestId("node-postgres-1").boundingBox())!;
   // Centred on the drop point, give or take the 16 px grid.
   expect(Math.abs(pg.x + pg.width / 2 - (canvas.x + 500))).toBeLessThanOrEqual(16);
@@ -142,9 +143,9 @@ test("the engine state and the design's size live in the status strip", async ({
 
 test("clicking Add twice places the second node beside the first and announces each add", async ({ page }) => {
   await openLab(page);
-  await page.getByRole("button", { name: "Add Web server" }).click();
+  await (await paletteItem(page, "Web server")).click();
   await expect(page.getByTestId("announcer")).toHaveText("Added Web server 1");
-  await page.getByRole("button", { name: "Add Web server" }).click();
+  await (await paletteItem(page, "Web server")).click();
   await expect(page.getByTestId("announcer")).toHaveText("Added Web server 2");
   const a = (await page.getByTestId("node-web-server-1").boundingBox())!;
   const b = (await page.getByTestId("node-web-server-2").boundingBox())!;
@@ -166,7 +167,7 @@ test("at 1024 px the problems pill clears the minimap, and its count is announce
 
 test("a node is the 172 × 148 illustrated tile, with 24 px ports and a dashed focus ring", async ({ page }) => {
   await openLab(page, "vi");
-  await page.getByRole("button", { name: "Thêm Máy chủ web" }).click();
+  await (await paletteItem(page, "Máy chủ web")).click();
   const tile = page.getByTestId("node-web-server-1");
   const box = (await tile.boundingBox())!;
   expect(Math.abs(box.width - 172)).toBeLessThanOrEqual(1);
@@ -189,3 +190,26 @@ test("a node is the 172 × 148 illustrated tile, with 24 px ports and a dashed f
   expect(await tile.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("dashed");
 });
 
+
+test("the palette rail and drawer: coming-soon kinds show but cannot be placed", async ({ page }) => {
+  await openLab(page, "vi");
+  const rail = page.getByRole("tablist", { name: "Loại thành phần" });
+  await expect(rail.getByRole("tab")).toHaveCount(7);
+  await rail.getByRole("tab", { name: "Đệm" }).click();
+  const drawer = page.getByRole("tabpanel");
+  await expect(drawer.getByRole("heading", { name: "Bộ nhớ đệm" })).toBeVisible();
+  const redis = drawer.getByRole("button", { name: "Thêm Redis" });
+  await expect(redis).toContainText("Sắp có");
+  await expect(drawer.getByRole("button", { name: "Thêm Memcached" })).toContainText("Sắp có");
+  await redis.dragTo(page.getByTestId("lab-canvas"), { targetPosition: { x: 300, y: 200 } });
+  await redis.click({ force: true });
+  await expect(page.locator(".react-flow__node")).toHaveCount(0);
+
+  await drawer.getByRole("searchbox", { name: "Tìm thành phần" }).fill("bo nho dem");
+  await expect(drawer.getByRole("button", { name: /^Thêm / })).toHaveText([/Redis/, /Memcached/]);
+
+  await drawer.getByRole("searchbox", { name: "Tìm thành phần" }).fill("");
+  await rail.getByRole("tab", { name: "Lối vào" }).click();
+  await page.getByRole("button", { name: "Thêm CDN" }).focus();
+  await expect(page.getByRole("tooltip")).toContainText("Chưa kéo vào khung vẽ được");
+});

@@ -5,8 +5,30 @@ export async function openLab(page: Page, locale = "en", query = "") {
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
 }
 
+/** The palette's category rail (its tabs, not the bottom panel's). */
+export const paletteRail = (page: Page) => page.getByTestId("palette").getByRole("tablist");
+
+/** A palette row, found through the drawer's search (rows show only in the open category). */
+export async function paletteItem(page: Page, name: string) {
+  const search = page.getByRole("searchbox", { name: /^(Search components|Tìm thành phần)$/ });
+  if (!(await search.isVisible())) await paletteRail(page).getByRole("tab").first().click();
+  await search.fill(name);
+  return page.getByRole("button", { name: new RegExp(`^(Add|Thêm) ${name}$`) });
+}
+
+/** Clears the drawer's search. */
+export async function clearPaletteSearch(page: Page) {
+  await page.getByRole("searchbox", { name: /^(Search components|Tìm thành phần)$/ }).fill("");
+}
+
+/**
+ * Drags a component from the drawer to a point on the canvas, then closes the drawer so the canvas
+ * is wide again. Points are relative to the canvas while the drawer is open (about 730 px wide).
+ */
 export async function addAt(page: Page, name: string, x: number, y: number) {
-  await page.getByRole("button", { name: `Add ${name}` }).dragTo(page.getByTestId("lab-canvas"), { targetPosition: { x, y } });
+  await (await paletteItem(page, name)).dragTo(page.getByTestId("lab-canvas"), { targetPosition: { x, y } });
+  await clearPaletteSearch(page);
+  await paletteRail(page).locator('[role="tab"][aria-selected="true"]').click();
 }
 
 /** The centre of an element once React Flow has measured and placed it (two equal reads). */
@@ -53,10 +75,10 @@ export async function connectToCard(page: Page, from: string, to: string) {
 
 /** client → lb → web-server (×replicas) → postgres, laid out on one row. */
 export async function buildFourTier(page: Page, webReplicas = 2) {
-  await addAt(page, "Users", 100, 220);
-  await addAt(page, "Load balancer", 330, 220);
-  await addAt(page, "Web server", 560, 220);
-  await addAt(page, "PostgreSQL", 790, 220);
+  await addAt(page, "Users", 90, 220);
+  await addAt(page, "Load balancer", 290, 220);
+  await addAt(page, "Web server", 490, 220);
+  await addAt(page, "PostgreSQL", 690, 220);
   await connectByDrag(page, "client-1", "lb-1");
   await connectByDrag(page, "lb-1", "web-server-1");
   await connectByDrag(page, "web-server-1", "postgres-1");

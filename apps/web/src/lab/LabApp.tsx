@@ -40,22 +40,26 @@ import { loadDraft, useAutosave } from "./designs/use-autosave";
 import { useDocActions } from "./designs/use-doc-actions";
 import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
+import { useKindPrices } from "./palette/use-kind-prices";
 import { BottomPanel } from "./panel/BottomPanel";
 import { Problems } from "./Problems";
 import { StatusStrip } from "./StatusStrip";
 import { UndoRedo } from "./UndoRedo";
 import { RunButton } from "./run/RunButton";
 import { useRunDesign } from "./run/use-run-design";
-import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useRunsApi, useUiApi } from "./store/LabStores";
+import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useRuns, useRunsApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
 import { useMetas } from "./use-metas";
 
 export function LabApp({
+  planned = [],
   initial,
   template,
   notFound = false,
 }: {
+  /** Kinds the engine will support next (curriculum.json), shown as coming soon. */
+  planned?: readonly string[];
   initial?: Design;
   /** `?template=`: built once the engine's component list is known. */
   template?: TemplateId;
@@ -81,9 +85,9 @@ export function LabApp({
           <RunPane />
         </TopBarPortal>
         <div data-testid="lab-page" className="flex min-h-0 flex-1 flex-col">
-          <div className="grid min-h-0 flex-1 grid-cols-[256px_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_auto]">
-            <aside aria-label={t("palette")} className="row-span-2 min-h-0 border-r border-border bg-bg" data-tour="palette">
-              <PalettePane />
+          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_auto]">
+            <aside aria-label={t("palette")} className="row-span-2 min-h-0" data-tour="palette">
+              <PalettePane planned={planned} />
             </aside>
             <section className="relative min-h-0" data-tour="canvas">
               <Canvas />
@@ -115,12 +119,14 @@ export function LabApp({
 
 const NO_METAS: never[] = [];
 
-/** The palette, fed by the engine's component list and the challenge's allowed kinds. */
-function PalettePane() {
+/** The palette, fed by the engine's component list, the planned kinds and the challenge's allowed kinds. */
+function PalettePane({ planned }: { planned: readonly string[] }) {
   const metas = useEngineStore((s) => s.info?.components ?? NO_METAS);
   const allowedKinds = useDesign((s) => s.design.challenge?.limits.allowedKinds ?? null);
+  const running = useRuns((s) => s.status === "running");
+  const prices = useKindPrices(metas);
   const add = useAddComponent();
-  return <Palette metas={metas} onAdd={(k) => add(k)} allowedKinds={allowedKinds} />;
+  return <Palette metas={metas} planned={planned} onAdd={(k) => add(k)} allowedKinds={allowedKinds} running={running} prices={prices} />;
 }
 
 function ConnectPane() {

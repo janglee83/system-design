@@ -167,13 +167,47 @@
     "client": "Users",
     "lb": "Load balancer",
     "web-server": "Web server",
-    "postgres": "PostgreSQL"
+    "postgres": "PostgreSQL",
+    "mobile": "Mobile app",
+    "dns": "DNS",
+    "cdn": "CDN",
+    "api-gateway": "API gateway",
+    "rate-limiter": "Rate limiter",
+    "worker": "Background worker",
+    "scheduler": "Scheduler (cron)",
+    "read-replica": "Read replica",
+    "kv-store": "Key–value store",
+    "search": "Search index",
+    "redis": "Redis",
+    "memcached": "Memcached",
+    "queue": "Queue",
+    "rabbitmq": "RabbitMQ",
+    "stream": "Event stream",
+    "object-storage": "Object storage",
+    "third-party": "External API"
   },
   "componentDescription": {
     "client": "Where requests come from: the people using your system.",
     "lb": "Spreads incoming requests across the servers behind it so no single one is swamped.",
     "web-server": "Runs your application code and answers HTTP requests. Add CPUs or copies to serve more.",
-    "postgres": "A relational database that keeps data safe. Read replicas share the reading load."
+    "postgres": "A relational database that keeps data safe. Read replicas share the reading load.",
+    "mobile": "People on phones, sending requests over mobile networks.",
+    "dns": "Turns a domain name into an address so people can reach your system.",
+    "cdn": "Keeps copies of static content close to people so it loads faster.",
+    "api-gateway": "One front door: checks who is calling, routes and combines the APIs behind it.",
+    "rate-limiter": "Turns away requests when one caller sends too many too quickly.",
+    "worker": "Does slow jobs in the background, taking work from a queue.",
+    "scheduler": "Runs jobs at set times, such as a report every night.",
+    "read-replica": "A read-only copy of the database that takes some of the reading load.",
+    "kv-store": "Stores data by key; very fast reads and writes, easy to split up.",
+    "search": "Finds text by keyword across a large amount of content.",
+    "redis": "An in-memory cache that takes reads off the database.",
+    "memcached": "A simple in-memory cache spread across several machines.",
+    "queue": "Holds work to be done later so people do not wait for it.",
+    "rabbitmq": "A message queue with routing and delivery receipts.",
+    "stream": "A durable log of events that many readers can replay.",
+    "object-storage": "Stores big files such as photos and video, cheaply and almost without limit.",
+    "third-party": "Someone else’s service your system calls, such as payments."
   },
   "category": {
     "general": "General",
@@ -312,7 +346,25 @@
     "add": "Add {name}",
     "notAllowed": "This challenge does not allow this component.",
     "noMatch": "No component matches “{query}”.",
-    "added": "Added {name}"
+    "added": "Added {name}",
+    "soon": "Coming soon",
+    "locked": "Locked",
+    "price": "${price}",
+    "card": {
+      "status": "Status",
+      "price": "Price",
+      "accepts": "Accepts",
+      "ready": "Available",
+      "planned": "Coming soon",
+      "later": "Later",
+      "acceptsNone": "Accepts no connections",
+      "perMonth": "${price}/mo",
+      "soonNote": "Can’t be placed on the canvas yet. Lessons that use it open when the simulator supports it.",
+      "notAllowed": "This challenge doesn’t allow this component."
+    },
+    "rail": "Component types",
+    "running": "Stop the run to add components",
+    "close": "Close the drawer"
   },
   "connect": {
     "title": "Connect {source} to…",
@@ -353,7 +405,26 @@
     "edgeKindNotAccepted": "{kind} (not accepted by {target})",
     "multi": "{count} items selected",
     "decrease": "Decrease {label}",
-    "increase": "Increase {label}"
+    "increase": "Increase {label}",
+    "summary": {
+      "world": "Uses the world parameters",
+      "own": "{count, plural, one {# own value} other {# own values}}",
+      "breakdown": "{count, plural, one {# instance} other {# instances}} × ${each}",
+      "noConnections": "No connections",
+      "connections": "{incoming} in · {outgoing} out",
+      "workload": "{rps} requests/s · {writes}% writes",
+      "run": "{seconds} s · seed {seed}",
+      "faults": "{count, plural, =0 {No faults} one {# fault} other {# faults}}"
+    },
+    "connections": "Connections",
+    "connection": {
+      "in": "From {name}",
+      "out": "To {name}"
+    },
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "exportDesign": "Export design",
+    "runSettingsTitle": "Run settings"
   },
   "group": {
     "untitled": "Group",
@@ -644,5 +715,42 @@
   "edit": {
     "undo": "Undo",
     "redo": "Redo"
+  },
+  "paletteCategory": {
+    "entry": {
+      "short": "Entry",
+      "name": "Entry points",
+      "description": "Where requests come into the system."
+    },
+    "compute": {
+      "short": "Compute",
+      "name": "Compute",
+      "description": "Machines that run your code."
+    },
+    "data": {
+      "short": "Data",
+      "name": "Data",
+      "description": "Where data is kept for good."
+    },
+    "cache": {
+      "short": "Cache",
+      "name": "Caching",
+      "description": "Keeps answers ready so replies come faster."
+    },
+    "msg": {
+      "short": "Messages",
+      "name": "Messaging",
+      "description": "Moves work between parts of the system."
+    },
+    "storage": {
+      "short": "Files",
+      "name": "File storage",
+      "description": "Where big files are kept."
+    },
+    "external": {
+      "short": "External",
+      "name": "External services",
+      "description": "Services you do not run yourself."
+    }
   }
 }

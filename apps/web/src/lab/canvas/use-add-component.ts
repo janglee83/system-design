@@ -6,19 +6,21 @@ import { useTranslations } from "next-intl";
 import { announce } from "@/ui/announce";
 import { displayLabel } from "../labels";
 import { addNode, freeSpot } from "../model/ops";
-import { useDesignApi } from "../store/LabStores";
+import { useDesignApi, useRunsApi } from "../store/LabStores";
 import { useMetas } from "../use-metas";
 
-/** Adds a component at a screen point, or at the centre of the canvas, and selects it. */
+/** Adds a component at a screen point, or at the centre of the canvas, and selects it (null when refused). */
 export function useAddComponent() {
   const flow = useReactFlow();
   const api = useDesignApi();
+  const runs = useRunsApi();
   const metas = useMetas();
   const t = useTranslations();
   return useCallback(
     (kind: string, screen?: { x: number; y: number }): string | null => {
+      // Only kinds the engine has (not planned or later ones), and never during a run (§3).
       const meta = metas.get(kind);
-      if (!meta) return null;
+      if (!meta || runs.getState().status === "running") return null;
       let point = screen;
       if (!point) {
         const r = document.querySelector('[data-testid="lab-canvas"]')?.getBoundingClientRect();
@@ -40,6 +42,6 @@ export function useAddComponent() {
       }
       return id;
     },
-    [flow, api, metas, t],
+    [flow, api, runs, metas, t],
   );
 }

@@ -167,13 +167,47 @@
     "client": "Người dùng",
     "lb": "Cân bằng tải",
     "web-server": "Máy chủ web",
-    "postgres": "PostgreSQL"
+    "postgres": "PostgreSQL",
+    "mobile": "Ứng dụng di động",
+    "dns": "DNS",
+    "cdn": "CDN",
+    "api-gateway": "Cổng API",
+    "rate-limiter": "Giới hạn tốc độ",
+    "worker": "Worker nền",
+    "scheduler": "Lịch chạy (cron)",
+    "read-replica": "Bản sao đọc",
+    "kv-store": "Kho khoá–giá trị",
+    "search": "Chỉ mục tìm kiếm",
+    "redis": "Redis",
+    "memcached": "Memcached",
+    "queue": "Hàng đợi",
+    "rabbitmq": "RabbitMQ",
+    "stream": "Luồng sự kiện",
+    "object-storage": "Kho tệp",
+    "third-party": "API bên ngoài"
   },
   "componentDescription": {
     "client": "Nơi yêu cầu xuất phát: những người đang dùng hệ thống của bạn.",
     "lb": "Chia yêu cầu đến cho các máy chủ phía sau để không máy nào bị dồn quá sức.",
     "web-server": "Chạy mã ứng dụng và trả lời yêu cầu HTTP. Thêm CPU hoặc thêm bản sao để phục vụ được nhiều hơn.",
-    "postgres": "Cơ sở dữ liệu quan hệ giữ dữ liệu an toàn. Bản sao đọc gánh bớt phần đọc."
+    "postgres": "Cơ sở dữ liệu quan hệ giữ dữ liệu an toàn. Bản sao đọc gánh bớt phần đọc.",
+    "mobile": "Người dùng trên điện thoại, gửi yêu cầu qua mạng di động.",
+    "dns": "Đổi tên miền thành địa chỉ để người dùng tìm thấy hệ thống.",
+    "cdn": "Giữ bản sao nội dung tĩnh gần người dùng để tải nhanh hơn.",
+    "api-gateway": "Cửa vào chung: xác thực, định tuyến và gom các API phía sau.",
+    "rate-limiter": "Chặn bớt yêu cầu khi một người gửi quá nhiều trong thời gian ngắn.",
+    "worker": "Làm các việc chậm ở phía sau, lấy việc từ hàng đợi.",
+    "scheduler": "Chạy việc theo giờ đã hẹn, ví dụ báo cáo mỗi đêm.",
+    "read-replica": "Bản sao chỉ đọc của cơ sở dữ liệu, chia bớt tải đọc.",
+    "kv-store": "Lưu dữ liệu theo khoá, đọc ghi rất nhanh và dễ chia nhỏ.",
+    "search": "Tìm theo từ khoá trên lượng lớn văn bản.",
+    "redis": "Bộ nhớ đệm trong RAM, giảm tải đọc cho cơ sở dữ liệu.",
+    "memcached": "Bộ nhớ đệm đơn giản trong RAM, chia đều trên nhiều máy.",
+    "queue": "Giữ việc cần làm để xử lý dần, không bắt người dùng chờ.",
+    "rabbitmq": "Hàng đợi tin nhắn có định tuyến và xác nhận đã nhận.",
+    "stream": "Nhật ký sự kiện lưu lâu, nhiều bên cùng đọc lại được.",
+    "object-storage": "Lưu tệp lớn như ảnh và video, rẻ và gần như không giới hạn.",
+    "third-party": "Dịch vụ của bên khác mà hệ thống gọi tới, như thanh toán."
   },
   "category": {
     "general": "Chung",
@@ -312,7 +346,25 @@
     "add": "Thêm {name}",
     "notAllowed": "Thử thách này không cho dùng thành phần này.",
     "noMatch": "Không có thành phần nào khớp “{query}”.",
-    "added": "Đã thêm {name}"
+    "added": "Đã thêm {name}",
+    "soon": "Sắp có",
+    "locked": "Bị khoá",
+    "price": "{price} $",
+    "card": {
+      "status": "Trạng thái",
+      "price": "Giá",
+      "accepts": "Nhận nối",
+      "ready": "Dùng được",
+      "planned": "Sắp có",
+      "later": "Sẽ có sau",
+      "acceptsNone": "Không nhận kết nối",
+      "perMonth": "{price} $/tháng",
+      "soonNote": "Chưa kéo vào khung vẽ được. Bài học dùng loại này sẽ mở khi bộ mô phỏng hỗ trợ.",
+      "notAllowed": "Thử thách này không cho dùng thành phần này."
+    },
+    "rail": "Loại thành phần",
+    "running": "Dừng lần chạy để thêm thành phần",
+    "close": "Đóng ngăn"
   },
   "connect": {
     "title": "Nối {source} tới…",
@@ -353,7 +405,26 @@
     "edgeKindNotAccepted": "{kind} ({target} không nhận)",
     "multi": "Đã chọn {count} mục",
     "decrease": "Giảm {label}",
-    "increase": "Tăng {label}"
+    "increase": "Tăng {label}",
+    "summary": {
+      "world": "Theo tham số thế giới",
+      "own": "{count, plural, other {# giá trị riêng}}",
+      "breakdown": "{count, plural, other {# máy}} × {each} $",
+      "noConnections": "Chưa có kết nối",
+      "connections": "{incoming} vào · {outgoing} ra",
+      "workload": "{rps} yêu cầu/giây · {writes}% ghi",
+      "run": "{seconds} giây · hạt giống {seed}",
+      "faults": "{count, plural, =0 {Không có sự cố} other {# sự cố}}"
+    },
+    "connections": "Kết nối",
+    "connection": {
+      "in": "Từ {name}",
+      "out": "Tới {name}"
+    },
+    "duplicate": "Nhân bản",
+    "delete": "Xoá",
+    "exportDesign": "Xuất thiết kế",
+    "runSettingsTitle": "Thiết lập lần chạy"
   },
   "group": {
     "untitled": "Nhóm",
@@ -644,5 +715,42 @@
   "edit": {
     "undo": "Hoàn tác",
     "redo": "Làm lại"
+  },
+  "paletteCategory": {
+    "entry": {
+      "short": "Lối vào",
+      "name": "Lối vào",
+      "description": "Nơi yêu cầu đi vào hệ thống."
+    },
+    "compute": {
+      "short": "Tính toán",
+      "name": "Tính toán",
+      "description": "Máy chạy mã của bạn."
+    },
+    "data": {
+      "short": "Dữ liệu",
+      "name": "Dữ liệu",
+      "description": "Nơi giữ dữ liệu lâu dài."
+    },
+    "cache": {
+      "short": "Đệm",
+      "name": "Bộ nhớ đệm",
+      "description": "Giữ sẵn kết quả để trả lời nhanh hơn."
+    },
+    "msg": {
+      "short": "Tin nhắn",
+      "name": "Tin nhắn",
+      "description": "Chuyển việc giữa các phần của hệ thống."
+    },
+    "storage": {
+      "short": "Tệp",
+      "name": "Lưu trữ tệp",
+      "description": "Nơi cất tệp lớn."
+    },
+    "external": {
+      "short": "Bên ngoài",
+      "name": "Bên ngoài",
+      "description": "Dịch vụ không do bạn vận hành."
+    }
   }
 }
