@@ -1,6 +1,9 @@
 import { setRequestLocale } from "next-intl/server";
+import { contentIndex, loadCurriculum } from "@/content/load";
 import { EngineProvider } from "@/engine/EngineProvider";
 import { DesktopNotice } from "@/shell/DesktopNotice";
+import { SearchButton } from "@/shell/SearchButton";
+import { ShellClient } from "@/shell/ShellClient";
 import { TopBar } from "@/shell/TopBar";
 import { Announcer } from "@/ui/Announcer";
 import { Toaster } from "@/ui/Toaster";
@@ -15,14 +18,17 @@ export default async function ShellLayout({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const index = contentIndex(await loadCurriculum());
   return (
     <EngineProvider>
       <TooltipProvider>
-        <div className="flex h-dvh flex-col">
-          <TopBar />
-          <DesktopNotice />
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-        </div>
+        <ShellClient index={index}>
+          <div className="flex h-dvh flex-col">
+            <TopBar search={<SearchButton />} />
+            <DesktopNotice />
+            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          </div>
+        </ShellClient>
         <Toaster />
         <Announcer />
       </TooltipProvider>

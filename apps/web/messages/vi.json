@@ -567,5 +567,29 @@
   "templates": {
     "empty": "Trống",
     "webDb": "Người dùng → máy chủ web → cơ sở dữ liệu"
+  },
+  "palette2": {
+    "open": "Tìm kiếm",
+    "placeholder": "Tìm lệnh, thành phần, bài học, thử thách…",
+    "hint": "{shortcut}",
+    "empty": "Không tìm thấy gì cho “{query}”.",
+    "group": {
+      "command": "Lệnh",
+      "component": "Thành phần",
+      "lesson": "Bài học",
+      "challenge": "Thử thách"
+    },
+    "cmd": {
+      "add": "Thêm {name}",
+      "run": "Chạy thiết kế",
+      "fitView": "Thu thiết kế vừa màn hình",
+      "layout": "Sắp xếp gọn",
+      "open": "Mở một thiết kế đã lưu",
+      "save": "Lưu thiết kế",
+      "export": "Xuất tệp thiết kế",
+      "import": "Nhập tệp thiết kế",
+      "newEmpty": "Thiết kế trống mới",
+      "newWebDb": "Thiết kế mới: người dùng → máy chủ web → cơ sở dữ liệu"
+    }
   }
 }

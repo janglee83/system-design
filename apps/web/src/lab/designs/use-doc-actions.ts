@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "@/ui/toast-store";
 import { designFromTemplate, type TemplateId } from "../model/templates";
 import { useMetas } from "../use-metas";
@@ -29,22 +29,25 @@ export function useDocActions() {
     else ui.getState().set({ saveDialog: "save" });
   }, [design, doc, ui, report]);
 
-  const saveNamed = (mode: "save" | "saveAs", name: string) =>
-    report(mode === "save" ? saveCurrent({ design, doc }, name) : saveAs({ design, doc }, name));
-
-  const open = (id: string) =>
-    openSaved({ design, doc }, id).then(
-      (ok) => {
-        if (ok) ui.getState().set({ designsOpen: false });
+  // One stable object, so callers can list it as a dependency (the command palette registers it).
+  return useMemo(
+    () => ({
+      save,
+      saveNamed: (mode: "save" | "saveAs", name: string) =>
+        report(mode === "save" ? saveCurrent({ design, doc }, name) : saveAs({ design, doc }, name)),
+      open: (id: string) =>
+        openSaved({ design, doc }, id).then(
+          (ok) => {
+            if (ok) ui.getState().set({ designsOpen: false });
+          },
+          () => toast(t("storageUnavailable"), "error"),
+        ),
+      /** A fresh design from a template; it is not one of the saved designs yet. */
+      newFrom: (id: TemplateId) => {
+        design.getState().replace(designFromTemplate(id, metas));
+        doc.getState().reset(null);
       },
-      () => toast(t("storageUnavailable"), "error"),
-    );
-
-  /** A fresh design from a template; it is not one of the saved designs yet. */
-  const newFrom = (id: TemplateId) => {
-    design.getState().replace(designFromTemplate(id, metas));
-    doc.getState().reset(null);
-  };
-
-  return { save, saveNamed, open, newFrom };
+    }),
+    [save, report, design, doc, ui, t, metas],
+  );
 }

@@ -1,8 +1,13 @@
 "use client";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/ui/toast-store";
+import { both } from "@/i18n/both";
+import { useRegisterCommands } from "@/shell/command-registry";
+import type { SearchItem } from "@/shell/search";
+import { ConfirmDialog } from "@/ui/ConfirmDialog";
+import { downloadText } from "@/ui/download";
 import { useEngineStart, useEngineStore } from "@/engine/EngineProvider";
 import { EngineStatus } from "@/engine/EngineStatus";
 import { Canvas } from "./canvas/Canvas";
@@ -24,9 +29,11 @@ import {
 import { useAddComponent } from "./canvas/use-add-component";
 import { useAutoLayout } from "./canvas/use-auto-layout";
 import type { Design } from "./model/design";
+import { exportDesign } from "./model/design-file";
 import { designFromTemplate, type TemplateId } from "./model/templates";
 import { DesignMenu } from "./designs/DesignMenu";
 import { DesignsDialog } from "./designs/DesignsDialog";
+import { ImportExport, type ImportExportHandle } from "./designs/ImportExport";
 import { SaveDialog } from "./designs/SaveDialog";
 import { loadDraft, useAutosave } from "./designs/use-autosave";
 import { useDocActions } from "./designs/use-doc-actions";
@@ -95,6 +102,7 @@ export function LabApp({
         <SaveDialog />
         <Drafts restore={!initial && !template} />
         <StartFrom template={template} notFound={notFound} />
+        <LabCommands />
       </ReactFlowProvider>
     </LabStoresProvider>
   );
@@ -199,4 +207,70 @@ function StartFrom({ template, notFound }: { template?: TemplateId; notFound: bo
     if (notFound) toast(t("notFound"), "warn");
   }, [notFound, t]);
   return null;
+}
+
+/** The Lab's commands and component adds in the command palette (R25). */
+function LabCommands() {
+  const design = useDesignApi();
+  const doc = useDocApi();
+  const ui = useUiApi();
+  const flow = useReactFlow();
+  const metas = useMetas();
+  const run = useRunDesign();
+  const layout = useAutoLayout();
+  const add = useAddComponent();
+  const docActions = useDocActions();
+  const engineVersion = useEngineStore((s) => s.info?.version ?? "");
+  const io = useRef<ImportExportHandle>(null);
+  const [confirmNew, setConfirmNew] = useState<TemplateId | null>(null);
+  const t = useTranslations("designs");
+  // Starting over asks first when there are unsaved changes, as the Design menu does.
+  const startNew = useCallback(
+    (id: TemplateId) => (doc.getState().dirty ? setConfirmNew(id) : docActions.newFrom(id)),
+    [doc, docActions],
+  );
+
+  const items = useMemo<SearchItem[]>(() => {
+    const cmd = (id: string, key: string, go: () => void): SearchItem => ({ id: `cmd-${id}`, group: "command", title: both(`palette2.cmd.${key}`), run: go });
+    return [
+      cmd("run", "run", run),
+      cmd("fit", "fitView", () => void flow.fitView({ duration: 200 })),
+      cmd("layout", "layout", layout),
+      cmd("open", "open", () => ui.getState().set({ designsOpen: true })),
+      cmd("save", "save", docActions.save),
+      cmd("export", "export", () => {
+        const { filename, text } = exportDesign(design.getState().design, engineVersion);
+        downloadText(filename, text);
+      }),
+      cmd("import", "import", () => io.current?.openImport()),
+      cmd("new-empty", "newEmpty", () => startNew("empty")),
+      cmd("new-webdb", "newWebDb", () => startNew("webDb")),
+      ...[...metas.values()].map((m) => ({
+        id: `cmp-${m.kind}`,
+        group: "component" as const,
+        title: both("palette2.cmd.add", { name: both(m.labelKey) }),
+        subtitle: both(`componentDescription.${m.kind}`),
+        keywords: [m.kind, both(m.labelKey).vi, both(m.labelKey).en],
+        run: () => void add(m.kind),
+      })),
+    ];
+  }, [run, flow, layout, ui, docActions, design, engineVersion, metas, add, startNew]);
+  useRegisterCommands("lab", items);
+
+  return (
+    <>
+      <ImportExport ref={io} />
+      <ConfirmDialog
+        open={confirmNew !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmNew(null);
+        }}
+        title={t("discard")}
+        confirmLabel={t("new")}
+        onConfirm={() => {
+          if (confirmNew) docActions.newFrom(confirmNew);
+        }}
+      />
+    </>
+  );
 }

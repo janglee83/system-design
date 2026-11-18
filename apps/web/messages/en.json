@@ -567,5 +567,29 @@
   "templates": {
     "empty": "Empty",
     "webDb": "Users → web server → database"
+  },
+  "palette2": {
+    "open": "Search",
+    "placeholder": "Search commands, components, lessons, challenges…",
+    "hint": "{shortcut}",
+    "empty": "Nothing found for “{query}”.",
+    "group": {
+      "command": "Commands",
+      "component": "Components",
+      "lesson": "Lessons",
+      "challenge": "Challenges"
+    },
+    "cmd": {
+      "add": "Add {name}",
+      "run": "Run the design",
+      "fitView": "Fit the design to the screen",
+      "layout": "Tidy the layout",
+      "open": "Open a saved design",
+      "save": "Save the design",
+      "export": "Export the design file",
+      "import": "Import a design file",
+      "newEmpty": "New empty design",
+      "newWebDb": "New design: users → web server → database"
+    }
   }
 }

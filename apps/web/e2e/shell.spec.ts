@@ -41,3 +41,18 @@ test("narrow windows get a dismissible notice and still render", async ({ page }
   await expect(page.getByText(/at least 1280 pixels/)).toBeHidden();
   await expect(page.getByTestId("lab-page")).toBeVisible();
 });
+
+test("⌘K / Ctrl+K adds a component in the Lab and finds a challenge in Vietnamese", async ({ page }) => {
+  await page.goto("/en/lab");
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  await page.keyboard.press("Control+k");
+  await page.getByRole("combobox", { name: "Search" }).fill("postgres");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+
+  await page.goto("/vi/learn");
+  await page.getByRole("button", { name: /Tìm kiếm/ }).click();
+  await page.getByRole("combobox", { name: "Tìm kiếm" }).fill("cua hang nho");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/vi\/lab\?challenge=c-l0-first-launch/);
+});
