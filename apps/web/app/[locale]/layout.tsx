@@ -2,6 +2,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
+import { ThemeKeeper } from "@/shell/ThemeKeeper";
 import { ThemeScript } from "@/shell/ThemeScript";
 import "@/ui/globals.css";
 
@@ -27,6 +28,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <ThemeScript />
       </head>
       <body className="min-h-dvh bg-bg text-text antialiased">
+        <ThemeKeeper />
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>

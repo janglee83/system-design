@@ -105,3 +105,15 @@ test("at 1280 px nothing in the Lab's top bar overflows", async ({ page }) => {
   await page.getByRole("button", { name: "Trợ giúp" }).click();
   await expect(page.getByRole("menuitemradio", { name: "English" })).toBeVisible();
 });
+
+test("switching language keeps the theme", async ({ page }) => {
+  await page.goto("/en/lab");
+  await pickTheme(page, "Dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: "Language" }).click();
+  await page.getByRole("menuitemradio", { name: "Tiếng Việt" }).click();
+  await expect(page).toHaveURL(/\/vi\/lab$/);
+  await expect(page.getByRole("button", { name: "Ngôn ngữ" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme-pref", "dark");
+});
