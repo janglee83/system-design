@@ -55,7 +55,7 @@ export function NodeInspector({
   const short = fields.filter(isShort);
   const other = fields.filter((f) => !isShort(f));
   const fieldInput = (f: ConfigField) => (
-    <Field key={f.key} label={t(`configField.${f.key}`)}>
+    <Field key={f.key} label={t(`configField.${f.key}`)} inline={typeof f.default === "boolean"}>
       <ConfigFieldInput field={f} value={node.config[f.key]} disabled={locked} onChange={(v) => apply((d) => setConfig(d, nodeId, f.key, v))} />
     </Field>
   );

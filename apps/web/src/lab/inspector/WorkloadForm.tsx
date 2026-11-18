@@ -74,7 +74,7 @@ export function WorkloadForm({ workloadParams }: { workloadParams: readonly stri
             options={ARRIVALS.map((a) => ({ value: a, label: t(`arrivals.${a}`) }))}
           />
         </Field>
-        <Field label={t("workload.surgeToggle")}>
+        <Field label={t("workload.surgeToggle")} inline>
           <Switch label={t("workload.surgeToggle")} checked={workload.surge !== null} onChange={(on) => patch({ surge: on ? { ...DEFAULT_SURGE } : null })} />
         </Field>
         {workload.surge ? (

@@ -13,6 +13,7 @@ export function Field({
   label,
   htmlFor,
   hint,
+  inline,
   changed,
   onReset,
   children,
@@ -20,6 +21,8 @@ export function Field({
   label: string;
   htmlFor?: string;
   hint?: React.ReactNode;
+  /** A toggle: the label on the left and the switch on the right, on one row. */
+  inline?: boolean;
   changed?: boolean;
   onReset?: () => void;
   children: React.ReactNode;
@@ -28,14 +31,15 @@ export function Field({
     <div
       data-field
       className={cn(
-        "relative flex min-w-0 flex-col gap-1.5",
+        "relative flex min-w-0",
+        inline ? "min-h-8 flex-row items-center justify-between gap-3" : "flex-col gap-1.5",
         changed && "before:absolute before:inset-y-0 before:-left-3 before:w-[3px] before:rounded-full before:bg-accent",
       )}
     >
       <label htmlFor={htmlFor} className="text-label break-words text-text-2">
         {label}
       </label>
-      <div className="flex min-w-0 items-center gap-1 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1">
+      <div className={cn("flex min-w-0 items-center gap-1", !inline && "[&>*:first-child]:min-w-0 [&>*:first-child]:flex-1")}>
         {children}
         {changed && onReset ? <ResetButton onReset={onReset} /> : null}
       </div>
