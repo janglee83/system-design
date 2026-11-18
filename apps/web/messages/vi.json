@@ -424,7 +424,8 @@
     "duplicate": "Nhân bản",
     "delete": "Xoá",
     "exportDesign": "Xuất thiết kế",
-    "runSettingsTitle": "Thiết lập lần chạy"
+    "runSettingsTitle": "Thiết lập lần chạy",
+    "designSub": "Toàn bộ thiết kế"
   },
   "group": {
     "untitled": "Nhóm",
@@ -531,7 +532,8 @@
       "lb": "Cân bằng tải",
       "pg": "PostgreSQL",
       "network": "Mạng"
-    }
+    },
+    "allDefault": "Theo mặc định"
   },
   "run": {
     "run": "Chạy",

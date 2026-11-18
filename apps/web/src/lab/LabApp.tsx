@@ -85,7 +85,7 @@ export function LabApp({
           <RunPane />
         </TopBarPortal>
         <div data-testid="lab-page" className="flex min-h-0 flex-1 flex-col">
-          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_auto]">
+          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_368px] grid-rows-[minmax(0,1fr)_auto]">
             <aside aria-label={t("palette")} className="row-span-2 min-h-0" data-tour="palette">
               <PalettePane planned={planned} />
             </aside>

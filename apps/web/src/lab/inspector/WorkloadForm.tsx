@@ -1,13 +1,14 @@
 "use client";
 import type { Arrivals, Profile, Workload } from "@sd/sim";
 import { Plus, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { ARRIVALS, PROFILES } from "@/i18n/engine-codes";
-import { Field } from "@/ui/Field";
+import { Field, FieldPair } from "@/ui/Field";
 import { IconButton } from "@/ui/IconButton";
 import { NumberField } from "@/ui/NumberField";
 import { Section } from "@/ui/Section";
+import { runSummary, workloadSummary } from "./summaries";
 import { Select } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
 import type { Design } from "../model/design";
@@ -24,6 +25,7 @@ const ms = (s: number) => Math.round(s * 1000);
 /** Traffic, scenario parameters and run settings of the design (spec §5.2). */
 export function WorkloadForm({ workloadParams }: { workloadParams: readonly string[] }) {
   const t = useTranslations();
+  const locale = useLocale();
   const api = useDesignApi();
   const workload = useDesign((s) => s.design.workload);
   const durationMs = useDesign((s) => s.design.durationMs);
@@ -34,7 +36,7 @@ export function WorkloadForm({ workloadParams }: { workloadParams: readonly stri
 
   return (
     <div className="flex flex-col">
-      <Section title={t("workload.traffic")} defaultOpen>
+      <Section title={t("workload.traffic")} id="design:traffic" summary={workloadSummary(workload, t, locale)} defaultOpen>
         <PresetPicker />
         <Field label={t("workload.field.profile")}>
           <Select<Profile>
@@ -100,16 +102,18 @@ export function WorkloadForm({ workloadParams }: { workloadParams: readonly stri
           />
         </Field>
       </Section>
-      <Section title={t("workload.params")} defaultOpen>
+      <Section title={t("workload.params")} id="design:params">
         <ParamRows params={workload.params} known={workloadParams} onChange={(params) => patch({ params })} />
       </Section>
-      <Section title={t("workload.runSettings")} defaultOpen>
+      <Section title={t("workload.runSettings")} id="design:run" summary={runSummary(durationMs, seed, t)} defaultOpen>
+        <FieldPair>
         <Field label={t("workload.field.durationMs")}>
           <NumberField label={t("workload.field.durationMs")} value={durationMs / 1000} min={1} max={MAX_DURATION_S} step={1} unit={sec} onChange={(v) => v !== undefined && apply((d) => setDuration(d, ms(v)))} />
         </Field>
         <Field label={t("workload.field.seed")}>
           <NumberField label={t("workload.field.seed")} value={seed} min={0} max={MAX_SEED} integer onChange={(v) => v !== undefined && apply((d) => setSeed(d, v))} />
         </Field>
+        </FieldPair>
       </Section>
     </div>
   );

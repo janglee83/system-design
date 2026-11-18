@@ -22,13 +22,14 @@ export function EdgeInspector({ edgeId, metas }: { edgeId: string; metas: Readon
   const target = nodes.find((n) => n.id === edge.to);
   const accepts = target ? metas.get(target.kind)?.accepts : undefined;
   return (
-    <div data-testid="inspector-edge" className="flex flex-col gap-2">
-      <header className="pb-1">
-        <h2 className="text-body font-semibold">{t("inspector.edge")}</h2>
+    <div data-testid="inspector-edge" className="flex flex-col">
+      <header className="border-b border-border px-4 py-3.5">
+        <h2 className="text-heading">{t("inspector.edge")}</h2>
         <p className="truncate text-caption text-text-2">
           {label(edge.from)} → {label(edge.to)}
         </p>
       </header>
+      <div className="px-4 py-4">
       <Field label={t("inspector.edgeKind")}>
         <Select<EdgeKind>
           label={t("inspector.edgeKind")}
@@ -43,6 +44,7 @@ export function EdgeInspector({ edgeId, metas }: { edgeId: string; metas: Readon
           }))}
         />
       </Field>
+      </div>
     </div>
   );
 }

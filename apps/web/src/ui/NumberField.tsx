@@ -56,13 +56,13 @@ export function NumberField({ label, value, onChange, min, max, step, integer, u
   return (
     <div
       className={cn(
-        "flex h-8 items-center rounded-sm border border-border-strong bg-surface",
+        "flex h-8 items-center overflow-hidden rounded-sm border border-border-strong bg-surface",
         // The ring sits on the whole stepper; the input itself draws none (globals.css :focus-visible is in @layer base).
-        "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus",
+        "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-text",
         disabled && "opacity-50",
       )}
     >
-      <button type="button" aria-label={t("decrease", { label })} disabled={disabled} onClick={() => bump(-1)} className="flex h-full w-7 items-center justify-center text-text-2 hover:text-text">
+      <button type="button" aria-label={t("decrease", { label })} disabled={disabled} onClick={() => bump(-1)} className="flex h-full w-8 shrink-0 items-center justify-center bg-surface-2 text-text-2 hover:text-text">
         <Minus size={12} aria-hidden />
       </button>
       <input
@@ -85,10 +85,10 @@ export function NumberField({ label, value, onChange, min, max, step, integer, u
             bump(e.key === "ArrowUp" ? 1 : -1);
           }
         }}
-        className="num h-full w-full min-w-0 bg-transparent text-center text-body outline-none focus-visible:outline-none"
+        className="num h-full w-full min-w-0 bg-transparent text-center text-body font-medium outline-none focus-visible:outline-none"
       />
       {unit ? <span className="pr-1 text-caption text-text-3">{unit}</span> : null}
-      <button type="button" aria-label={t("increase", { label })} disabled={disabled} onClick={() => bump(1)} className="flex h-full w-7 items-center justify-center text-text-2 hover:text-text">
+      <button type="button" aria-label={t("increase", { label })} disabled={disabled} onClick={() => bump(1)} className="flex h-full w-8 shrink-0 items-center justify-center bg-surface-2 text-text-2 hover:text-text">
         <Plus size={12} aria-hidden />
       </button>
     </div>

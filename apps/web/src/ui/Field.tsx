@@ -4,42 +4,55 @@ import { useTranslations } from "next-intl";
 import { cn } from "./cn";
 import { IconButton } from "./IconButton";
 
-/** A 32 px label/control row. `changed` marks a value that differs from its default. */
+/**
+ * A label above its control (design-system §4.1): the label never truncates, so long Vietnamese
+ * labels wrap. `hint` explains the number under the control; `changed` marks a value that differs
+ * from its default.
+ */
 export function Field({
   label,
   htmlFor,
+  hint,
   changed,
   onReset,
   children,
 }: {
   label: string;
   htmlFor?: string;
+  hint?: React.ReactNode;
   changed?: boolean;
   onReset?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div
+      data-field
       className={cn(
-        "relative flex min-h-8 items-center justify-between gap-3 py-0.5",
-        changed && "before:absolute before:inset-y-1 before:-left-3 before:w-[3px] before:rounded-full before:bg-accent",
+        "relative flex min-w-0 flex-col gap-1.5",
+        changed && "before:absolute before:inset-y-0 before:-left-3 before:w-[3px] before:rounded-full before:bg-accent",
       )}
     >
-      <label htmlFor={htmlFor} className="min-w-0 flex-1 truncate text-label text-text-2">
+      <label htmlFor={htmlFor} className="text-label break-words text-text-2">
         {label}
       </label>
-      <div className="flex w-40 shrink-0 items-center justify-end gap-1">
+      <div className="flex min-w-0 items-center gap-1 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1">
         {children}
         {changed && onReset ? <ResetButton onReset={onReset} /> : null}
       </div>
+      {hint ? <p className="text-caption text-text-3">{hint}</p> : null}
     </div>
   );
+}
+
+/** Two short fields side by side (10 px gap). */
+export function FieldPair({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-2.5">{children}</div>;
 }
 
 function ResetButton({ onReset }: { onReset: () => void }) {
   const t = useTranslations("world");
   return (
-    <IconButton label={t("reset")} onClick={onReset} className="size-7">
+    <IconButton label={t("reset")} onClick={onReset} className="size-7 shrink-0">
       <RotateCcw size={14} aria-hidden />
     </IconButton>
   );

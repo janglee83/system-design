@@ -424,7 +424,8 @@
     "duplicate": "Duplicate",
     "delete": "Delete",
     "exportDesign": "Export design",
-    "runSettingsTitle": "Run settings"
+    "runSettingsTitle": "Run settings",
+    "designSub": "The whole design"
   },
   "group": {
     "untitled": "Group",
@@ -531,7 +532,8 @@
       "lb": "Load balancers",
       "pg": "PostgreSQL",
       "network": "Network"
-    }
+    },
+    "allDefault": "All defaults"
   },
   "run": {
     "run": "Run",

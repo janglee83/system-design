@@ -8,6 +8,7 @@ import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { NumberField } from "@/ui/NumberField";
 import { Section } from "@/ui/Section";
+import { faultsSummary } from "./summaries";
 import { Select } from "@/ui/Select";
 import { toast } from "@/ui/toast-store";
 import { displayLabel } from "../labels";
@@ -53,7 +54,7 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
   };
 
   return (
-    <Section title={t("faults.title")} defaultOpen>
+    <Section title={t("faults.title")} id="design:faults" summary={faultsSummary(faults.length, t)} defaultOpen>
       {faults.length === 0 ? <p className="pb-2 text-body text-text-3">{t("faults.empty")}</p> : null}
       <ul className="flex flex-col gap-2">
         {faults.map((f, i) => {

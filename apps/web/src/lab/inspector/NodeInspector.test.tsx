@@ -60,7 +60,7 @@ describe("NodeInspector", () => {
 
   it("sets and clears a per-node override under Advanced", async () => {
     const panel = setup();
-    await userEvent.click(within(panel).getByRole("button", { name: "Advanced" }));
+    await userEvent.click(within(panel).getByRole("button", { name: /^Advanced/ }));
     const serviceMs = within(panel).getByRole("spinbutton", { name: "Service time (ms)" });
     await userEvent.type(serviceMs, "250{Enter}");
     expect(node().config).toEqual({ serviceMs: 250 });
@@ -72,7 +72,7 @@ describe("NodeInspector", () => {
   it("shows the locked notice and disables every control of a locked node", async () => {
     const panel = setup(design(["web-server-1"]));
     expect(panel).toHaveTextContent("The challenge locks this component.");
-    await userEvent.click(within(panel).getByRole("button", { name: "Advanced" }));
+    await userEvent.click(within(panel).getByRole("button", { name: /^Advanced/ }));
     const controls = [
       ...within(panel).getAllByRole("textbox"),
       ...within(panel).getAllByRole("spinbutton"),

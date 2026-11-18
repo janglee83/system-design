@@ -64,6 +64,7 @@ describe("WorkloadForm", () => {
 
   it("adds a scenario parameter and says the engine does not read it yet", async () => {
     setup();
+    await userEvent.click(screen.getByRole("button", { name: /^Scenario parameters/ }));
     await userEvent.type(screen.getByRole("combobox", { name: "Parameter name" }), "consumersPerPublisher");
     await userEvent.type(screen.getByRole("spinbutton", { name: "Value" }), "4");
     await userEvent.click(screen.getByRole("button", { name: "Add parameter" }));

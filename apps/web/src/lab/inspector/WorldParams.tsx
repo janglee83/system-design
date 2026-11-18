@@ -18,11 +18,11 @@ export function WorldParams({ defaults }: { defaults: Calibration }) {
   const title = changed > 0 ? `${t("world.title")} · ${t("world.changed", { count: changed })}` : t("world.title");
 
   return (
-    <Section title={title}>
-      <p className="pb-2 text-caption text-text-3">{t("world.intro")}</p>
+    <Section title={title} id="design:world" summary={changed > 0 ? t("world.changed", { count: changed }) : t("world.allDefault")}>
+      <p className="text-caption text-text-3">{t("world.intro")}</p>
       {CALIBRATION_GROUPS.map((g) => (
-        <div key={g.id} className="pb-2">
-          <h3 className="section-label pb-1">{t(`world.group.${g.id}`)}</h3>
+        <div key={g.id} className="flex flex-col gap-3">
+          <h3 className="section-label">{t(`world.group.${g.id}`)}</h3>
           {g.fields.map((f) => {
             const value = overrides[f] ?? defaults[f];
             const isChanged = overrides[f] !== undefined;
@@ -32,6 +32,7 @@ export function WorldParams({ defaults }: { defaults: Calibration }) {
                 <Field
                   label={t(`calibration.${f}`)}
                   changed={isChanged}
+                  hint={isChanged ? t("world.default", { value: defaults[f] }) : undefined}
                   onReset={() => api.getState().apply((d) => setCalibration(d, f, undefined, defaults))}
                 >
                   <NumberField
@@ -43,7 +44,6 @@ export function WorldParams({ defaults }: { defaults: Calibration }) {
                     onChange={(v) => v !== undefined && api.getState().apply((d) => setCalibration(d, f, v, defaults))}
                   />
                 </Field>
-                {isChanged ? <p className="num -mt-0.5 pb-1 text-right text-caption text-text-3">{t("world.default", { value: defaults[f] })}</p> : null}
               </div>
             );
           })}

@@ -32,10 +32,10 @@ export function Inspector() {
   if (count === 0) content = <DesignSettings />;
   else if (nodes.length === 1 && count === 1) content = <NodeInspector nodeId={nodes[0]!} metas={metas} overrideKeys={overrideKeys} />;
   else if (edges.length === 1 && count === 1) content = <EdgeInspector edgeId={edges[0]!} metas={metas} />;
-  else content = <p className="text-body text-text-2">{t("multi", { count })}</p>;
+  else content = <p className="px-4 py-3.5 text-body text-text-2">{t("multi", { count })}</p>;
 
   return (
-    <div ref={ref} className="h-full overflow-y-auto p-3">
+    <div ref={ref} className="h-full overflow-y-auto bg-surface">
       {content}
     </div>
   );
