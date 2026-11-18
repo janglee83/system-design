@@ -29,9 +29,14 @@ export function useAutosave(): void {
       if (s.design === prev.design) return;
       doc.getState().markDirty();
       clearTimeout(timer);
-      timer = setTimeout(() => void flushDraft(design, doc), AUTOSAVE_MS);
+      timer = setTimeout(() => {
+        timer = undefined;
+        void flushDraft(design, doc);
+      }, AUTOSAVE_MS);
     });
     return () => {
+      // Leaving the Lab (a language switch remounts it) writes a pending draft now instead of dropping it.
+      if (timer !== undefined) void flushDraft(design, doc);
       clearTimeout(timer);
       unsub();
     };

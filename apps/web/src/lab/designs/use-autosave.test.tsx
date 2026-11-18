@@ -53,4 +53,21 @@ describe("useAutosave", () => {
     expect(setKv.mock.calls[0]![0]).toBe("draft");
     expect((setKv.mock.calls[0]![1] as { design: { seed: number } }).design.seed).toBe(3);
   });
+
+  it("writes a pending draft at once when the Lab unmounts (a language switch or navigation)", () => {
+    vi.useFakeTimers();
+    const view = render(
+      <LabStoresProvider initial={emptyDesign()}>
+        <Auto />
+      </LabStoresProvider>,
+    );
+    act(() => {
+      api.getState().apply((d) => ({ ...d, seed: 3 }));
+    });
+    expect(setKv).not.toHaveBeenCalled();
+    view.unmount();
+    expect(setKv).toHaveBeenCalledTimes(1);
+    expect(setKv.mock.calls[0]![0]).toBe("draft");
+  });
 });
+
