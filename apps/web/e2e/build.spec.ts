@@ -22,7 +22,7 @@ test("build client → lb → 2× web → postgres with the mouse", async ({ pag
   await expect(page.locator("[data-testid^='node-']")).toHaveCount(4);
   await expect(page.locator("[data-testid^='edge-']")).toHaveCount(3);
   await expect(page.getByTestId("problems")).toHaveText("No problems");
-  await expect(page.getByTestId("node-web-server-1")).toContainText("× 2");
+  await expect(page.getByTestId("node-web-server-1")).toContainText("×2");
 });
 
 test("undo, redo, delete, duplicate", async ({ page }) => {

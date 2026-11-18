@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "ensure-wasm": "node scripts/ensure-wasm.mjs",
+    "art:import": "node scripts/import-node-art.mjs",
     "predev": "node scripts/ensure-wasm.mjs",
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "prebuild": "node scripts/ensure-wasm.mjs",

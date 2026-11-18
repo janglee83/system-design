@@ -109,7 +109,7 @@ describe("design ops", () => {
     expect(g.id).toBe("g1");
     const frame = g.design.groups[0]!;
     expect(frame.position).toEqual({ x: 240 - 32, y: 0 - 32 - 24 });
-    expect(frame.size).toEqual({ width: 480 + 184 - 240 + 64, height: 76 + 64 + 24 });
+    expect(frame.size).toEqual({ width: 480 + 172 - 240 + 64, height: 148 + 64 + 24 });
     const moved = moveGroup(g.design, "g1", { x: frame.position.x + 100, y: frame.position.y + 50 });
     expect(moved.nodes.find((n) => n.id === "lb-1")!.position).toEqual({ x: 340, y: 50 });
     expect(moved.nodes.find((n) => n.id === "client-1")!.position).toEqual({ x: 0, y: 0 });
@@ -139,9 +139,9 @@ describe("design ops", () => {
     let d = emptyDesign();
     expect(freeSpot(d, { x: 100, y: 100 })).toEqual({ x: 96, y: 96 });
     d = addNode(d, meta("web-server"), { x: 96, y: 96 }).design;
-    expect(freeSpot(d, { x: 100, y: 100 })).toEqual({ x: 320, y: 96 }); // one card width + 32 px, snapped
-    d = addNode(d, meta("web-server"), { x: 320, y: 96 }).design;
-    expect(freeSpot(d, { x: 96, y: 96 })).toEqual({ x: 544, y: 96 });
+    expect(freeSpot(d, { x: 100, y: 100 })).toEqual({ x: 304, y: 96 }); // one card width + 32 px, snapped
+    d = addNode(d, meta("web-server"), { x: 304, y: 96 }).design;
+    expect(freeSpot(d, { x: 96, y: 96 })).toEqual({ x: 512, y: 96 });
     expect(freeSpot(d, { x: 1200, y: 600 })).toEqual({ x: 1200, y: 608 }); // already free (600 snaps to 608)
   });
 

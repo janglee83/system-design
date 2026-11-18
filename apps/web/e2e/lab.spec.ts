@@ -68,7 +68,7 @@ test("problems update live and nodes show their monthly cost", async ({ page }) 
   await expect(page.getByRole("complementary", { name: "Inspector" }).getByRole("heading", { name: "Web server 1" })).toBeVisible();
   await connectByDrag(page, "client-1", "web-server-1");
   await expect(page.getByTestId("problems")).toHaveText("No problems");
-  await expect(page.getByTestId("node-web-server-1")).toContainText(/\$\d+ \/mo/);
+  await expect(page.getByTestId("node-web-server-1")).toContainText(/\$\d+\/mo/);
 });
 
 test("a dropped component lands where it was dropped", async ({ page }) => {
@@ -128,7 +128,7 @@ test("the inspector edits a node and its cost follows", async ({ page }) => {
   await expect(page.getByTestId("node-web-server-1")).not.toHaveText(before);
   await inspector.getByRole("spinbutton", { name: "Replicas" }).fill("2");
   await inspector.getByRole("spinbutton", { name: "Replicas" }).press("Enter");
-  await expect(page.getByTestId("node-web-server-1")).toContainText("× 2");
+  await expect(page.getByTestId("node-web-server-1")).toContainText("×2");
 });
 
 test("the engine state and the design's size live in the status strip", async ({ page }) => {
@@ -163,3 +163,29 @@ test("at 1024 px the problems pill clears the minimap, and its count is announce
   expect(overlap).toBe(false);
   await expect(page.getByTestId("problems-live")).toHaveText("1 problem");
 });
+
+test("a node is the 172 × 148 illustrated tile, with 24 px ports and a dashed focus ring", async ({ page }) => {
+  await openLab(page, "vi");
+  await page.getByRole("button", { name: "Thêm Máy chủ web" }).click();
+  const tile = page.getByTestId("node-web-server-1");
+  const box = (await tile.boundingBox())!;
+  expect(Math.abs(box.width - 172)).toBeLessThanOrEqual(1);
+  expect(Math.abs(box.height - 148)).toBeLessThanOrEqual(1);
+  const port = (await page.getByTestId("handle-out-web-server-1").boundingBox())!;
+  expect(port.width).toBeGreaterThanOrEqual(24);
+  expect(port.height).toBeGreaterThanOrEqual(24);
+  const wrapper = page.locator('.react-flow__node[data-id="web-server-1"]');
+  await expect(wrapper).toHaveAttribute("aria-label", /Máy chủ web/);
+
+  const inspector = page.getByRole("complementary", { name: "Thuộc tính" });
+  await inspector.getByRole("spinbutton", { name: "Số bản sao" }).fill("2");
+  await inspector.getByRole("spinbutton", { name: "Số bản sao" }).press("Enter");
+  await expect(tile.getByText("×2")).toBeVisible();
+
+  await wrapper.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(wrapper).toBeFocused();
+  expect(await tile.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("dashed");
+});
+

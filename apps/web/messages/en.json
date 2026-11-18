@@ -25,11 +25,17 @@
       "title": "Connections"
     },
     "node": {
-      "replicas": "× {count}",
-      "costPerMonth": "${cost} /mo",
-      "costUnknown": "—",
+      "replicas": "×{count}",
       "locked": "Locked by the challenge",
-      "issues": "{count, plural, one {# problem} other {# problems}}"
+      "issues": "{count, plural, one {# problem} other {# problems}}",
+      "line": {
+        "client": "{rps} requests/s",
+        "webServer": "{cpu} vCPU · {memoryGb} GB",
+        "postgres": "1 primary · {replicas, plural, =0 {no read replicas} one {# read replica} other {# read replicas}}"
+      },
+      "cost": "${cost}/mo",
+      "free": "Free",
+      "noPrice": "No price yet"
     },
     "minimap": "Overview map",
     "zoomIn": "Zoom in",
@@ -432,7 +438,15 @@
     "handle": "Connection port",
     "node": "{label}, {kind}",
     "group": "Group {label}",
-    "edge": "{kind} connection from {source} to {target}"
+    "edge": "{kind} connection from {source} to {target}",
+    "state": {
+      "busy": "Busy",
+      "overloaded": "Overloaded",
+      "down": "Down"
+    },
+    "selected": "selected",
+    "locked": "locked",
+    "issues": "{count, plural, one {# problem} other {# problems}}"
   },
   "world": {
     "title": "World parameters",

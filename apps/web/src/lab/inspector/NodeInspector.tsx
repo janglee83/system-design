@@ -75,7 +75,7 @@ export function NodeInspector({
         </Field>
         <Field label={t("inspector.cost")}>
           <span data-testid="inspector-node-cost" className="num text-body">
-            {typeof cost === "number" ? t("inspector.costValue", { cost: Math.round(cost) }) : t("lab.node.costUnknown")}
+            {typeof cost === "number" ? t("inspector.costValue", { cost: Math.round(cost) }) : t("lab.node.noPrice")}
           </span>
         </Field>
       </div>

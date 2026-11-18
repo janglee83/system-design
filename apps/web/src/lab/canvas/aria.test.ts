@@ -1,7 +1,7 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 import vi from "../../../messages/vi.json";
-import { flowAriaLabels } from "./aria";
+import { flowAriaLabels, nodeAccessibleName } from "./aria";
 
 const tVi = createTranslator({ locale: "vi", messages: vi });
 
@@ -16,3 +16,17 @@ describe("React Flow aria labels", () => {
     for (const v of Object.values(labels)) if (typeof v === "string") expect(v).not.toMatch(/Press|Zoom|Mini Map|Handle/);
   });
 });
+
+describe("node accessible name (design-system §5)", () => {
+  const base = { label: "Máy chủ web 1", kind: "Máy chủ web", selected: false, locked: false, issues: 0 };
+  it("names the node and its kind", () => {
+    expect(nodeAccessibleName(base, tVi)).toBe("Máy chủ web 1, Máy chủ web");
+  });
+  it("adds only the parts that apply, in order", () => {
+    expect(nodeAccessibleName({ ...base, state: "busy", selected: true, locked: true, issues: 2 }, tVi)).toBe(
+      "Máy chủ web 1, Máy chủ web, Bận, đang chọn, đã khoá, 2 vấn đề",
+    );
+    expect(nodeAccessibleName({ ...base, state: "normal", issues: 1 }, tVi)).toBe("Máy chủ web 1, Máy chủ web, 1 vấn đề");
+  });
+});
+

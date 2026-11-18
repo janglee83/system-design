@@ -25,11 +25,17 @@
       "title": "Kiểu kết nối"
     },
     "node": {
-      "replicas": "× {count}",
-      "costPerMonth": "{cost} $/tháng",
-      "costUnknown": "—",
+      "replicas": "×{count}",
       "locked": "Thử thách đã khóa thành phần này",
-      "issues": "{count, plural, other {# vấn đề}}"
+      "issues": "{count, plural, other {# vấn đề}}",
+      "line": {
+        "client": "{rps} yêu cầu/giây",
+        "webServer": "{cpu} vCPU · {memoryGb} GB",
+        "postgres": "1 chính · {replicas, plural, =0 {không có bản sao đọc} other {# bản sao đọc}}"
+      },
+      "cost": "{cost} $/tháng",
+      "free": "Miễn phí",
+      "noPrice": "Chưa có giá"
     },
     "minimap": "Bản đồ thu nhỏ",
     "zoomIn": "Phóng to",
@@ -432,7 +438,15 @@
     "handle": "Cổng kết nối",
     "node": "{label}, {kind}",
     "group": "Nhóm {label}",
-    "edge": "Kết nối {kind} từ {source} tới {target}"
+    "edge": "Kết nối {kind} từ {source} tới {target}",
+    "state": {
+      "busy": "Bận",
+      "overloaded": "Quá tải",
+      "down": "Ngừng chạy"
+    },
+    "selected": "đang chọn",
+    "locked": "đã khoá",
+    "issues": "{count, plural, other {# vấn đề}}"
   },
   "world": {
     "title": "Tham số thế giới",

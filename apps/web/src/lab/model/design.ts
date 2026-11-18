@@ -2,7 +2,7 @@ import type { CalibrationOverrides, ConfigValue, EdgeKind, Fault, GraphLimits, W
 
 export const DESIGN_FORMAT_VERSION = 1 as const;
 /** Layout size of a node card (R14). */
-export const NODE_SIZE = { width: 184, height: 76 } as const;
+export const NODE_SIZE = { width: 172, height: 148 } as const;
 
 export interface XY {
   x: number;

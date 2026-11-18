@@ -15,6 +15,8 @@ export interface LabNodeData extends Record<string, unknown> {
   /** Trace highlight (Task 28): true = on the path, false = dimmed, undefined = no trace. */
   onPath?: boolean;
   disallowed?: boolean;
+  /** Requests per second the design sends; only on source nodes (Users), whose config line shows it. */
+  baseRps?: number;
 }
 export interface LabEdgeData extends Record<string, unknown> {
   kind: EdgeKind;
@@ -35,10 +37,16 @@ export interface AdapterContext {
   states?: Readonly<Record<string, NodeState>>;
   path?: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null;
   allowedKinds?: readonly string[] | null;
+  /** The workload's requests per second (shown on Users tiles). */
+  baseRps?: number;
   /** Translated aria-roledescription for node cards ("component"). */
   nodeRole?: string;
   /** Translated accessible names, built from display labels (never raw ids). */
-  aria?: { node(n: LabNode, meta: ComponentMeta | null): string; group(g: LabGroup): string; edge(e: LabEdge): string };
+  aria?: {
+    node(n: LabNode, meta: ComponentMeta | null, s: { selected: boolean; locked: boolean; issues: number; state: NodeState | undefined }): string;
+    group(g: LabGroup): string;
+    edge(e: LabEdge): string;
+  };
 }
 
 const NO_ISSUES = { blocking: 0, warnings: 0 };
@@ -62,26 +70,35 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
     const abs = ctx.drag[n.id] ?? n.position;
     const parent = n.groupId ? groupPos.get(n.groupId) : undefined;
     const locked = d.locked.includes(n.id);
+    const selected = sel.has(n.id);
+    const issues = ctx.issues.nodes[n.id] ?? NO_ISSUES;
+    const state = ctx.states?.[n.id];
+    const meta = ctx.metas.get(n.kind) ?? null;
+    const dom: Record<string, string> = {};
+    if (ctx.nodeRole) dom["aria-roledescription"] = ctx.nodeRole;
+    if (selected) dom["aria-current"] = "true"; // design-system §5: selection is announced, not only drawn
     return {
       id: n.id,
       type: "lab",
       position: parent ? { x: abs.x - parent.x, y: abs.y - parent.y } : abs,
       parentId: parent ? (n.groupId as string) : undefined,
-      selected: sel.has(n.id),
+      selected,
       deletable: !locked,
-      ariaLabel: ctx.aria?.node(n, ctx.metas.get(n.kind) ?? null),
+      ariaLabel: ctx.aria?.node(n, meta, { selected, locked, issues: issues.blocking + issues.warnings, state }),
       // Node cards have a fixed size (R14); telling React Flow keeps it from hiding them to re-measure.
       measured: { width: NODE_SIZE.width, height: NODE_SIZE.height },
-      domAttributes: ctx.nodeRole ? { "aria-roledescription": ctx.nodeRole } : undefined,
+      domAttributes: Object.keys(dom).length > 0 ? dom : undefined,
       data: {
         node: n,
-        meta: ctx.metas.get(n.kind) ?? null,
+        meta,
         locked,
         cost: ctx.costs[n.id],
-        issues: ctx.issues.nodes[n.id] ?? NO_ISSUES,
-        state: ctx.states?.[n.id],
+        issues,
+        state,
         onPath: ctx.path ? ctx.path.nodes.has(n.id) : undefined,
         disallowed: ctx.allowedKinds ? !ctx.allowedKinds.includes(n.kind) : false,
+        // Sources (kinds that accept nothing, like Users) show the workload's rate.
+        baseRps: meta && meta.accepts.length === 0 ? ctx.baseRps : undefined,
       },
     };
   });
@@ -140,6 +157,7 @@ function sameNode(a: FlowNode, b: FlowNode): boolean {
     a.style?.width === b.style?.width &&
     a.style?.height === b.style?.height &&
     a.domAttributes?.["aria-roledescription"] === b.domAttributes?.["aria-roledescription"] &&
+    a.domAttributes?.["aria-current"] === b.domAttributes?.["aria-current"] &&
     sameData(a.data, b.data)
   );
 }

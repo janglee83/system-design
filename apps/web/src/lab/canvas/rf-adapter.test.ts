@@ -49,7 +49,7 @@ describe("React Flow adapter", () => {
   it("gives React Flow the measured size, so it never hides nodes to re-measure them", () => {
     const d = design();
     const nodes = toFlowNodes(d, ctx);
-    expect(nodes.find((n) => n.id === "client-1")!.measured).toEqual({ width: 184, height: 76 });
+    expect(nodes.find((n) => n.id === "client-1")!.measured).toEqual({ width: 172, height: 148 });
     expect(nodes.find((n) => n.id === "g1")!.measured).toEqual(d.groups[0]!.size);
   });
 
@@ -81,6 +81,36 @@ describe("React Flow adapter", () => {
     expect(nodes.find((n) => n.id === "lb-1")!.ariaLabel).toBe("name of lb-1");
     expect(nodes.find((n) => n.id === "g1")!.ariaLabel).toBe("frame g1");
     expect(toFlowEdges(d, { ...ctx, aria })[0]!.ariaLabel).toBe("client-1 to lb-1");
+  });
+
+  it("passes selection, lock, issues and state to the node's name, and marks the selected node current", () => {
+    const d = { ...design(), locked: ["lb-1"] };
+    const seen: Record<string, unknown> = {};
+    const aria = {
+      node: (n: { id: string }, _m: unknown, s: unknown) => {
+        seen[n.id] = s;
+        return n.id;
+      },
+      group: () => "",
+      edge: () => "",
+    };
+    const nodes = toFlowNodes(d, {
+      ...ctx,
+      aria,
+      selection: { nodes: ["lb-1"], edges: [], groups: [] },
+      issues: { nodes: { "lb-1": { blocking: 1, warnings: 1 } }, edges: {} },
+      states: { "lb-1": "busy" },
+    });
+    expect(seen["lb-1"]).toEqual({ selected: true, locked: true, issues: 2, state: "busy" });
+    expect(seen["client-1"]).toEqual({ selected: false, locked: false, issues: 0, state: undefined });
+    expect(nodes.find((n) => n.id === "lb-1")!.domAttributes?.["aria-current"]).toBe("true");
+    expect(nodes.find((n) => n.id === "client-1")!.domAttributes?.["aria-current"]).toBeUndefined();
+  });
+
+  it("gives the workload's rate to source nodes only", () => {
+    const nodes = toFlowNodes(design(), { ...ctx, baseRps: 1200 });
+    expect(nodes.find((n) => n.id === "client-1")!.data.baseRps).toBe(1200);
+    expect(nodes.find((n) => n.id === "lb-1")!.data.baseRps).toBeUndefined();
   });
 
   it("dims kinds the challenge does not allow", () => {

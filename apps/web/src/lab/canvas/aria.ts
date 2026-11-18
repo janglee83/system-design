@@ -1,5 +1,6 @@
 import type { AriaLabelConfig } from "@xyflow/react";
 import type { Translate } from "../labels";
+import type { NodeState } from "./rf-adapter";
 
 type Labels = { [K in keyof AriaLabelConfig]-?: NonNullable<AriaLabelConfig[K]> };
 
@@ -19,4 +20,20 @@ export function flowAriaLabels(t: Translate): Labels {
     "minimap.ariaLabel": t("canvasA11y.minimap"),
     "handle.ariaLabel": t("canvasA11y.handle"),
   };
+}
+
+/**
+ * A node's accessible name (design-system §5): "Máy chủ web 1, Máy chủ web, Bận, đang chọn, đã khoá,
+ * 2 vấn đề", with only the parts that apply.
+ */
+export function nodeAccessibleName(
+  p: { label: string; kind: string; state?: NodeState; selected: boolean; locked: boolean; issues: number },
+  t: Translate,
+): string {
+  const parts = [t("canvasA11y.node", { label: p.label, kind: p.kind })];
+  if (p.state && p.state !== "normal") parts.push(t(`canvasA11y.state.${p.state}`));
+  if (p.selected) parts.push(t("canvasA11y.selected"));
+  if (p.locked) parts.push(t("canvasA11y.locked"));
+  if (p.issues > 0) parts.push(t("canvasA11y.issues", { count: p.issues }));
+  return parts.join(", ");
 }

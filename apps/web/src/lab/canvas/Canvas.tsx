@@ -31,7 +31,7 @@ import { GroupNode } from "./GroupNode";
 import { LabNode } from "./LabNode";
 import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
-import { flowAriaLabels } from "./aria";
+import { flowAriaLabels, nodeAccessibleName } from "./aria";
 import { CanvasControls } from "./CanvasControls";
 import { formatCombo } from "../shortcuts";
 import { useIsMac } from "../use-shortcuts";
@@ -102,7 +102,7 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const ariaLabelConfig = useMemo(() => flowAriaLabels(tAll), [tAll]);
   const aria = useMemo<NonNullable<AdapterContext["aria"]>>(
     () => ({
-      node: (n, meta) => tAll("canvasA11y.node", { label: displayLabel(n, meta, tAll), kind: meta ? tAll(meta.labelKey) : n.kind }),
+      node: (n, meta, s) => nodeAccessibleName({ label: displayLabel(n, meta, tAll), kind: meta ? tAll(meta.labelKey) : n.kind, ...s }, tAll),
       group: (g) => tAll("canvasA11y.group", { label: g.label || tAll("group.untitled") }),
       edge: (e) => {
         const d = api.getState().design;
@@ -121,10 +121,11 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const counts = useMemo(() => issueCounts({ issues, runIssues }), [issues, runIssues]);
 
   const allowedKinds = design.challenge?.limits.allowedKinds ?? null;
+  const baseRps = design.workload.baseRps;
   const nodeRole = t("nodeRole");
   const ctx = useMemo<AdapterContext>(
-    () => ({ metas, selection, costs, issues: counts, nodeRole, aria, drag, allowedKinds, ...extra }),
-    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, extra],
+    () => ({ metas, selection, costs, issues: counts, nodeRole, aria, drag, allowedKinds, baseRps, ...extra }),
+    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, extra],
   );
   // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
   const lastNodes = useRef<FlowNode[]>([]);

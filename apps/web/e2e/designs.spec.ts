@@ -27,7 +27,7 @@ test("save, reload, open", async ({ page }) => {
   await page.keyboard.press(`${mod}+o`);
   await page.getByRole("button", { name: "Open “Shop v1”" }).click();
   await expect(page.getByTestId("node-postgres-1")).toBeVisible();
-  await expect(page.getByTestId("node-web-server-1")).toContainText("× 2");
+  await expect(page.getByTestId("node-web-server-1")).toContainText("×2");
 });
 
 test("opening over unsaved changes asks first", async ({ page }) => {
