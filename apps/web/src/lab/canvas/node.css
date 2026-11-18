@@ -273,3 +273,51 @@
     animation: none;
   }
 }
+
+/* Connecting (design-system §6.2): valid targets glow, invalid ones dim; the hovered one has a tip. */
+.sd-node[data-target="valid"] {
+  outline: 2px solid var(--sd-accent-text);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px var(--sd-accent-soft), var(--sd-shadow-1);
+}
+.sd-node[data-target="valid"] .react-flow__handle.sd-port[data-handlepos="left"]::after {
+  inset: 5px;
+  opacity: 1;
+  background: var(--sd-accent-text);
+  border-color: var(--sd-surface);
+  box-shadow: 0 0 0 5px var(--sd-accent-soft);
+}
+.sd-node[data-target="invalid"] {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+.sd-node[data-target="source"] .react-flow__handle.sd-port[data-handlepos="right"]::after {
+  opacity: 1;
+  background: var(--sd-accent-text);
+  border-color: var(--sd-accent-text);
+}
+.sd-node-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  pointer-events: none;
+  background: var(--sd-accent);
+  color: var(--sd-on-accent);
+  box-shadow: var(--sd-shadow-2);
+}
+/* The reason on an invalid target: an inverse tip, readable over the dimmed tile. */
+.sd-node-tip[data-tone="invalid"] {
+  background: var(--sd-text);
+  color: var(--sd-surface);
+}
+.sd-node[data-target="invalid"]:has(.sd-node-tip) {
+  opacity: 1;
+}

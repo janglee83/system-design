@@ -16,7 +16,7 @@ const yes = (b: boolean | undefined) => (b ? "" : undefined);
 function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
   const t = useTranslations();
   const locale = useLocale();
-  const { node, meta, locked, cost, issues, state = "normal", onPath, disallowed, baseRps = 0 } = data;
+  const { node, meta, locked, cost, issues, state = "normal", onPath, disallowed, baseRps = 0, target, targetTip } = data;
   const art = kindArt(node.kind);
   const StateIcon = state !== "normal" ? STATE_ICON[state] : null;
   const issueCount = issues.blocking + issues.warnings;
@@ -29,6 +29,7 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
       data-replicas={node.replicas > 1 ? node.replicas : undefined}
       data-disallowed={yes(disallowed)}
       data-path={onPath === undefined ? undefined : onPath ? "on" : "off"}
+      data-target={target}
       className="sd-node"
       style={{ "--k": categoryColor(node.kind) } as React.CSSProperties}
     >
@@ -60,6 +61,11 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
       {issueCount > 0 ? (
         <span className="sd-node-issues" data-tone={issues.blocking > 0 ? undefined : "warn"} role="img" aria-label={t("lab.node.issues", { count: issueCount })}>
           {issueCount}
+        </span>
+      ) : null}
+      {targetTip ? (
+        <span role="tooltip" className="sd-node-tip" data-tone={target}>
+          {targetTip}
         </span>
       ) : null}
       <Handle id="out" type="source" position={Position.Right} data-testid={`handle-out-${node.id}`} className="sd-port" />

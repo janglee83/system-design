@@ -113,6 +113,17 @@ describe("React Flow adapter", () => {
     expect(nodes.find((n) => n.id === "lb-1")!.data.baseRps).toBeUndefined();
   });
 
+  it("marks the source, valid and invalid targets while connecting, with a tip on the hovered node only", () => {
+    const connecting = { from: "lb-1", valid: { "client-1": false, "lb-1": false }, hover: "client-1", tip: "Users accept nothing" };
+    const nodes = toFlowNodes(design(), { ...ctx, connecting });
+    const data = (id: string) => nodes.find((n) => n.id === id)!.data;
+    expect(data("lb-1").target).toBe("source");
+    expect(data("client-1").target).toBe("invalid");
+    expect(data("client-1").targetTip).toBe("Users accept nothing");
+    expect(toFlowNodes(design(), { ...ctx, connecting: { ...connecting, hover: "lb-1" } }).find((n) => n.id === "lb-1")!.data.targetTip).toBeUndefined();
+    expect(toFlowNodes(design(), ctx).find((n) => n.id === "client-1")!.data.target).toBeUndefined();
+  });
+
   it("dims kinds the challenge does not allow", () => {
     const nodes = toFlowNodes(design(), { ...ctx, allowedKinds: ["client"] });
     expect(nodes.find((n) => n.id === "client-1")!.data.disallowed).toBe(false);

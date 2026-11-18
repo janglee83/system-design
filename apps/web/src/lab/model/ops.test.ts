@@ -18,6 +18,7 @@ import {
   freeSpot,
   ungroup,
   updateNode,
+  reverseEdge,
 } from "./ops";
 import { META_BY_KIND, meta } from "../../test/metas";
 
@@ -166,4 +167,20 @@ describe("design ops", () => {
       { kind: "db-primary-down", target: "postgres-1", atMs: 4000 },
     ]);
   });
+
+  it("reverseEdge swaps the ends and picks the kind the new target accepts, or refuses", () => {
+    let d = emptyDesign();
+    d = addNode(d, meta("client"), { x: 0, y: 0 }).design;
+    d = addNode(d, meta("web-server"), { x: 300, y: 0 }).design;
+    d = addNode(d, meta("postgres"), { x: 600, y: 0 }).design;
+    d = (connect(d, "web-server-1", "postgres-1", META_BY_KIND) as { design: Design }).design;
+    d = (connect(d, "client-1", "web-server-1", META_BY_KIND) as { design: Design }).design;
+    const back = reverseEdge(d, "e1", META_BY_KIND);
+    expect("refused" in back).toBe(false);
+    expect(back.design.edges.find((e) => e.id === "e1")).toEqual({ id: "e1", from: "postgres-1", to: "web-server-1", kind: "http" });
+    // Users accept nothing, so an edge cannot point at them.
+    const refused = reverseEdge(d, "e2", META_BY_KIND);
+    expect(refused).toEqual({ design: d, refused: "not-accepted" });
+  });
 });
+

@@ -17,6 +17,10 @@ export interface LabNodeData extends Record<string, unknown> {
   disallowed?: boolean;
   /** Requests per second the design sends; only on source nodes (Users), whose config line shows it. */
   baseRps?: number;
+  /** While a connection is being dragged (design-system §6.2). */
+  target?: "source" | "valid" | "invalid";
+  /** The tooltip over the node under the pointer while connecting ("Thả để nối · …" or the reason). */
+  targetTip?: string;
 }
 export interface LabEdgeData extends Record<string, unknown> {
   kind: EdgeKind;
@@ -39,6 +43,8 @@ export interface AdapterContext {
   allowedKinds?: readonly string[] | null;
   /** The workload's requests per second (shown on Users tiles). */
   baseRps?: number;
+  /** A connection drag in progress: its source, each node's validity, and the hovered node's tip. */
+  connecting?: { from: string; valid: Readonly<Record<string, boolean>>; hover: string | null; tip: string | null } | null;
   /** Translated aria-roledescription for node cards ("component"). */
   nodeRole?: string;
   /** Translated accessible names, built from display labels (never raw ids). */
@@ -99,6 +105,8 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
         disallowed: ctx.allowedKinds ? !ctx.allowedKinds.includes(n.kind) : false,
         // Sources (kinds that accept nothing, like Users) show the workload's rate.
         baseRps: meta && meta.accepts.length === 0 ? ctx.baseRps : undefined,
+        target: !ctx.connecting ? undefined : ctx.connecting.from === n.id ? "source" : ctx.connecting.valid[n.id] ? "valid" : "invalid",
+        targetTip: ctx.connecting && ctx.connecting.hover === n.id && ctx.connecting.from !== n.id ? (ctx.connecting.tip ?? undefined) : undefined,
       },
     };
   });

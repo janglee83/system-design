@@ -2,8 +2,7 @@
 import {
   Background,
   BackgroundVariant,
-  ConnectionLineType,
-  MiniMap,
+  useConnection,
   useReactFlow,
   ReactFlow,
   type Connection,
@@ -25,8 +24,8 @@ import { issueCounts } from "../store/check-store";
 import { useCheck, useDesign, useDesignApi, useUi } from "../store/LabStores";
 import { DRAG_MIME } from "../palette/Palette";
 import { useMetas } from "../use-metas";
-import { EdgeLegend } from "./EdgeLegend";
-import { EdgeMarkers, LabEdge } from "./LabEdge";
+import { connectTarget } from "./edge-geometry";
+import { EdgeMarkers, GhostConnection, LabEdge } from "./LabEdge";
 import { GroupNode } from "./GroupNode";
 import { LabNode } from "./LabNode";
 import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
@@ -46,7 +45,6 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const api = useDesignApi();
   const metas = useMetas();
   const snap = useUi((s) => s.snap);
-  const minimap = useUi((s) => s.minimap);
   const [drag, setDrag] = useState<Record<string, XY>>({});
   // Fit only a design that opens with nodes. On an empty canvas React Flow would otherwise
   // zoom to fit the first component added (to the max zoom), and later drops would land elsewhere.
@@ -91,13 +89,35 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
       const target = (e.target as Element | null)?.closest?.(".react-flow__node");
       const to = state.toNode?.id ?? target?.getAttribute("data-id");
       if (!to || to === state.fromNode.id) return;
-      const toNode = api.getState().design.nodes.find((n) => n.id === to);
-      const meta = toNode ? metas.get(toNode.kind) : undefined;
-      if (meta && meta.accepts.length === 0) refuse("not-accepted", state.fromNode.id, to);
+      const r = connectTarget(api.getState().design, state.fromNode.id, to, metas);
+      if (!r.valid) refuse(r.reason, state.fromNode.id, to);
     },
     [api, metas, refuse],
   );
-  const isValidConnection = useCallback((c: Connection | FlowEdge) => c.source !== c.target, []);
+  // The same rule as a drop: React Flow refuses an invalid target before the drop (§6.2).
+  const isValidConnection = useCallback(
+    (c: Connection | FlowEdge) => !!c.source && !!c.target && connectTarget(api.getState().design, c.source, c.target, metas).valid,
+    [api, metas],
+  );
+  const connectingFrom = useConnection((c) => (c.inProgress ? (c.fromNode?.id ?? null) : null));
+  const [hover, setHover] = useState<string | null>(null);
+  const connecting = useMemo<AdapterContext["connecting"]>(() => {
+    if (!connectingFrom) return null;
+    const valid: Record<string, boolean> = {};
+    for (const n of design.nodes) valid[n.id] = connectTarget(design, connectingFrom, n.id, metas).valid;
+    let tip: string | null = null;
+    if (hover && hover !== connectingFrom) {
+      const r = connectTarget(design, connectingFrom, hover, metas);
+      const label = (id: string) => {
+        const n = design.nodes.find((x) => x.id === id);
+        return n ? displayLabel(n, metas.get(n.kind) ?? null, tAll) : id;
+      };
+      tip = r.valid
+        ? tAll("connect.drop", { kind: tAll(`edgeKind.${r.kind}`) })
+        : tAll(`connect.refused.${r.reason}`, { source: label(connectingFrom), target: label(hover) });
+    }
+    return { from: connectingFrom, valid, hover, tip };
+  }, [connectingFrom, hover, design, metas, tAll]);
 
   const ariaLabelConfig = useMemo(() => flowAriaLabels(tAll), [tAll]);
   const aria = useMemo<NonNullable<AdapterContext["aria"]>>(
@@ -124,8 +144,8 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   const baseRps = design.workload.baseRps;
   const nodeRole = t("nodeRole");
   const ctx = useMemo<AdapterContext>(
-    () => ({ metas, selection, costs, issues: counts, nodeRole, aria, drag, allowedKinds, baseRps, ...extra }),
-    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, extra],
+    () => ({ metas, selection, costs, issues: counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, ...extra }),
+    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, extra],
   );
   // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
   const lastNodes = useRef<FlowNode[]>([]);
@@ -219,7 +239,9 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
-        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineComponent={GhostConnection}
+        onNodeMouseEnter={(_e, n) => setHover(n.id)}
+        onNodeMouseLeave={() => setHover(null)}
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes(DRAG_MIME)) {
             e.preventDefault();
@@ -248,22 +270,13 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         ariaLabelConfig={ariaLabelConfig}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--sd-grid)" />
-        {minimap ? (
-          <MiniMap
-            ariaLabel={t("minimap")}
-            pannable
-            zoomable
-            className="!m-3 !h-28 !w-42 overflow-hidden rounded-lg border border-border !bg-surface/85"
-            nodeColor={(n) => (n.type === "group" ? "transparent" : "var(--sd-cat-compute)")}
-          />
-        ) : null}
       </ReactFlow>
-      <div className="pointer-events-none absolute top-3 left-3">
-        <div className="pointer-events-auto">
-          <EdgeLegend />
-        </div>
-      </div>
-      <div className="absolute bottom-3 left-3">
+      {connectingFrom ? (
+        <p role="status" className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-surface px-3 py-1 text-caption text-text-2 shadow-1">
+          {tAll("connect.hint")}
+        </p>
+      ) : null}
+      <div className="absolute right-4 bottom-3.5">
         <CanvasControls />
       </div>
       {design.nodes.length === 0 ? <EmptyState /> : null}

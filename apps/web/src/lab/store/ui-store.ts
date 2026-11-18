@@ -4,7 +4,6 @@ export type BottomTab = "metrics" | "events" | "logs" | "simulation";
 
 export interface UiState {
   snap: boolean;
-  minimap: boolean;
   panelHeight: number;
   bottomTab: BottomTab;
   connectOpen: boolean;
@@ -21,7 +20,6 @@ export interface UiState {
 export function createUiStore() {
   return createStore<UiState>()((set, get) => ({
     snap: true,
-    minimap: true,
     panelHeight: 260,
     bottomTab: "metrics",
     connectOpen: false,

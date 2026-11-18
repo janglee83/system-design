@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { addAt, connectByDrag, connectToCard, openLab, paletteItem } from "./helpers";
 
-test("the Lab shows an empty canvas with the edge legend", async ({ page }) => {
+test("the Lab shows an empty canvas, with no minimap and no floating legend card", async ({ page }) => {
   await page.goto("/en/lab");
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
   await expect(page.getByText("Nothing here yet")).toBeVisible();
-  for (const k of ["http", "db", "cache", "msg"]) await expect(page.getByTestId(`legend-${k}`)).toBeVisible();
-  await expect(page.getByTestId("legend-db")).toContainText("Database");
+  await expect(page.locator(".react-flow__minimap")).toHaveCount(0);
+  await expect(page.getByText("Connection kinds in this design")).toHaveCount(0);
 });
 
 test("components are added by click (centre) and by drag (drop point)", async ({ page }) => {
@@ -153,15 +153,11 @@ test("clicking Add twice places the second node beside the first and announces e
   expect(overlap).toBe(false);
 });
 
-test("at 1024 px the problems pill clears the minimap, and its count is announced", async ({ page }) => {
+test("at 1024 px the problems count is announced", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await openLab(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
   await addAt(page, "Users", 80, 120);
-  const pill = (await page.getByTestId("problems").boundingBox())!;
-  const map = (await page.getByRole("img", { name: "Overview map" }).boundingBox())!;
-  const overlap = pill.x < map.x + map.width && map.x < pill.x + pill.width && pill.y < map.y + map.height && map.y < pill.y + pill.height;
-  expect(overlap).toBe(false);
   await expect(page.getByTestId("problems-live")).toHaveText("1 problem");
 });
 
@@ -213,3 +209,72 @@ test("the palette rail and drawer: coming-soon kinds show but cannot be placed",
   await page.getByRole("button", { name: "Thêm CDN" }).focus();
   await expect(page.getByRole("tooltip")).toContainText("Chưa kéo vào khung vẽ được");
 });
+
+test("while connecting, valid targets glow with a drop tip and invalid ones say why; Esc cancels", async ({ page }) => {
+  await openLab(page, "vi");
+  await addAt(page, "Người dùng", 90, 140);
+  await addAt(page, "Máy chủ web", 330, 140);
+  await addAt(page, "PostgreSQL", 570, 140);
+  const box = async (id: string) => {
+    const b = (await page.getByTestId(id).boundingBox())!;
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  const from = await box("handle-out-web-server-1");
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  const pg = await box("node-postgres-1");
+  await page.mouse.move(pg.x, pg.y, { steps: 10 });
+  await expect(page.getByTestId("node-postgres-1")).toHaveAttribute("data-target", "valid");
+  await expect(page.getByRole("tooltip").filter({ hasText: "Thả để nối" })).toBeVisible();
+  await expect(page.getByText("Thả vào một thành phần để nối")).toBeVisible();
+  const users = await box("node-client-1");
+  await page.mouse.move(users.x, users.y, { steps: 10 });
+  await expect(page.getByTestId("node-client-1")).toHaveAttribute("data-target", "invalid");
+  await expect(page.getByRole("tooltip").filter({ hasText: "không nhận kết nối đi vào" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(page.locator('[data-testid^="edge-"]')).toHaveCount(0);
+  await expect(page.getByTestId("node-postgres-1")).not.toHaveAttribute("data-target", /./);
+});
+
+test("the legend toggles from the controls cluster and counts edges per kind", async ({ page }) => {
+  await openLab(page, "vi");
+  await addAt(page, "Người dùng", 90, 140);
+  await addAt(page, "Cân bằng tải", 330, 140);
+  await addAt(page, "Máy chủ web", 570, 140);
+  await connectByDrag(page, "client-1", "lb-1");
+  await connectByDrag(page, "lb-1", "web-server-1");
+  const legend = page.getByRole("toolbar", { name: "Điều khiển khung vẽ" }).getByRole("button", { name: "Chú giải" });
+  await legend.click();
+  const pop = page.getByRole("dialog").filter({ hasText: "Kiểu kết nối trong thiết kế" });
+  await expect(pop).toContainText("HTTP");
+  await expect(pop).toContainText("2 đường");
+  await expect(pop).toContainText("chưa dùng");
+  await legend.click();
+  await expect(pop).toHaveCount(0);
+});
+
+test("arrowheads keep one on-screen size at every zoom, and C opens the connect list", async ({ page }) => {
+  await openLab(page);
+  await addAt(page, "Users", 90, 140);
+  await addAt(page, "Web server", 330, 140);
+  await connectByDrag(page, "client-1", "web-server-1");
+  const onScreen = () =>
+    page.evaluate(() => {
+      const m = document.querySelector("#sd-arrow-http")!;
+      const zoom = new DOMMatrix(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
+      return Number(m.getAttribute("markerWidth")) * zoom;
+    });
+  const zoomOut = page.getByRole("button", { name: "Zoom out" });
+  await zoomOut.click();
+  await zoomOut.click();
+  await expect.poll(onScreen).toBeCloseTo(11, 1);
+  const zoomIn = page.getByRole("button", { name: "Zoom in" });
+  for (let i = 0; i < 4; i++) await zoomIn.click();
+  await expect.poll(onScreen).toBeCloseTo(11, 1);
+
+  await page.getByTestId("node-web-server-1").click();
+  await page.keyboard.press("c");
+  await expect(page.getByRole("dialog", { name: /Connect Web server 1/ })).toBeVisible();
+});
+

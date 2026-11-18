@@ -22,7 +22,10 @@
       "body": "Drag a component onto the canvas, or press {shortcut} to search."
     },
     "legend": {
-      "title": "Connections"
+      "button": "Legend",
+      "title": "Connection kinds in this design",
+      "count": "{count, plural, one {# line} other {# lines}}",
+      "unused": "not used"
     },
     "node": {
       "replicas": "×{count}",
@@ -37,7 +40,6 @@
       "free": "Free",
       "noPrice": "No price yet"
     },
-    "minimap": "Overview map",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fitView": "Fit to screen",
@@ -48,7 +50,14 @@
     "autoLayout": "Tidy layout",
     "groupAction": "Group",
     "ungroupAction": "Ungroup",
-    "layoutFailed": "The layout could not be worked out. Your design is unchanged."
+    "layoutFailed": "The layout could not be worked out. Your design is unchanged.",
+    "edgePopover": {
+      "title": "Selected connection",
+      "reverse": "Reverse",
+      "delete": "Delete",
+      "kind": "Kind"
+    },
+    "zoomLevel": "Zoom {percent}%"
   },
   "nav": {
     "primary": "Main",
@@ -375,7 +384,9 @@
       "duplicate": "These two are already connected.",
       "self": "A component cannot connect to itself.",
       "unknown-node": "That component no longer exists."
-    }
+    },
+    "hint": "Drop on a component to connect · Esc to cancel · or press C to pick from a list",
+    "drop": "Drop to connect · {kind}"
   },
   "problems": {
     "none": "No problems",

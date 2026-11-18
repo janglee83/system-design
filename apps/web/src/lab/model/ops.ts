@@ -74,6 +74,20 @@ export function connect(d: Design, from: string, to: string, metas: ReadonlyMap<
   return { design: { ...d, edges: [...d.edges, { id, from, to, kind }] }, edgeId: id };
 }
 
+/** Points an edge the other way, with the kind its new target accepts (the edge popover's Đảo chiều). */
+export function reverseEdge(d: Design, id: string, metas: ReadonlyMap<string, ComponentMeta>): ConnectResult {
+  const e = d.edges.find((x) => x.id === id);
+  if (!e) return { design: d, refused: "unknown-node" };
+  if (d.edges.some((x) => x.from === e.to && x.to === e.from)) return { design: d, refused: "duplicate" };
+  const target = d.nodes.find((n) => n.id === e.from);
+  if (!target) return { design: d, refused: "unknown-node" };
+  const meta = metas.get(target.kind);
+  const kind = meta ? inferEdgeKind(meta) : "http";
+  if (kind === null) return { design: d, refused: "not-accepted" };
+  const edges = d.edges.map((x) => (x.id === id ? { id, from: e.to, to: e.from, kind } : x));
+  return { design: { ...d, edges }, edgeId: id };
+}
+
 export function deleteItems(d: Design, sel: ItemSelection): Design {
   const nodeIds = new Set(sel.nodes.filter((id) => !isLocked(d, id)));
   const edgeIds = new Set(sel.edges);
