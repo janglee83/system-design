@@ -10,7 +10,7 @@ export function EdgeLegend() {
       <p className="section-label mb-1">{t("lab.legend.title")}</p>
       <ul className="space-y-0.5">
         {EDGE_KINDS.map((k) => (
-          <li key={k} data-testid={`legend-${k}`} className="flex items-center gap-2 text-xs text-text-2">
+          <li key={k} data-testid={`legend-${k}`} className="flex items-center gap-2 text-caption text-text-2">
             <svg width="24" height="8" viewBox="0 0 24 8" aria-hidden className="shrink-0">
               <line
                 x1="1"

@@ -59,7 +59,7 @@ export function SimulationTab({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <p className="num flex-1 text-xs text-text-2">{t("simulation.engine", { version: engineVersion })}</p>
+        <p className="num flex-1 text-caption text-text-2">{t("simulation.engine", { version: engineVersion })}</p>
         <Button size="sm" onClick={() => void exportRun()} disabled={!client || !available || exporting}>
           <Download size={14} aria-hidden />
           {t("simulation.export")}
@@ -69,9 +69,9 @@ export function SimulationTab({
           {t("simulation.copy")}
         </Button>
       </div>
-      {available ? null : <p className="text-xs text-text-3">{t("run.unavailable")}</p>}
+      {available ? null : <p className="text-caption text-text-3">{t("run.unavailable")}</p>}
       <h3 className="section-label">{t("simulation.input")}</h3>
-      <pre data-testid="sim-input" className="num max-h-64 overflow-auto rounded-md border border-border bg-surface p-2 text-xs">
+      <pre data-testid="sim-input" className="num max-h-64 overflow-auto rounded-md border border-border bg-surface p-2 text-caption">
         {inputText}
       </pre>
     </div>

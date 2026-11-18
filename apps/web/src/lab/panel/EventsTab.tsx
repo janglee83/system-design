@@ -21,7 +21,7 @@ export function EventsTab({ run }: { run: RunRecord }) {
   const metas = useMetas();
   const timeMs = usePlayback((s) => s.timeMs);
   const playback = usePlaybackApi();
-  if (run.events.length === 0) return <p className="text-sm text-text-3">{t("events.empty")}</p>;
+  if (run.events.length === 0) return <p className="text-body text-text-3">{t("events.empty")}</p>;
   let current = -1;
   run.events.forEach((e, i) => {
     if (e.atMs <= timeMs) current = i;
@@ -31,9 +31,9 @@ export function EventsTab({ run }: { run: RunRecord }) {
     return n ? displayLabel(n, metas.get(n.kind) ?? null, t) : (id ?? "");
   };
   return (
-    <table className="w-full text-sm">
+    <table className="w-full text-body">
       <thead>
-        <tr className="text-left text-xs text-text-3">
+        <tr className="text-left text-caption text-text-3">
           <th className="w-20 py-1 font-medium">{t("events.time")}</th>
           <th className="w-40 py-1 font-medium">{t("events.node")}</th>
           <th className="py-1 font-medium">{t("events.message")}</th>

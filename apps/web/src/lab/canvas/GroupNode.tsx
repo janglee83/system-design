@@ -68,10 +68,10 @@ function GroupNodeView({ id, data, selected }: NodeProps<Node<GroupData>>) {
               setEditing(false);
             }
           }}
-          className="nodrag absolute top-1 left-2 h-6 w-48 rounded-xs border border-border-strong bg-surface px-1.5 text-xs font-semibold"
+          className="nodrag absolute top-1 left-2 h-6 w-48 rounded-xs border border-border-strong bg-surface px-1.5 text-caption font-semibold"
         />
       ) : (
-        <span title={t("rename")} className="absolute top-1.5 left-2.5 text-xs font-semibold text-text-2">
+        <span title={t("rename")} className="absolute top-1.5 left-2.5 text-caption font-semibold text-text-2">
           {data.group.label || t("untitled")}
         </span>
       )}

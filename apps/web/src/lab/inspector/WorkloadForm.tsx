@@ -159,7 +159,7 @@ function ParamRows({
               <X size={14} aria-hidden />
             </IconButton>
           </Field>
-          {known.includes(key) ? null : <p className="pb-1 text-xs text-text-3">{t("paramIgnored", { name: key })}</p>}
+          {known.includes(key) ? null : <p className="pb-1 text-caption text-text-3">{t("paramIgnored", { name: key })}</p>}
         </div>
       ))}
       <div className="flex items-center gap-1">
@@ -173,7 +173,7 @@ function ParamRows({
             nameRef.current = e.target.value;
             setName(e.target.value);
           }}
-          className="h-8 min-w-0 flex-1 rounded-sm border border-border-strong bg-surface px-2 text-sm placeholder:text-text-3"
+          className="h-8 min-w-0 flex-1 rounded-sm border border-border-strong bg-surface px-2 text-body placeholder:text-text-3"
         />
         <datalist id={listId}>
           {known.map((k) => (

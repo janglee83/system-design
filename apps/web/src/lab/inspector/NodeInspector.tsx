@@ -35,7 +35,7 @@ export function NodeInspector({
   const meta = metas.get(node.kind) ?? null;
   const apply = (fn: (d: Design) => Design) => api.getState().apply(fn);
   const Icon = iconFor(node.kind);
-  const color = categoryColor(meta?.category);
+  const color = categoryColor(node.kind);
 
   return (
     <div data-testid="inspector-node" className="flex flex-col gap-2">
@@ -44,8 +44,8 @@ export function NodeInspector({
           <Icon size={16} aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold">{displayLabel(node, meta, t)}</h2>
-          <p className="truncate text-2xs text-text-3">{meta ? t(meta.labelKey) : node.kind}</p>
+          <h2 className="truncate text-body font-semibold">{displayLabel(node, meta, t)}</h2>
+          <p className="truncate text-caption text-text-3">{meta ? t(meta.labelKey) : node.kind}</p>
         </div>
       </header>
       {locked ? <Banner tone="info">{t("inspector.lockedNotice")}</Banner> : null}
@@ -74,7 +74,7 @@ export function NodeInspector({
           />
         </Field>
         <Field label={t("inspector.cost")}>
-          <span data-testid="inspector-node-cost" className="num text-sm">
+          <span data-testid="inspector-node-cost" className="num text-body">
             {typeof cost === "number" ? t("inspector.costValue", { cost: Math.round(cost) }) : t("lab.node.costUnknown")}
           </span>
         </Field>
@@ -95,7 +95,7 @@ export function NodeInspector({
       ) : null}
       {overrideKeys.length > 0 ? (
         <Section title={t("inspector.advanced")}>
-          <p className="pb-1 text-xs text-text-3">{t("inspector.advancedHint")}</p>
+          <p className="pb-1 text-caption text-text-3">{t("inspector.advancedHint")}</p>
           {overrideKeys.map((k) => {
             const v = node.config[k];
             return (

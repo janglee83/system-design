@@ -25,7 +25,7 @@ export function Field({
         changed && "before:absolute before:inset-y-1 before:-left-3 before:w-[3px] before:rounded-full before:bg-accent",
       )}
     >
-      <label htmlFor={htmlFor} className="min-w-0 flex-1 truncate text-sm text-text-2">
+      <label htmlFor={htmlFor} className="min-w-0 flex-1 truncate text-label text-text-2">
         {label}
       </label>
       <div className="flex w-40 shrink-0 items-center justify-end gap-1">

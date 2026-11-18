@@ -21,7 +21,7 @@ export function RunBar({ onRun }: { onRun: () => void }) {
     <Button variant="primary" disabled={!canRun || running} onClick={onRun}>
       {running ? <LoaderCircle size={14} aria-hidden className="animate-spin" /> : <Play size={14} aria-hidden />}
       {running ? t("running") : t("run")}
-      <kbd className="num ml-1 text-2xs opacity-80">{combo}</kbd>
+      <kbd className="num ml-1 text-caption opacity-80">{combo}</kbd>
     </Button>
   );
   return (
@@ -34,7 +34,7 @@ export function RunBar({ onRun }: { onRun: () => void }) {
       {/* A disabled button gets no pointer events, so the "why" tooltip sits on a wrapper. */}
       {canRun || running ? button : <Tooltip content={t("blocked")}><span tabIndex={0}>{button}</span></Tooltip>}
       <span className="h-5 w-px bg-border" aria-hidden />
-      <span className="num px-1 text-xs text-text-2">{t("duration", { seconds: durationMs / 1000 })}</span>
+      <span className="num px-1 text-caption text-text-2">{t("duration", { seconds: durationMs / 1000 })}</span>
     </div>
   );
 }

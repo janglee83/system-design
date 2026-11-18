@@ -69,7 +69,7 @@ export function ConnectDialog({ metas }: { metas: ReadonlyMap<string, ComponentM
       description={t("connect.description", { source: sourceLabel })}
     >
       {options.length === 0 ? (
-        <p className="text-sm text-text-2">{t("connect.none")}</p>
+        <p className="text-body text-text-2">{t("connect.none")}</p>
       ) : (
         <ul
           role="listbox"
@@ -88,18 +88,18 @@ export function ConnectDialog({ metas }: { metas: ReadonlyMap<string, ComponentM
               onClick={() => pick(i)}
               onMouseEnter={() => setActive(i)}
               className={cn(
-                "flex h-8 cursor-default items-center justify-between gap-3 rounded-sm px-2 text-sm",
+                "flex h-8 cursor-default items-center justify-between gap-3 rounded-sm px-2 text-body",
                 i === active && "bg-accent-soft",
               )}
             >
               <span className="truncate">{label(n)}</span>
-              <span className="truncate text-xs text-text-3">{metas.get(n.kind) ? t(metas.get(n.kind)!.labelKey) : n.kind}</span>
+              <span className="truncate text-caption text-text-3">{metas.get(n.kind) ? t(metas.get(n.kind)!.labelKey) : n.kind}</span>
             </li>
           ))}
         </ul>
       )}
       {error ? (
-        <p role="alert" className="mt-3 text-sm text-over">
+        <p role="alert" className="mt-3 text-body text-over">
           {error}
         </p>
       ) : null}

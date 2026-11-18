@@ -7,7 +7,7 @@ import { IconButton } from "@/ui/IconButton";
 import { AboutDialog } from "./AboutDialog";
 
 export const MENU_ITEM_CLASS =
-  "flex h-8 cursor-default items-center gap-2 rounded-sm px-2 text-sm text-text outline-none select-none data-[highlighted]:bg-surface-2";
+  "flex h-8 cursor-default items-center gap-2 rounded-sm px-2 text-body text-text outline-none select-none data-[highlighted]:bg-surface-2";
 
 /** The help menu in the top bar. `extraItems` (DropdownMenu items) come first; Task 33 adds the shortcut sheet and tour. */
 export function HelpMenu({ extraItems }: { extraItems?: React.ReactNode }) {

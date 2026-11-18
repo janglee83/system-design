@@ -24,8 +24,8 @@ export function EdgeInspector({ edgeId, metas }: { edgeId: string; metas: Readon
   return (
     <div data-testid="inspector-edge" className="flex flex-col gap-2">
       <header className="pb-1">
-        <h2 className="text-sm font-semibold">{t("inspector.edge")}</h2>
-        <p className="truncate text-xs text-text-2">
+        <h2 className="text-body font-semibold">{t("inspector.edge")}</h2>
+        <p className="truncate text-caption text-text-2">
           {label(edge.from)} → {label(edge.to)}
         </p>
       </header>

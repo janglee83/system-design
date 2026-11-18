@@ -42,7 +42,7 @@ export function TextField({
         if (e.key === "Enter") commit();
         if (e.key === "Escape") setText(value);
       }}
-      className="h-8 w-full min-w-0 rounded-sm border border-border-strong bg-surface px-2 text-sm placeholder:text-text-3 disabled:cursor-not-allowed disabled:opacity-50"
+      className="h-8 w-full min-w-0 rounded-sm border border-border-strong bg-surface px-2 text-body placeholder:text-text-3 disabled:cursor-not-allowed disabled:opacity-50"
     />
   );
 }

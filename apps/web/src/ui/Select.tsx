@@ -41,13 +41,13 @@ export function Select<T extends string>({
       key={o.value}
       value={o.value}
       disabled={o.disabled}
-      className="relative flex h-7 cursor-default items-center rounded-sm pr-2 pl-6 text-sm outline-none select-none data-[disabled]:text-text-3 data-[highlighted]:bg-surface-2"
+      className="relative flex h-7 cursor-default items-center rounded-sm pr-2 pl-6 text-body outline-none select-none data-[disabled]:text-text-3 data-[highlighted]:bg-surface-2"
     >
       <S.ItemIndicator className="absolute left-1.5">
         <Check size={12} aria-hidden />
       </S.ItemIndicator>
       <S.ItemText>{o.label}</S.ItemText>
-      {o.hint ? <span className="ml-2 text-xs text-text-3">{o.hint}</span> : null}
+      {o.hint ? <span className="ml-2 text-caption text-text-3">{o.hint}</span> : null}
     </S.Item>
   );
   return (
@@ -56,7 +56,7 @@ export function Select<T extends string>({
         id={id}
         aria-label={label}
         className={cn(
-          "inline-flex h-8 w-full min-w-0 items-center justify-between gap-1 rounded-sm border border-border-strong bg-surface px-2 text-sm",
+          "inline-flex h-8 w-full min-w-0 items-center justify-between gap-1 rounded-sm border border-border-strong bg-surface px-2 text-body",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
       >

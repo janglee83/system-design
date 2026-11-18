@@ -34,7 +34,7 @@ export function EngineStatus() {
       data-testid="engine-status"
       data-status={status}
       role="status"
-      className="inline-flex h-6 items-center gap-1.5 self-start rounded-full border border-border bg-surface px-2.5 text-xs text-text-2"
+      className="inline-flex h-6 items-center gap-1.5 self-start rounded-full border border-border bg-surface px-2.5 text-caption text-text-2"
     >
       {status === "ready" ? (
         <>

@@ -21,7 +21,7 @@ export const IconButton = forwardRef<HTMLButtonElement, Props>(function IconButt
         aria-pressed={active}
         className={cn(
           "inline-flex size-8 items-center justify-center rounded-md text-text-2",
-          "transition-colors duration-120 ease-sd hover:bg-surface-2 hover:text-text",
+          "transition-colors duration-(--sd-t-fast) ease-sd hover:bg-surface-2 hover:text-text",
           "disabled:cursor-not-allowed disabled:opacity-50",
           active && "bg-accent-soft text-accent",
           className,

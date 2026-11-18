@@ -33,8 +33,8 @@ export function Dialog({
             wide ? "w-[720px]" : "w-[480px]",
           )}
         >
-          <D.Title className="pr-8 text-lg font-semibold">{title}</D.Title>
-          {description ? <D.Description className="mt-1 text-sm text-text-2">{description}</D.Description> : null}
+          <D.Title className="pr-8 text-title font-semibold">{title}</D.Title>
+          {description ? <D.Description className="mt-1 text-body text-text-2">{description}</D.Description> : null}
           <div className="mt-4">{children}</div>
           {footer ? <div className="mt-6 flex justify-end gap-2">{footer}</div> : null}
           <D.Close

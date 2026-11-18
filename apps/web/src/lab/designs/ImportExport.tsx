@@ -70,7 +70,7 @@ export const ImportExport = forwardRef<ImportExportHandle>(function ImportExport
         title={t("importIssue.title")}
         description={t("importIssue.description")}
       >
-        <ul className="num max-h-72 list-disc overflow-y-auto pl-5 text-xs">
+        <ul className="num max-h-72 list-disc overflow-y-auto pl-5 text-caption">
           {(issues ?? []).map((i, k) => (
             <li key={k}>{t("importIssue.line", { path: i.path || t("importIssue.root"), reason: reason(i.code) })}</li>
           ))}

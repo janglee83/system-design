@@ -23,7 +23,7 @@ export function Tooltip({
         <T.Content
           side={side}
           sideOffset={6}
-          className="z-50 max-w-72 rounded-md border border-border bg-surface px-2 py-1 text-xs text-text shadow-2"
+          className="z-50 max-w-72 rounded-md border border-border bg-surface px-2 py-1 text-caption text-text shadow-2"
         >
           {content}
           {shortcut ? <kbd className="num ml-2 text-text-3">{shortcut}</kbd> : null}

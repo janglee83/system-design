@@ -56,3 +56,26 @@ test("⌘K / Ctrl+K adds a component in the Lab and finds a challenge in Vietnam
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/vi\/lab\?challenge=c-l0-first-launch/);
 });
+
+test("Design v2 tokens: the 2A accent in both themes", async ({ page }) => {
+  const accent = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--sd-accent").trim().toUpperCase());
+  await page.goto("/en/lab");
+  await page.getByRole("radio", { name: "Light" }).click();
+  expect(await accent()).toBe("#0B6870");
+  await page.getByRole("radio", { name: "Dark" }).click();
+  expect(await accent()).toBe("#3FC3CB");
+});
+
+test("focus rings show for the keyboard only", async ({ page }) => {
+  await page.goto("/en/lab");
+  const pill = page.getByTestId("problems");
+  const outline = () => pill.evaluate((el) => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth }));
+  await pill.click();
+  await pill.click(); // closes the list; focus stays on the pill
+  await expect(pill).toBeFocused();
+  expect((await outline()).style).toBe("none");
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(pill).toBeFocused();
+  expect(await outline()).toEqual({ style: "solid", width: "2px" });
+});

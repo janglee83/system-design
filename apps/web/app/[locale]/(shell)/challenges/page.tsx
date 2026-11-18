@@ -20,17 +20,17 @@ export default async function ChallengesPage({ params }: { params: Promise<{ loc
               {level.challenges.map((c) => (
                 <li key={c.id} className="rounded-lg border border-border bg-surface p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold">{vi ? c.titleVi : c.titleEn}</span>
+                    <span className="text-body font-semibold">{vi ? c.titleVi : c.titleEn}</span>
                     {playable.has(c.id) ? (
-                      <Link href={`/lab?challenge=${c.id}`} className="text-sm font-medium text-accent hover:underline">
+                      <Link href={`/lab?challenge=${c.id}`} className="text-label font-medium text-accent hover:underline">
                         {t("challenges.open")}
                       </Link>
                     ) : (
-                      <span className="text-xs text-text-3">{t("common.comingSoon")}</span>
+                      <span className="text-caption text-text-3">{t("common.comingSoon")}</span>
                     )}
                   </div>
                   {playable.has(c.id) ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-caption">
                       <span className="text-text-3">{t("challenges.modes")}</span>
                       {c.modes.map((m) => (
                         <Link

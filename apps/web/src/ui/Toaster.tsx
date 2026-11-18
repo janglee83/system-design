@@ -25,7 +25,7 @@ export function Toaster() {
         <div
           key={x.id}
           data-testid="toast"
-          className="pointer-events-auto flex max-w-md items-center gap-3 rounded-lg border border-l-[3px] border-border bg-surface py-1 pr-1 pl-3 text-sm shadow-2"
+          className="pointer-events-auto flex max-w-md items-center gap-3 rounded-lg border border-l-[3px] border-border bg-surface py-1 pr-1 pl-3 text-body shadow-2"
           style={{ borderLeftColor: BAR[x.tone] }}
         >
           <span className="flex-1">{x.message}</span>

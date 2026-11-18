@@ -42,11 +42,11 @@ export function CommandPalette({
               placeholder={t("placeholder")}
               value={query}
               onValueChange={setQuery}
-              className="h-11 w-full border-b border-border bg-transparent px-4 text-sm outline-none placeholder:text-text-3"
+              className="h-11 w-full border-b border-border bg-transparent px-4 text-body outline-none placeholder:text-text-3"
             />
             <Command.List className="max-h-[50dvh] overflow-y-auto p-1">
               {results.length === 0 && query.trim() ? (
-                <Command.Empty className="px-3 py-4 text-sm text-text-3">{t("empty", { query: query.trim() })}</Command.Empty>
+                <Command.Empty className="px-3 py-4 text-body text-text-3">{t("empty", { query: query.trim() })}</Command.Empty>
               ) : null}
               {groupResults(results).map(({ group: g, items: inGroup }) => {
                 return (
@@ -59,10 +59,10 @@ export function CommandPalette({
                           onOpenChange(false);
                           item.run();
                         }}
-                        className="flex cursor-default items-center gap-3 rounded-md px-2 py-1.5 text-sm data-[selected=true]:bg-surface-2"
+                        className="flex cursor-default items-center gap-3 rounded-md px-2 py-1.5 text-body data-[selected=true]:bg-surface-2"
                       >
                         <span className="min-w-0 flex-1 truncate">{item.title[lang]}</span>
-                        {item.subtitle ? <span className="truncate text-xs text-text-3">{item.subtitle[lang]}</span> : null}
+                        {item.subtitle ? <span className="truncate text-caption text-text-3">{item.subtitle[lang]}</span> : null}
                       </Command.Item>
                     ))}
                   </Command.Group>

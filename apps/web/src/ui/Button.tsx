@@ -23,8 +23,8 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       type={type}
       className={cn(
         "inline-flex items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap",
-        "transition-colors duration-120 ease-sd disabled:cursor-not-allowed disabled:opacity-50",
-        size === "md" ? "h-8 px-3 text-sm" : "h-7 px-2 text-xs",
+        "transition-colors duration-(--sd-t-fast) ease-sd disabled:cursor-not-allowed disabled:opacity-50",
+        size === "md" ? "h-8 px-3 text-label" : "h-7 px-2 text-label",
         VARIANTS[variant],
         className,
       )}

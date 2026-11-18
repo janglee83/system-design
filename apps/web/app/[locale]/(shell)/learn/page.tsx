@@ -14,12 +14,12 @@ export default async function LearnPage({ params }: { params: Promise<{ locale: 
       {curriculum.levels.map((level, i) => (
         <section key={level.id} className="mb-6">
           <h2 className="section-label pb-1">{t("level", { level: i })}</h2>
-          <p className="pb-2 text-md font-semibold">{vi ? level.titleVi : level.titleEn}</p>
+          <p className="pb-2 text-heading font-semibold">{vi ? level.titleVi : level.titleEn}</p>
           <ol className="flex flex-col gap-1">
             {level.lessons.map((lesson) => (
-              <li key={lesson.id} id={lesson.id} className="flex items-baseline justify-between gap-3 text-sm">
+              <li key={lesson.id} id={lesson.id} className="flex items-baseline justify-between gap-3 text-body">
                 <span>{vi ? lesson.titleVi : lesson.titleEn}</span>
-                <span className="num text-xs text-text-3">{t("minutes", { n: lesson.minutes })}</span>
+                <span className="num text-caption text-text-3">{t("minutes", { n: lesson.minutes })}</span>
               </li>
             ))}
           </ol>

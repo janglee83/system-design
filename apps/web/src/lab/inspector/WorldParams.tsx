@@ -19,7 +19,7 @@ export function WorldParams({ defaults }: { defaults: Calibration }) {
 
   return (
     <Section title={title}>
-      <p className="pb-2 text-xs text-text-3">{t("world.intro")}</p>
+      <p className="pb-2 text-caption text-text-3">{t("world.intro")}</p>
       {CALIBRATION_GROUPS.map((g) => (
         <div key={g.id} className="pb-2">
           <h3 className="section-label pb-1">{t(`world.group.${g.id}`)}</h3>
@@ -43,7 +43,7 @@ export function WorldParams({ defaults }: { defaults: Calibration }) {
                     onChange={(v) => v !== undefined && api.getState().apply((d) => setCalibration(d, f, v, defaults))}
                   />
                 </Field>
-                {isChanged ? <p className="num -mt-0.5 pb-1 text-right text-2xs text-text-3">{t("world.default", { value: defaults[f] })}</p> : null}
+                {isChanged ? <p className="num -mt-0.5 pb-1 text-right text-caption text-text-3">{t("world.default", { value: defaults[f] })}</p> : null}
               </div>
             );
           })}

@@ -9,7 +9,7 @@ export function Section({ title, defaultOpen = false, children }: { title: strin
       <A.Item value="s">
         <A.Header>
           <A.Trigger className="group section-label flex h-8 w-full items-center gap-1 text-left">
-            <ChevronRight size={12} aria-hidden className="transition-transform duration-120 group-data-[state=open]:rotate-90" />
+            <ChevronRight size={12} aria-hidden className="transition-transform duration-(--sd-t-fast) group-data-[state=open]:rotate-90" />
             {title}
           </A.Trigger>
         </A.Header>

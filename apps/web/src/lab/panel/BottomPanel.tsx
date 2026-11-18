@@ -77,8 +77,8 @@ export function BottomPanel() {
               <span className="flex size-16 items-center justify-center rounded-full bg-surface-2 text-text-3">
                 <BarChart3 size={32} aria-hidden />
               </span>
-              <p className="text-md font-semibold">{t("panel.noRun")}</p>
-              <p className="text-sm text-text-2">{t("panel.noRunBody")}</p>
+              <p className="text-heading font-semibold">{t("panel.noRun")}</p>
+              <p className="text-body text-text-2">{t("panel.noRunBody")}</p>
             </div>
           )}
         </div>

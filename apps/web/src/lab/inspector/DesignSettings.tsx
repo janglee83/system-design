@@ -28,7 +28,7 @@ export function DesignSettings() {
   const calibration = useEngineStore((s) => s.info?.calibration ?? null);
   return (
     <div data-testid="design-settings" className="flex flex-col gap-2">
-      <h2 className="pb-1 text-sm font-semibold">{t("design")}</h2>
+      <h2 className="pb-1 text-body font-semibold">{t("design")}</h2>
       <Field label={t("name")} htmlFor={id}>
         <TextField id={id} label={t("name")} value={name} placeholder={t("untitled")} onCommit={(v) => api.getState().apply((d) => setName(d, v))} />
       </Field>

@@ -117,7 +117,7 @@ export function PresetPicker() {
             placeholder={t("name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2 text-sm placeholder:text-text-3"
+            className="h-8 w-full rounded-sm border border-border-strong bg-surface px-2 text-body placeholder:text-text-3"
           />
         </form>
       </Dialog>

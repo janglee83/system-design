@@ -22,7 +22,7 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
   const Icon = iconFor(node.kind);
   const StateIcon = state !== "normal" ? STATE_ICON[state] : null;
   const label = displayLabel(node, meta, t);
-  const color = categoryColor(meta?.category);
+  const color = categoryColor(node.kind);
   return (
     <div
       data-testid={`node-${node.id}`}
@@ -52,15 +52,15 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
           <Icon size={16} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{label}</div>
-          <div className="truncate text-2xs text-text-3">{meta ? t(meta.labelKey) : node.kind}</div>
+          <div className="truncate text-body font-semibold">{label}</div>
+          <div className="truncate text-caption text-text-3">{meta ? t(meta.labelKey) : node.kind}</div>
         </div>
         {locked ? <Lock size={14} role="img" className="text-text-3" aria-label={t("lab.node.locked")} /> : null}
         {StateIcon ? <StateIcon size={14} aria-hidden className={state === "busy" ? "text-busy" : state === "overloaded" ? "text-over" : "text-down"} /> : null}
       </div>
       <div className="mx-2.5 mt-1.5 flex items-center justify-between border-t border-border pt-1">
-        <span className="num rounded-xs bg-surface-2 px-1 text-2xs">{t("lab.node.replicas", { count: node.replicas })}</span>
-        <span className="num text-2xs text-text-2">
+        <span className="num rounded-xs bg-surface-2 px-1 text-caption">{t("lab.node.replicas", { count: node.replicas })}</span>
+        <span className="num text-caption text-text-2">
           {typeof cost === "number" ? t("lab.node.costPerMonth", { cost: Math.round(cost) }) : t("lab.node.costUnknown")}
         </span>
       </div>

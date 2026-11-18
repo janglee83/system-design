@@ -275,8 +275,8 @@ function EmptyState() {
   const mac = useIsMac();
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-      <p className="text-md font-semibold">{t("title")}</p>
-      <p className="text-sm text-text-2">{t("body", { shortcut: formatCombo("Mod+K", mac) })}</p>
+      <p className="text-heading font-semibold">{t("title")}</p>
+      <p className="text-body text-text-2">{t("body", { shortcut: formatCombo("Mod+K", mac) })}</p>
     </div>
   );
 }

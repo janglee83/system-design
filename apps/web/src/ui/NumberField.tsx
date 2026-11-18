@@ -85,9 +85,9 @@ export function NumberField({ label, value, onChange, min, max, step, integer, u
             bump(e.key === "ArrowUp" ? 1 : -1);
           }
         }}
-        className="num h-full w-full min-w-0 bg-transparent text-center text-sm outline-none focus-visible:outline-none"
+        className="num h-full w-full min-w-0 bg-transparent text-center text-body outline-none focus-visible:outline-none"
       />
-      {unit ? <span className="pr-1 text-2xs text-text-3">{unit}</span> : null}
+      {unit ? <span className="pr-1 text-caption text-text-3">{unit}</span> : null}
       <button type="button" aria-label={t("increase", { label })} disabled={disabled} onClick={() => bump(1)} className="flex h-full w-7 items-center justify-center text-text-2 hover:text-text">
         <Plus size={12} aria-hidden />
       </button>

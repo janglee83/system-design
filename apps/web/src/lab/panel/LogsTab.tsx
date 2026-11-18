@@ -31,13 +31,13 @@ export function LogsTab({ run }: { run: RunRecord }) {
               else next.add(l);
               setShown(next);
             }}
-            className={cn("h-7 rounded-sm border px-2 text-xs", shown.has(l) ? "border-border-strong bg-surface" : "border-border text-text-3")}
+            className={cn("h-7 rounded-sm border px-2 text-caption", shown.has(l) ? "border-border-strong bg-surface" : "border-border text-text-3")}
           >
             {t(`logs.level.${l}`)}
           </button>
         ))}
       </div>
-      <ol className="num text-xs">
+      <ol className="num text-caption">
         {lines
           .filter((l) => shown.has(l.level))
           .map((l, i) => (

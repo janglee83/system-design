@@ -11,7 +11,7 @@ export function TabsList({ label, items }: { label: string; items: { value: stri
         <T.Trigger
           key={it.value}
           value={it.value}
-          className="relative px-2 text-sm font-medium text-text-2 hover:text-text data-[state=active]:text-text data-[state=active]:after:absolute data-[state=active]:after:inset-x-2 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-accent"
+          className="relative px-2 text-label font-medium text-text-2 hover:text-text data-[state=active]:text-text data-[state=active]:after:absolute data-[state=active]:after:inset-x-2 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-accent"
         >
           {it.label}
         </T.Trigger>

@@ -31,14 +31,14 @@ export function DesignMenu() {
 
   return (
     <div className="flex items-center gap-2 border-b border-border px-3 py-2" data-testid="design-menu">
-      <p className="min-w-0 flex-1 truncate text-sm font-semibold" title={dirty ? t("designs.unsaved") : undefined}>
+      <p className="min-w-0 flex-1 truncate text-body font-semibold" title={dirty ? t("designs.unsaved") : undefined}>
         {name || t("inspector.untitled")}
         {dirty ? (
           <span role="img" aria-label={t("designs.unsaved")} className="ml-1.5 inline-block size-1.5 rounded-full bg-busy align-middle" />
         ) : null}
       </p>
       <DM.Root modal={false}>
-        <DM.Trigger className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-sm font-medium text-text-2 hover:bg-surface-2">
+        <DM.Trigger className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-label font-medium text-text-2 hover:bg-surface-2">
           {t("designs.menu")}
           <ChevronDown size={14} aria-hidden />
         </DM.Trigger>
@@ -61,11 +61,11 @@ export function DesignMenu() {
             </DM.Sub>
             <DM.Item className={MENU_ITEM_CLASS} onSelect={() => ui.getState().set({ designsOpen: true })}>
               <span className="flex-1">{t("designs.open")}</span>
-              <kbd className="num text-2xs text-text-3">{openCombo}</kbd>
+              <kbd className="num text-caption text-text-3">{openCombo}</kbd>
             </DM.Item>
             <DM.Item className={MENU_ITEM_CLASS} onSelect={actions.save}>
               <span className="flex-1">{t("designs.save")}</span>
-              <kbd className="num text-2xs text-text-3">{saveCombo}</kbd>
+              <kbd className="num text-caption text-text-3">{saveCombo}</kbd>
             </DM.Item>
             <DM.Item className={MENU_ITEM_CLASS} onSelect={() => ui.getState().set({ saveDialog: "saveAs" })}>
               {t("designs.saveAs")}

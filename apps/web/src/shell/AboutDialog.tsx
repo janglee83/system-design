@@ -14,8 +14,8 @@ export function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   }, [open, start]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("title")}>
-      <p className="text-sm text-text-2">{t("body")}</p>
-      <div className="num mt-4 space-y-1 text-xs text-text-3">
+      <p className="text-body text-text-2">{t("body")}</p>
+      <div className="num mt-4 space-y-1 text-caption text-text-3">
         <p>{t("appVersion", { version: process.env.NEXT_PUBLIC_APP_VERSION ?? "" })}</p>
         <p>{t("engineVersion", { version: engineVersion })}</p>
       </div>

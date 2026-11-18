@@ -60,14 +60,14 @@ export function MetricsTab({ run, previous }: { run: RunRecord; previous: RunRec
           const cmp = compareMetric(key, now, previous?.metrics[key]);
           return (
             <li key={key} data-testid={`metric-${key}`} className="rounded-lg border border-border bg-surface p-2">
-              <p className="truncate text-xs text-text-3">{t(`metric.${key}`)}</p>
-              <p className="num text-xl font-semibold" data-value={now ?? ""}>
+              <p className="truncate text-caption text-text-3">{t(`metric.${key}`)}</p>
+              <p className="num text-title font-semibold" data-value={now ?? ""}>
                 {formatMetric(key, now, locale)}
               </p>
               {previous && cmp.verdict ? (
                 <p
                   className={cn(
-                    "num text-2xs",
+                    "num text-caption",
                     cmp.verdict === "better" ? "text-ok" : cmp.verdict === "worse" ? "text-over" : "text-text-3",
                   )}
                 >
@@ -84,7 +84,7 @@ export function MetricsTab({ run, previous }: { run: RunRecord; previous: RunRec
           );
         })}
       </ul>
-      {previous ? null : <p className="text-xs text-text-3">{t("panel.noComparison")}</p>}
+      {previous ? null : <p className="text-caption text-text-3">{t("panel.noComparison")}</p>}
       <section>
         <h3 className="section-label pb-1">{t("panel.breakdown")}</h3>
         <div className="flex h-3 overflow-hidden rounded-full bg-surface-3" aria-hidden>
@@ -92,7 +92,7 @@ export function MetricsTab({ run, previous }: { run: RunRecord; previous: RunRec
             <span key={k} style={{ width: total ? `${((m[k] ?? 0) / total) * 100}%` : 0, background: color }} />
           ))}
         </div>
-        <ul className="mt-1 flex flex-wrap gap-x-4 text-xs text-text-2">
+        <ul className="mt-1 flex flex-wrap gap-x-4 text-caption text-text-2">
           {BREAKDOWN.map(([k, color]) => (
             <li key={k} className="flex items-center gap-1">
               <span aria-hidden className="size-2 rounded-full" style={{ background: color }} />

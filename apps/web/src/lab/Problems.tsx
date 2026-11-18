@@ -50,7 +50,7 @@ export function Problems() {
                 type="button"
                 title={i.nodeId || i.edgeId ? t("problems.select") : undefined}
                 onClick={() => show(i)}
-                className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-2"
+                className="w-full rounded-sm px-2 py-1.5 text-left text-body hover:bg-surface-2"
               >
                 {issueText(i, { design, metas, t })}
               </button>
@@ -71,7 +71,7 @@ export function Problems() {
         <button
           type="button"
           data-testid="problems"
-          className="inline-flex h-8 items-center gap-2 rounded-full border border-border bg-surface px-3 text-sm font-medium shadow-2"
+          className="inline-flex h-8 items-center gap-2 rounded-full border border-border bg-surface px-3 text-label font-medium shadow-2"
         >
           <span aria-hidden className="size-2 rounded-full" style={{ background: dot }} />
           {all.length === 0 ? t("problems.none") : t("problems.count", { count: all.length })}
@@ -84,7 +84,7 @@ export function Problems() {
           sideOffset={8}
           className="z-50 max-h-80 w-96 overflow-y-auto rounded-lg border border-border bg-surface p-2 shadow-2"
         >
-          {all.length === 0 ? <p className="px-2 py-1 text-sm text-text-2">{t("problems.none")}</p> : null}
+          {all.length === 0 ? <p className="px-2 py-1 text-body text-text-2">{t("problems.none")}</p> : null}
           {list(t("problems.blocking"), blocking)}
           {list(t("problems.warning"), warnings)}
         </Popover.Content>

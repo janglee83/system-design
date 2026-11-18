@@ -18,7 +18,7 @@ export function Banner({
 }) {
   const { cls, Icon, role } = TONES[tone];
   return (
-    <div role={role} className={cn("flex items-center gap-3 rounded-lg border px-3 py-2 text-sm", cls)}>
+    <div role={role} className={cn("flex items-center gap-3 rounded-lg border px-3 py-2 text-body", cls)}>
       <Icon size={16} aria-hidden className="shrink-0" />
       <div className="flex-1">{children}</div>
       {action}

@@ -28,7 +28,7 @@ export function Segmented<T extends string>({
           aria-label={it.icon ? it.label : undefined}
           title={it.title ?? (it.icon ? it.label : undefined)}
           className={cn(
-            "inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 text-xs font-medium text-text-2",
+            "inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 text-caption font-medium text-text-2",
             "data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:shadow-1",
           )}
         >

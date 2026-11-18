@@ -14,11 +14,11 @@ export function SearchButton() {
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="inline-flex h-8 w-56 items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 text-sm text-text-3 hover:text-text-2"
+      className="inline-flex h-8 w-56 items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 text-body text-text-3 hover:text-text-2"
     >
       <Search size={14} aria-hidden />
       <span className="flex-1 text-left">{t("open")}</span>
-      <kbd className="num text-2xs">{combo}</kbd>
+      <kbd className="num text-caption">{combo}</kbd>
     </button>
   );
 }

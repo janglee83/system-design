@@ -54,7 +54,7 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
 
   return (
     <Section title={t("faults.title")} defaultOpen>
-      {faults.length === 0 ? <p className="pb-2 text-sm text-text-3">{t("faults.empty")}</p> : null}
+      {faults.length === 0 ? <p className="pb-2 text-body text-text-3">{t("faults.empty")}</p> : null}
       <ul className="flex flex-col gap-2">
         {faults.map((f, i) => {
           const targets = targetsFor(f.kind, design, metas);
@@ -81,7 +81,7 @@ export function FaultList({ supported, metas }: { supported: readonly FaultKind[
               <div className="flex items-center gap-1">
                 <div className="min-w-0 flex-1">
                   {f.kind === "traffic-surge-3x" ? (
-                    <p className="px-1 text-xs text-text-2">{t("faults.noTarget")}</p>
+                    <p className="px-1 text-caption text-text-2">{t("faults.noTarget")}</p>
                   ) : (
                     <Select<string>
                       label={t("faults.target")}

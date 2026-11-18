@@ -56,7 +56,7 @@ export function DesignsDialog() {
         description={t("dialogDescription")}
         wide
       >
-        {list && list.length === 0 ? <p className="text-sm text-text-3">{t("empty")}</p> : null}
+        {list && list.length === 0 ? <p className="text-body text-text-3">{t("empty")}</p> : null}
         <ul className="flex max-h-[50dvh] flex-col divide-y divide-border overflow-y-auto">
           {(list ?? []).map((d) => (
             <li key={d.id} className="flex items-center gap-2 py-2" data-testid={`saved-${d.id}`}>
@@ -71,9 +71,9 @@ export function DesignsDialog() {
                     }}
                   />
                 ) : (
-                  <p className="truncate text-sm font-semibold">{d.name}</p>
+                  <p className="truncate text-body font-semibold">{d.name}</p>
                 )}
-                <p className="text-xs text-text-3">
+                <p className="text-caption text-text-3">
                   {t("updated", { when: relative(d.updatedAt, locale) })} · {t("nodes", { count: d.design.nodes.length })}
                 </p>
               </div>
