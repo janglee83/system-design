@@ -80,11 +80,20 @@
   },
   "learn": {
     "title": "Học",
-    "placeholder": "Bài học sẽ có trong bản cập nhật tới. Dưới đây là lộ trình các bài sẽ đi theo."
+    "placeholder": "Bài học sẽ có trong bản cập nhật tới. Dưới đây là lộ trình các bài sẽ đi theo.",
+    "level": "Cấp {level}",
+    "minutes": "{n} phút",
+    "lesson": "Bài học"
   },
   "challenges": {
     "title": "Thử thách",
-    "placeholder": "Phần chơi thử thách sắp ra mắt. Bạn đã có thể mở thiết kế ban đầu của mọi thử thách trong Lab."
+    "placeholder": "Phần chơi thử thách sắp ra mắt. Bạn đã có thể mở thiết kế ban đầu của mọi thử thách trong Lab.",
+    "open": "Mở trong Lab",
+    "openMode": "Mở chế độ {mode}",
+    "modes": "Chế độ",
+    "level": "Cấp {level}",
+    "fromChallenge": "Thiết kế ban đầu của “{title}” ({mode})",
+    "notFound": "Không có thử thách hoặc chế độ đó, nên Lab mở thiết kế gần nhất của bạn."
   },
   "leaderboard": {
     "title": "Bảng xếp hạng",
@@ -525,7 +534,6 @@
     "storageUnavailable": "Trình duyệt không cho lab lưu dữ liệu, nên không lưu được thiết kế ở đây.",
     "draftRestored": "Đã mở lại đúng chỗ bạn đang làm.",
     "discard": "Các thay đổi chưa lưu sẽ mất. Vẫn tiếp tục?",
-    "empty_template": "Trống",
     "openConfirm": "Mở"
   },
   "labCheck": {
@@ -555,5 +563,9 @@
     "duplicate_id": "lặp lại một mã đã dùng",
     "line": "{path}: {reason}",
     "imported": "Đã nhập “{name}”."
+  },
+  "templates": {
+    "empty": "Trống",
+    "webDb": "Người dùng → máy chủ web → cơ sở dữ liệu"
   }
 }

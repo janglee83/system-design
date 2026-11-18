@@ -1,7 +1,7 @@
 "use client";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "@/ui/toast-store";
 import { useEngineStart, useEngineStore } from "@/engine/EngineProvider";
 import { EngineStatus } from "@/engine/EngineStatus";
@@ -24,6 +24,7 @@ import {
 import { useAddComponent } from "./canvas/use-add-component";
 import { useAutoLayout } from "./canvas/use-auto-layout";
 import type { Design } from "./model/design";
+import { designFromTemplate, type TemplateId } from "./model/templates";
 import { DesignMenu } from "./designs/DesignMenu";
 import { DesignsDialog } from "./designs/DesignsDialog";
 import { SaveDialog } from "./designs/SaveDialog";
@@ -40,7 +41,17 @@ import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
 import { useMetas } from "./use-metas";
 
-export function LabApp({ initial }: { initial?: Design }) {
+export function LabApp({
+  initial,
+  template,
+  notFound = false,
+}: {
+  initial?: Design;
+  /** `?template=`: built once the engine's component list is known. */
+  template?: TemplateId;
+  /** `?challenge=` named a challenge or mode that does not exist. */
+  notFound?: boolean;
+}) {
   useEngineStart();
   const t = useTranslations("lab");
   return (
@@ -82,7 +93,8 @@ export function LabApp({ initial }: { initial?: Design }) {
         <LabShortcuts />
         <DesignsDialog />
         <SaveDialog />
-        <Drafts restore={!initial} />
+        <Drafts restore={!initial && !template} />
+        <StartFrom template={template} notFound={notFound} />
       </ReactFlowProvider>
     </LabStoresProvider>
   );
@@ -167,5 +179,24 @@ function Drafts({ restore }: { restore: boolean }) {
       cancelled = true;
     };
   }, [restore, design, doc, t]);
+  return null;
+}
+
+/** `?template=` and the "no such challenge" notice, once per page load. */
+function StartFrom({ template, notFound }: { template?: TemplateId; notFound: boolean }) {
+  const design = useDesignApi();
+  const doc = useDocApi();
+  const metas = useMetas();
+  const t = useTranslations("challenges");
+  const applied = useRef(false); // once, when the component list first arrives
+  useEffect(() => {
+    if (!template || metas.size === 0 || applied.current) return;
+    applied.current = true;
+    design.getState().replace(designFromTemplate(template, metas));
+    doc.getState().reset(null);
+  }, [template, metas, design, doc]);
+  useEffect(() => {
+    if (notFound) toast(t("notFound"), "warn");
+  }, [notFound, t]);
   return null;
 }

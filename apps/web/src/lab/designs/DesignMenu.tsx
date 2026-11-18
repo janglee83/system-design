@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { MENU_ITEM_CLASS } from "@/shell/HelpMenu";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
+import { TEMPLATES } from "../model/templates";
 import { formatCombo } from "../shortcuts";
 import { useDesign, useDoc, useUiApi } from "../store/LabStores";
 import { useIsMac } from "../use-shortcuts";
@@ -14,7 +15,7 @@ import { useDocActions } from "./use-doc-actions";
 const CONTENT = "z-50 min-w-52 rounded-md border border-border bg-surface p-1 shadow-2";
 
 /** The design's name and the Design menu, at the top of the palette column. */
-export function DesignMenu({ templates }: { templates?: React.ReactNode }) {
+export function DesignMenu() {
   const t = useTranslations();
   const name = useDesign((s) => s.design.name);
   const dirty = useDoc((s) => s.dirty);
@@ -50,10 +51,11 @@ export function DesignMenu({ templates }: { templates?: React.ReactNode }) {
               </DM.SubTrigger>
               <DM.Portal>
                 <DM.SubContent className={CONTENT} sideOffset={4}>
-                  <DM.Item className={MENU_ITEM_CLASS} onSelect={guarded(actions.newEmpty)}>
-                    {t("designs.empty_template")}
-                  </DM.Item>
-                  {templates}
+                  {TEMPLATES.map((id) => (
+                    <DM.Item key={id} className={MENU_ITEM_CLASS} onSelect={guarded(() => actions.newFrom(id))}>
+                      {t(`templates.${id}`)}
+                    </DM.Item>
+                  ))}
                 </DM.SubContent>
               </DM.Portal>
             </DM.Sub>

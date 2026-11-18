@@ -2,7 +2,8 @@
 import { useTranslations } from "next-intl";
 import { useCallback } from "react";
 import { toast } from "@/ui/toast-store";
-import { emptyDesign } from "../model/design";
+import { designFromTemplate, type TemplateId } from "../model/templates";
+import { useMetas } from "../use-metas";
 import { useDesignApi, useDocApi, useUiApi } from "../store/LabStores";
 import { openSaved, saveAs, saveCurrent } from "./save";
 
@@ -12,6 +13,7 @@ export function useDocActions() {
   const design = useDesignApi();
   const doc = useDocApi();
   const ui = useUiApi();
+  const metas = useMetas();
   const report = useCallback(
     (p: Promise<string>) =>
       p.then(
@@ -38,10 +40,11 @@ export function useDocActions() {
       () => toast(t("storageUnavailable"), "error"),
     );
 
-  const newEmpty = () => {
-    design.getState().replace(emptyDesign());
+  /** A fresh design from a template; it is not one of the saved designs yet. */
+  const newFrom = (id: TemplateId) => {
+    design.getState().replace(designFromTemplate(id, metas));
     doc.getState().reset(null);
   };
 
-  return { save, saveNamed, open, newEmpty };
+  return { save, saveNamed, open, newFrom };
 }

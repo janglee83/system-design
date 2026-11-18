@@ -80,11 +80,20 @@
   },
   "learn": {
     "title": "Learn",
-    "placeholder": "Lessons arrive in the next update. Here is the path they will follow."
+    "placeholder": "Lessons arrive in the next update. Here is the path they will follow.",
+    "level": "Level {level}",
+    "minutes": "{n} min",
+    "lesson": "Lesson"
   },
   "challenges": {
     "title": "Challenges",
-    "placeholder": "Challenge play arrives soon. You can already open any challenge's starting design in the Lab."
+    "placeholder": "Challenge play arrives soon. You can already open any challenge's starting design in the Lab.",
+    "open": "Open in the Lab",
+    "openMode": "Open the {mode} mode",
+    "modes": "Modes",
+    "level": "Level {level}",
+    "fromChallenge": "Starting design of “{title}” ({mode})",
+    "notFound": "That challenge or mode does not exist, so the Lab opened your last design."
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -525,7 +534,6 @@
     "storageUnavailable": "This browser is not letting the lab store data, so designs cannot be saved here.",
     "draftRestored": "Picked up where you left off.",
     "discard": "Your unsaved changes will be lost. Continue?",
-    "empty_template": "Empty",
     "openConfirm": "Open"
   },
   "labCheck": {
@@ -555,5 +563,9 @@
     "duplicate_id": "repeats an id that is already used",
     "line": "{path}: {reason}",
     "imported": "Imported “{name}”."
+  },
+  "templates": {
+    "empty": "Empty",
+    "webDb": "Users → web server → database"
   }
 }
