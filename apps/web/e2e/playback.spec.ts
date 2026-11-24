@@ -72,3 +72,14 @@ test("a design edit after the run makes the playback stale", async ({ page }) =>
   await expect(page.getByText("The design changed after this run.", { exact: false })).toBeVisible();
   await expect(page.getByTestId("node-web-server-1")).not.toContainText("% load");
 });
+
+test("request dots move while playing, beside a live chip; none under reduced motion", async ({ page }) => {
+  await ranThreeTier(page);
+  await page.getByTestId("playback-bar").getByRole("button", { name: "Phát" }).click();
+  await expect(page.locator("circle.dot").first()).toBeAttached();
+  expect(await page.locator("circle.dot").count()).toBeGreaterThanOrEqual(4);
+  await expect(page.getByTestId("live-chip")).toContainText(/giây \d+,\d \/ 10,0/);
+  await expect(page.getByTestId("verdict")).toHaveCount(0); // the chip has the top of the canvas
+  await page.emulateMedia({ reducedMotion: "reduce" }); // listened to live
+  await expect(page.locator("circle.dot")).toHaveCount(0);
+});

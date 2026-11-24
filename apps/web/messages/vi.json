@@ -804,7 +804,10 @@
       "p95": "Độ trễ p95",
       "p99": "Độ trễ p99"
     },
-    "live": "Đang mô phỏng {seconds} giây"
+    "live": "Đang mô phỏng {seconds} giây",
+    "clock": "giây {now} / {total}",
+    "eventsSoFar": "{count, plural, other {# sự kiện}}",
+    "overloadedNow": "{count, plural, other {# quá tải}}"
   },
   "boot": {
     "title": "Đang khởi động bộ mô phỏng",

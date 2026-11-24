@@ -13,7 +13,7 @@ import { formatMetric } from "../format";
 import { displayLabel, type Translate } from "../labels";
 import { NODE_SIZE } from "../model/design";
 import { currentRun } from "../store/run-store";
-import { useDesign, useDesignApi, useRuns } from "../store/LabStores";
+import { useDesign, useDesignApi, usePlayback, useRuns } from "../store/LabStores";
 import { useMetas } from "../use-metas";
 import { focusViewport } from "./focus-viewport";
 import { verdictView, type GoalChip } from "./verdict-model";
@@ -42,7 +42,9 @@ export function Verdict({ onRunAgain }: { onRunAgain: () => void }) {
   const view = useMemo(() => (run ? verdictView({ goals: run.goals, verdict: run.verdict, timeline: run.timeline }) : null), [run]);
 
   // While the strip is open the design stays clear of it: fit leaving 96 px at the top (§7.3).
-  const open = !!run && status !== "running" && closed !== run.id;
+  // While playback plays, the live chip takes the top of the canvas.
+  const playing = usePlayback((x) => x.playing);
+  const open = !!run && status !== "running" && closed !== run.id && !playing;
   useEffect(() => {
     if (!open) return;
     const id = requestAnimationFrame(() => void flow.fitView({ duration: 200, maxZoom: 1, padding: { top: "96px", left: "48px", right: "48px", bottom: "48px" } }));

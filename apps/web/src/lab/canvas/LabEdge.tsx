@@ -13,6 +13,9 @@ import { displayLabel } from "../labels";
 import { reverseEdge } from "../model/ops";
 import { useDesign, useDesignApi } from "../store/LabStores";
 import { useMetas } from "../use-metas";
+import { useMediaQuery } from "@/ui/use-media-query";
+import { usePlayback } from "../store/LabStores";
+import { edgeDots } from "./dots";
 import { bezierMidpoint, bezierPath } from "./edge-geometry";
 import type { LabEdgeData } from "./rf-adapter";
 
@@ -28,6 +31,10 @@ function LabEdgeView({ id, source, target, sourceX, sourceY, targetX, targetY, d
   // §6.1 running: HTTP stays solid; other kinds keep their dash.
   const dash = onPath || (running && kind === "http") ? "none" : `var(--sd-dash-${kind})`;
   const mid = bezierMidpoint(sourceX, sourceY, targetX, targetY);
+  const playing = usePlayback((s) => s.playing);
+  const speed = usePlayback((s) => s.speed);
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)"); // listened to live (§1.4)
+  const dots = running ? edgeDots({ playing, reducedMotion, rate: data?.rate ?? 0, state, speed }) : null;
   return (
     <>
       <g
@@ -50,6 +57,21 @@ function LabEdgeView({ id, source, target, sourceX, sourceY, targetX, targetY, d
             filter: selected ? "drop-shadow(0 0 3px color-mix(in srgb, var(--sd-accent-text) 50%, transparent))" : undefined,
           }}
         />
+        {dots
+          ? dots.dots.map((d, i) => (
+              <circle
+                key={`${i}-${dots.durS}`}
+                className="dot"
+                data-rejected={d.rejected ? "" : undefined}
+                r={3.2}
+                fill={d.rejected ? "var(--sd-canvas)" : `var(--sd-edge-${kind})`}
+                stroke={d.rejected ? "var(--sd-over)" : "none"}
+                strokeWidth={d.rejected ? 2 : 0}
+              >
+                <animateMotion dur={`${dots.durS}s`} begin={`${d.beginS}s`} repeatCount="indefinite" path={path} />
+              </circle>
+            ))
+          : null}
       </g>
       {running && data?.rate !== undefined ? <RatePill x={mid.x} y={mid.y} rate={data.rate} state={state} /> : null}
       {selected ? <EdgePopover id={id} source={source} target={target} x={targetX} y={targetY} /> : null}

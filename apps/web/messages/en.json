@@ -804,7 +804,10 @@
       "p95": "p95 latency",
       "p99": "p99 latency"
     },
-    "live": "Simulating {seconds} s"
+    "live": "Simulating {seconds} s",
+    "clock": "{now} / {total} s",
+    "eventsSoFar": "{count, plural, one {# event} other {# events}}",
+    "overloadedNow": "{count, plural, other {# overloaded}}"
   },
   "boot": {
     "title": "Starting the simulator",
