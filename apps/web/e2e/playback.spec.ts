@@ -103,3 +103,32 @@ test("clicking a sampled request follows it: path highlighted, trace card with h
   await expect(card).toHaveCount(0);
   await expect(page.getByTestId("node-client-1")).not.toHaveAttribute("data-path", /./);
 });
+
+test("every running state keeps the kind's illustration; the icon stays in the small chip", async ({ page }) => {
+  await page.goto("/en/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  const rps = page.getByRole("complementary", { name: "Inspector" }).getByRole("spinbutton", { name: "Total requests per second" });
+  await rps.fill("9000");
+  await rps.press("Enter");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  const bar = page.getByTestId("run-bar");
+  await bar.getByRole("button", { name: /^Run simulation/ }).click();
+  await expect(bar).toHaveAttribute("data-status", "idle");
+  const slider = page.getByRole("slider", { name: "Playback time" });
+  await slider.focus();
+  for (let i = 0; i < 4; i++) await page.keyboard.press("PageUp");
+  const web = page.getByTestId("node-web-server-1");
+  await expect(web).toHaveAttribute("data-state", /busy|overloaded/);
+  const art = (await web.locator(".sd-node-art > svg").boundingBox())!;
+  const chipIcon = (await web.locator(".sd-node-chip svg").boundingBox())!;
+  expect(art.width).toBeGreaterThan(50); // the 76 px illustration (at the current zoom)
+  expect(chipIcon.width).toBeLessThanOrEqual(14);
+  // The traffic source shows what it sends, not a load.
+  const users = page.getByTestId("node-client-1");
+  await expect(users).toContainText("Sending 9,000 requests/s");
+  await expect(users).not.toContainText("% load");
+  // Edge pills carry a unit and explain themselves.
+  const pill = page.getByTestId("rate-pill").first();
+  await expect(pill).toContainText("on the way");
+  await expect(pill).toHaveAttribute("aria-label", /^About \S+ requests on this connection right now/);
+});

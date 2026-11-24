@@ -50,7 +50,8 @@
         "down": "Down since {seconds} s",
         "rejected": "Rejecting {count}",
         "inFlight": "{count} in flight",
-        "load": "{percent}% load"
+        "load": "{percent}% load",
+        "sending": "Sending {rps} requests/s"
       }
     },
     "zoomIn": "Zoom in",
@@ -76,7 +77,8 @@
       "hide": "Hide the minimap",
       "label": "Overview map"
     },
-    "edgeRate": "{count} requests on the way"
+    "edgeRate": "About {count} requests on this connection right now (estimated from the receiving side)",
+    "edgePill": "{count} on the way"
   },
   "nav": {
     "primary": "Main",

@@ -50,7 +50,8 @@
         "down": "Ngừng từ giây {seconds}",
         "rejected": "Từ chối {count}",
         "inFlight": "{count} đang xử lý",
-        "load": "{percent}% tải"
+        "load": "{percent}% tải",
+        "sending": "Gửi {rps} yêu cầu/giây"
       }
     },
     "zoomIn": "Phóng to",
@@ -76,7 +77,8 @@
       "hide": "Ẩn bản đồ thu nhỏ",
       "label": "Bản đồ thu nhỏ"
     },
-    "edgeRate": "{count} yêu cầu đang đi qua"
+    "edgeRate": "Khoảng {count} yêu cầu đang đi trên kết nối này lúc này (ước tính từ phía nhận)",
+    "edgePill": "{count} đang đi"
   },
   "nav": {
     "primary": "Chính",

@@ -26,6 +26,7 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
   const locale = useLocale();
   const { node, meta, locked, cost, issues, state = "normal", onPath, disallowed, baseRps = 0, target, targetTip, live } = data;
   const art = kindArt(node.kind);
+  const isSource = !!meta && meta.accepts.length === 0;
   const StateIcon = state !== "normal" ? STATE_ICON[state] : null;
   const issueCount = issues.blocking + issues.warnings;
   return (
@@ -59,7 +60,13 @@ function LabNodeView({ data, selected }: NodeProps<Node<LabNodeData>>) {
       </div>
       <div className="sd-node-body">
         <div className="sd-node-name">{displayLabel(node, meta, t)}</div>
-        {live ? (
+        {live && isSource ? (
+          <>
+            {/* The traffic source sends; it has no load of its own. */}
+            <div className="sd-node-line">{t("lab.node.live.sending", { rps: formatNumber(baseRps, locale, 0) })}</div>
+            <div className="sd-node-line3" aria-hidden />
+          </>
+        ) : live ? (
           <>
             <div className="sd-node-line">{liveLine(live, t, locale)}</div>
             <div className="sd-node-line3">

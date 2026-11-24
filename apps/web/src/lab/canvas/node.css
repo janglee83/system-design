@@ -44,7 +44,8 @@
   border-radius: var(--sd-r-lg) var(--sd-r-lg) 0 0;
   background: color-mix(in srgb, var(--k) 7%, var(--sd-surface));
 }
-.sd-node-art svg {
+/* Only the illustration (a direct child); the state chip's icon keeps its own small size. */
+.sd-node-art > svg {
   position: relative;
   width: 76px;
   height: 57px;
@@ -104,6 +105,7 @@
   text-overflow: ellipsis;
 }
 .sd-node-line3 {
+  min-height: 16px;
   font: 400 12px/16px var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--sd-text-3);
@@ -247,7 +249,7 @@
   border-style: dashed;
   border-color: var(--sd-border-strong);
 }
-.sd-node[data-state="down"] .sd-node-art svg {
+.sd-node[data-state="down"] .sd-node-art > svg {
   filter: grayscale(1);
   opacity: 0.5;
 }

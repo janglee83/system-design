@@ -6,6 +6,7 @@ import { memo } from "react";
 import { EDGE_KINDS } from "@/i18n/engine-codes";
 import { Button } from "@/ui/Button";
 import { cn } from "@/ui/cn";
+import { Tooltip } from "@/ui/Tooltip";
 import { toast } from "@/ui/toast-store";
 import { deleteSelection } from "../commands";
 import { formatNumber } from "../format";
@@ -88,19 +89,22 @@ function RatePill({ x, y, rate, state }: { x: number; y: number; rate: number; s
   const n = formatNumber(Math.round(rate), locale, 0);
   return (
     <EdgeLabelRenderer>
+      <Tooltip content={t("lab.edgeRate", { count: n })} side="top">
       <span
         role="img"
+        tabIndex={0}
         aria-label={t("lab.edgeRate", { count: n })}
         data-testid="rate-pill"
         className={cn(
-          "num pointer-events-none absolute inline-flex items-center gap-1 rounded-full border bg-surface px-[7px] text-caption leading-[18px] font-medium whitespace-nowrap shadow-1",
+          "num nodrag nopan pointer-events-auto absolute inline-flex items-center gap-1 rounded-full border bg-surface px-[7px] text-caption leading-[18px] font-medium whitespace-nowrap shadow-1",
           state === "hot" ? "border-over/45 text-over" : state === "dead" ? "border-border text-text-3 line-through" : "border-border text-text-2",
         )}
         style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}
       >
         {state === "hot" ? <TriangleAlert size={11} aria-hidden /> : null}
-        {n}
+        {t("lab.edgePill", { count: n })}
       </span>
+      </Tooltip>
     </EdgeLabelRenderer>
   );
 }
