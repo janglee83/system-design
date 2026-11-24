@@ -10,6 +10,7 @@ import { selectRun } from "../run/select-run";
 import { usePlaybackApi, useRuns, useRunsApi, useUi, useUiApi } from "../store/LabStores";
 import { currentRun, previousRun, runAvailable } from "../store/run-store";
 import type { BottomTab } from "../store/ui-store";
+import { eventLevel } from "./event-text";
 import { EventsTab } from "./EventsTab";
 import { LogsTab } from "./LogsTab";
 import { MetricsTab } from "./MetricsTab";
@@ -33,14 +34,23 @@ export function BottomPanel() {
   const engineVersion = useEngineStore((s) => s.info?.version ?? "");
   const client = useEngineStore((s) => (s.status === "ready" ? s.client : null));
   const max = useMaxPanelHeight();
+  // The Sự kiện badge: warnings and errors in the current run (§8).
+  const alerts = run ? run.events.filter((e) => eventLevel(e.code) !== "info").length : 0;
   const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   return (
-    <section aria-label={t("panel.label")} className="flex flex-col bg-bg" data-testid="bottom-panel">
+    <section aria-label={t("panel.label")} className="flex flex-col bg-surface" data-testid="bottom-panel">
       <ResizeHandle label={t("panel.resize")} value={height} min={MIN} max={max} onChange={(h) => ui.getState().set({ panelHeight: h })} />
       <Tabs value={tab} onValueChange={(v) => ui.getState().set({ bottomTab: v as BottomTab })} className="flex flex-col" style={{ height }}>
         <div className="flex items-center justify-between border-b border-border px-3">
-          <TabsList label={t("panel.label")} items={TABS.map((v) => ({ value: v, label: t(`panel.tabs.${v}`) }))} />
+          <TabsList
+            label={t("panel.label")}
+            items={TABS.map((v) => ({
+              value: v,
+              label: t(`panel.tabs.${v}`),
+              ...(v === "events" && alerts > 0 ? { badge: alerts, badgeLabel: t("panel.alerts", { count: alerts }) } : {}),
+            }))}
+          />
           {runs.length > 0 ? (
             <div className="w-64">
               <Select<string>

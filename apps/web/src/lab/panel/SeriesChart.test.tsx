@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import en from "../../../messages/en.json";
 import type { RunRecord } from "../store/run-store";
+import { LabStoresProvider } from "../store/LabStores";
 import { SeriesChart } from "./SeriesChart";
 
 vi.mock("uplot", () => {
@@ -23,7 +24,9 @@ describe("SeriesChart", () => {
     } as unknown as RunRecord;
     render(
       <NextIntlClientProvider locale="en" messages={en}>
-        <SeriesChart run={run} nodeId="web" label="Over time: web" />
+        <LabStoresProvider>
+          <SeriesChart run={run} nodeId="web" label="Over time: web" />
+        </LabStoresProvider>
       </NextIntlClientProvider>,
     );
     await new Promise((r) => setTimeout(r, 20)); // an unhandled rejection would fail the run here

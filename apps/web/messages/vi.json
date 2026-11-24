@@ -649,14 +649,18 @@
     "series": "Theo thời gian",
     "node": "Thành phần",
     "noComparison": "Lần chạy đầu tiên: chưa có gì để so.",
-    "points": "{value} điểm %"
+    "points": "{value} điểm %",
+    "vsRun": "{delta} so với #{id}",
+    "pointsUnit": "điểm %",
+    "alerts": "{count, plural, other {# cảnh báo hoặc lỗi}}"
   },
   "events": {
     "time": "Thời điểm",
     "node": "Thành phần",
     "message": "Điều đã xảy ra",
     "empty": "Lần chạy này không có sự kiện nào.",
-    "jump": "Tới {time}"
+    "jump": "Tới {time}",
+    "show": "Xem trên sơ đồ"
   },
   "logs": {
     "level": {
@@ -895,7 +899,15 @@
     },
     "unavailable": "Không tải được yêu cầu này: bộ mô phỏng đã khởi động lại. Hãy chạy lại.",
     "delta": "+{ms} ms",
-    "ms": "{ms} ms"
+    "ms": "{ms} ms",
+    "filter": "Lọc theo kết quả",
+    "all": "Tất cả",
+    "request": "#{id} · {class}",
+    "col": {
+      "request": "Yêu cầu",
+      "outcome": "Kết quả",
+      "latency": "Thời gian"
+    }
   },
   "onboarding": {
     "title": "Làm quen với Lab",

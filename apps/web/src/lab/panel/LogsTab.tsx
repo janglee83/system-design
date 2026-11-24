@@ -14,32 +14,71 @@ const CHIP = { info: "bg-surface-2 text-info", warn: "bg-busy-soft text-busy", e
 
 const OUTCOME = { delivered: "bg-ok-soft text-ok", rejected: "bg-over-soft text-over", timeout: "bg-busy-soft text-busy", unreachable: "bg-over-soft text-over" } as const;
 
-/** The run's sampled requests, slowest first; clicking one follows it on the canvas (design-system §7.4). */
-function Sampled({ run }: { run: RunRecord }) {
+const FILTERS = [null, "rejected", "timeout", "unreachable"] as const;
+
+/**
+ * The run's sampled requests (design-system §8): outcome filter chips with counts, then a table;
+ * clicking a row follows the request on the canvas (§7.4).
+ */
+function Requests({ run }: { run: RunRecord }) {
   const t = useTranslations();
   const locale = useLocale();
   const follow = useFollowRequest();
-  const list = useMemo(() => filterTraces(run.traces, null).slice(0, 12), [run]);
-  if (list.length === 0) return null;
+  const [outcome, setOutcome] = useState<(typeof FILTERS)[number]>(null);
+  const rows = useMemo(() => filterTraces(run.traces, outcome).slice(0, 50), [run, outcome]);
+  const count = (o: (typeof FILTERS)[number]) => (o === null ? run.traces.length : run.traces.filter((x) => x.outcome === o).length);
+  if (run.traces.length === 0) return null;
   return (
-    <section>
-      <h3 className="section-label pb-1">{t("trace.sampled")}</h3>
-      <ul className="flex flex-col">
-        {list.map((s) => (
-          <li key={s.id}>
-            <button
-              type="button"
+    <section className="flex flex-col gap-2">
+      <h3 className="section-label">{t("trace.sampled")}</h3>
+      <div role="group" aria-label={t("trace.filter")} className="flex flex-wrap gap-1">
+        {FILTERS.map((o) => (
+          <button
+            key={o ?? "all"}
+            type="button"
+            aria-pressed={outcome === o}
+            onClick={() => setOutcome(o)}
+            className={cn("inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-caption", outcome === o ? "border-accent-text bg-accent-soft text-text" : "border-border text-text-2")}
+          >
+            {o === null ? t("trace.all") : t(`traceOutcome.${o}`)}
+            <span className="num text-text-3">{count(o)}</span>
+          </button>
+        ))}
+      </div>
+      <table className="w-full text-caption" data-testid="request-table">
+        <thead className="sticky top-0 bg-surface">
+          <tr className="text-left text-text-3">
+            <th className="py-1 font-medium">{t("trace.col.request")}</th>
+            <th className="w-32 py-1 font-medium">{t("trace.col.outcome")}</th>
+            <th className="w-24 py-1 text-right font-medium">{t("trace.col.latency")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((s) => (
+            <tr
+              key={s.id}
               data-testid="trace-row"
+              data-outcome={s.outcome}
+              tabIndex={0}
               aria-label={t("trace.follow", { id: s.id })}
               onClick={() => follow(run.traces.indexOf(s))}
-              className="flex w-full items-center gap-2 rounded-sm px-1 py-0.5 text-left text-caption hover:bg-surface-2"
+              onKeyDown={(k) => {
+                if (k.key === "Enter" || k.key === " ") {
+                  k.preventDefault();
+                  follow(run.traces.indexOf(s));
+                }
+              }}
+              className="cursor-pointer border-t border-border hover:bg-surface-2"
             >
-              <span className="num flex-1">{t("trace.row", { id: s.id, class: t(`trace.class.${s.class}`), latency: t("trace.ms", { ms: formatNumber(s.latencyMs, locale, 0) }) })}</span>
-              <span className={cn("rounded-full px-1.5", OUTCOME[s.outcome])}>{t(`traceOutcome.${s.outcome}`)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+              <td className="num py-1">{t("trace.request", { id: s.id, class: t(`trace.class.${s.class}`) })}</td>
+              <td className="py-1">
+                <span className={cn("rounded-full px-1.5 py-px", OUTCOME[s.outcome])}>{t(`traceOutcome.${s.outcome}`)}</span>
+              </td>
+              <td className="num py-1 text-right">{t("trace.ms", { ms: formatNumber(s.latencyMs, locale, 0) })}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }
@@ -71,7 +110,7 @@ export function LogsTab({ run }: { run: RunRecord }) {
           </button>
         ))}
       </div>
-      <Sampled run={run} />
+      <Requests run={run} />
       <ol className="num text-caption">
         {lines
           .filter((l) => shown.has(l.level))

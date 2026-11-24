@@ -48,7 +48,11 @@ export function ResizeHandle({
         e.preventDefault();
         onChange(clamp(next));
       }}
-      className={cn("h-1.5 shrink-0 cursor-row-resize bg-border hover:bg-accent focus-visible:bg-accent", className)}
+      className={cn(
+        // A 6 px grip with a 36 × 3 bar (design-system §8).
+        "relative flex h-1.5 shrink-0 cursor-row-resize items-center justify-center border-t border-border bg-surface after:h-[3px] after:w-9 after:rounded-full after:bg-border-strong after:opacity-50 hover:after:opacity-100 focus-visible:after:bg-accent-text focus-visible:after:opacity-100",
+        className,
+      )}
     />
   );
 }

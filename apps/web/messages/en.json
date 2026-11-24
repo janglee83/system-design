@@ -649,14 +649,18 @@
     "series": "Over time",
     "node": "Component",
     "noComparison": "First run: nothing to compare yet.",
-    "points": "{value} pp"
+    "points": "{value} pp",
+    "vsRun": "{delta} vs #{id}",
+    "pointsUnit": "pts",
+    "alerts": "{count, plural, one {# warning or error} other {# warnings or errors}}"
   },
   "events": {
     "time": "Time",
     "node": "Component",
     "message": "What happened",
     "empty": "No events in this run.",
-    "jump": "Jump to {time}"
+    "jump": "Jump to {time}",
+    "show": "Show on the canvas"
   },
   "logs": {
     "level": {
@@ -895,7 +899,15 @@
     },
     "unavailable": "This request cannot be loaded: the simulator restarted. Run again.",
     "delta": "+{ms} ms",
-    "ms": "{ms} ms"
+    "ms": "{ms} ms",
+    "filter": "Filter by outcome",
+    "all": "All",
+    "request": "#{id} · {class}",
+    "col": {
+      "request": "Request",
+      "outcome": "Outcome",
+      "latency": "Took"
+    }
   },
   "onboarding": {
     "title": "Get to know the Lab",

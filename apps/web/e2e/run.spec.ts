@@ -26,7 +26,7 @@ test("metrics appear after a run and compare with the previous run", async ({ pa
   }
   await expect(page.getByTestId("metric-availability")).toContainText("%");
   await runOnce(page);
-  await expect(page.getByTestId("metric-p95")).toContainText(/vs previous run|same/);
+  await expect(page.getByTestId("metric-p95")).toContainText(/[▲▼=] .* vs #\d+/);
 });
 
 test("changing a world parameter changes p95", async ({ page }) => {

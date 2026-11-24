@@ -5,15 +5,16 @@ import { useMemo, useState } from "react";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/Field";
 import { Select } from "@/ui/Select";
-import { formatMetric, formatSignedPercent, formatSignedPoints } from "../format";
+import { formatMetric } from "../format";
 import { displayLabel } from "../labels";
 import { useDesign } from "../store/LabStores";
 import type { RunRecord } from "../store/run-store";
 import { useMetas } from "../use-metas";
-import { compareMetric } from "./compare";
+import { compareMetric, deltaText, failsGoal } from "./compare";
 import { SeriesChart } from "./SeriesChart";
 
-const TILES: (keyof Metrics)[] = ["p50", "p95", "p99", "availability", "throughputRps", "costPerMonth", "spofCount", "peakBusy"];
+/** Six KPI tiles (design-system §8). */
+const TILES: (keyof Metrics)[] = ["p50", "p95", "p99", "availability", "throughputRps", "costPerMonth"];
 const BREAKDOWN = [
   ["requestsOk", "var(--sd-ok)"],
   ["requestsRejected", "var(--sd-over)"],
@@ -54,29 +55,20 @@ export function MetricsTab({ run, previous }: { run: RunRecord; previous: RunRec
 
   return (
     <div className="flex flex-col gap-4">
-      <ul className="grid grid-cols-4 gap-2 xl:grid-cols-8">
+      <ul className="grid grid-cols-3 gap-2 xl:grid-cols-6">
         {TILES.map((key) => {
           const now = m[key];
           const cmp = compareMetric(key, now, previous?.metrics[key]);
+          const delta = previous ? deltaText(key, now, previous.metrics[key], locale, t("panel.pointsUnit")) : null;
           return (
-            <li key={key} data-testid={`metric-${key}`} className="rounded-lg border border-border bg-surface p-2">
+            <li key={key} data-testid={`metric-${key}`} className="rounded-md border border-border bg-surface px-3 py-2.5">
               <p className="truncate text-caption text-text-3">{t(`metric.${key}`)}</p>
-              <p className="num text-title font-semibold" data-value={now ?? ""}>
+              <p className={cn("num text-[20px] leading-[26px] font-semibold", failsGoal(key, now, run.goals) && "text-over")} data-value={now ?? ""}>
                 {formatMetric(key, now, locale)}
               </p>
-              {previous && cmp.verdict ? (
-                <p
-                  className={cn(
-                    "num text-caption",
-                    cmp.verdict === "better" ? "text-ok" : cmp.verdict === "worse" ? "text-over" : "text-text-3",
-                  )}
-                >
-                  {key === "availability"
-                    ? t("panel.points", { value: formatSignedPoints(cmp.delta, locale) })
-                    : cmp.ratio !== null
-                      ? formatSignedPercent(cmp.ratio, locale)
-                      : formatMetric(key, cmp.delta, locale)}{" "}
-                  {t("panel.vsPrevious")}
+              {previous && delta && cmp.verdict ? (
+                <p className={cn("num text-[11.5px] leading-4", cmp.verdict === "better" ? "text-ok" : cmp.verdict === "worse" ? "text-over" : "text-text-3")}>
+                  {t("panel.vsRun", { delta, id: previous.id })}
                   {cmp.verdict !== "same" ? <span className="sr-only"> {t(`panel.${cmp.verdict}`)}</span> : null}
                 </p>
               ) : null}

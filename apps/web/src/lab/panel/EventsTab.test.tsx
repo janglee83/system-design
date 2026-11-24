@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { NextIntlClientProvider } from "next-intl";
 import { EngineClient } from "../../engine/client";
 import { EngineProvider } from "../../engine/EngineProvider";
@@ -33,8 +34,10 @@ describe("EventsTab", () => {
       <NextIntlClientProvider locale="en" messages={en}>
         <EngineProvider makeClient={() => new EngineClient(() => new FakeWorker())}>
           <LabStoresProvider>
+            <ReactFlowProvider>
             <Grab />
             <EventsTab run={run} />
+          </ReactFlowProvider>
           </LabStoresProvider>
         </EngineProvider>
       </NextIntlClientProvider>,

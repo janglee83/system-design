@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { METRIC_KEYS } from "@/i18n/engine-codes";
-import { compareMetric, METRIC_DIRECTION } from "./compare";
+import { compareMetric, deltaText, failsGoal, METRIC_DIRECTION } from "./compare";
 
 describe("compareMetric", () => {
   it("knows a direction for every metric", () => {
@@ -16,4 +16,25 @@ describe("compareMetric", () => {
     expect(compareMetric("p95", 10, undefined).verdict).toBeNull();
     expect(compareMetric("staleReads", null, null).verdict).toBeNull();
   });
+  it("writes the delta with an arrow in the metric's unit (design-system §8)", () => {
+    expect(deltaText("p95", 300, 154, "en")).toBe("▲ 146 ms");
+    expect(deltaText("throughputRps", 900, 1000, "en")).toBe("▼ 100 rps");
+    expect(deltaText("availability", 0.97, 0.99, "vi", "điểm %")).toBe("▼ 2 điểm %");
+    expect(deltaText("p95", 10, 10, "en")).toBe("= 0 ms");
+    expect(deltaText("p95", 10, undefined, "en")).toBeNull();
+  });
 });
+
+describe("failsGoal", () => {
+  const goals = [
+    { id: "fast", metric: "p95", op: "<=" as const, value: 50 },
+    { id: "up", metric: "availability", op: ">=" as const, value: 0.98 },
+  ];
+  it("says whether a metric misses one of the run's goals", () => {
+    expect(failsGoal("p95", 60, goals)).toBe(true);
+    expect(failsGoal("p95", 40, goals)).toBe(false);
+    expect(failsGoal("availability", 0.9, goals)).toBe(true);
+    expect(failsGoal("throughputRps", 1, goals)).toBe(false);
+  });
+});
+

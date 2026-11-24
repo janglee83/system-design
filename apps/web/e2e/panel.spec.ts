@@ -27,3 +27,45 @@ test("events, logs and the simulation tab", async ({ page, context }) => {
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(JSON.parse(copied).graph.nodes).toHaveLength(4);
 });
+
+test("the bottom panel: delta lines name the compared run, events show on the canvas, requests filter by outcome", async ({ page }) => {
+  await page.goto("/vi/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  const rps = page.getByRole("complementary", { name: "Thuộc tính" }).getByRole("spinbutton", { name: "Tổng số yêu cầu mỗi giây" });
+  const run = async () => {
+    const bar = page.getByTestId("run-bar");
+    const before = (await bar.getAttribute("data-run-id")) ?? "";
+    await bar.getByRole("button", { name: /^Chạy mô phỏng/ }).click();
+    await expect(bar).not.toHaveAttribute("data-run-id", before);
+    await expect(bar).toHaveAttribute("data-status", "idle");
+  };
+  await run();
+  await rps.fill("9000");
+  await rps.press("Enter");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await run();
+  await expect(page.getByTestId("metric-p95")).toContainText(/so với #1/);
+
+  // Requests: the "Bị từ chối" chip shows only rejected rows.
+  await page.getByRole("tab", { name: "Nhật ký" }).click();
+  await page.getByRole("group", { name: "Lọc theo kết quả" }).getByRole("button", { name: /^Bị từ chối/ }).click();
+  const rows = page.getByTestId("request-table").getByTestId("trace-row");
+  expect(await rows.count()).toBeGreaterThan(0);
+  for (const o of await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-outcome")))) expect(o).toBe("rejected");
+});
+
+test("an event's 'Xem trên sơ đồ' selects its component; the events tab counts warnings", async ({ page }) => {
+  await page.goto("/vi/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  const inspector = page.getByRole("complementary", { name: "Thuộc tính" });
+  await inspector.getByRole("button", { name: "Thêm sự cố" }).click(); // instance-down at 3.0 s
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  const bar = page.getByTestId("run-bar");
+  await bar.getByRole("button", { name: /^Chạy mô phỏng/ }).click();
+  await expect(bar).toHaveAttribute("data-run-id", /\d+/);
+  const tab = page.getByRole("tab", { name: /^Sự kiện/ });
+  await expect(tab).toContainText(/\d/);
+  await tab.click();
+  await page.getByRole("button", { name: "Xem trên sơ đồ" }).first().click();
+  await expect(page.locator('[data-testid^="node-"][data-selected]')).toHaveCount(1);
+});

@@ -28,7 +28,7 @@ export interface UiState {
 export function createUiStore() {
   return createStore<UiState>()((set, get) => ({
     snap: true,
-    panelHeight: 260,
+    panelHeight: 320,
     bottomTab: "metrics",
     connectOpen: false,
     designsOpen: false,
