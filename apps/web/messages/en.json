@@ -64,7 +64,12 @@
       "delete": "Delete",
       "kind": "Kind"
     },
-    "zoomLevel": "Zoom {percent}%"
+    "zoomLevel": "Zoom {percent}%",
+    "minimap": {
+      "show": "Show the minimap",
+      "hide": "Hide the minimap",
+      "label": "Overview map"
+    }
   },
   "nav": {
     "primary": "Main",
@@ -711,7 +716,8 @@
       "export": "Export the design file",
       "import": "Import a design file",
       "newEmpty": "New empty design",
-      "newWebDb": "New design: users → web server → database"
+      "newWebDb": "New design: users → web server → database",
+      "minimap": "Toggle the minimap"
     }
   },
   "designTitle": {

@@ -11,6 +11,8 @@ export interface UiState {
   designsOpen: boolean;
   /** The name prompt for a first save or a save-as. */
   saveDialog: "save" | "saveAs" | null;
+  /** The viewer's minimap choice, or null to show it automatically for large designs (owner override 2026-11-19). */
+  minimapChoice: boolean | null;
   /** The last design was looked for (and restored if there was one): the boot card's last step. */
   draftChecked: boolean;
   /** The engine error card was put aside to edit the design while the engine is down. */
@@ -31,6 +33,7 @@ export function createUiStore() {
     saveDialog: null,
     inspectorFocusTick: 0,
     draftChecked: false,
+    minimapChoice: null,
     errorDismissed: false,
     set: (patch) => set(patch),
     focusInspector: () => set({ inspectorFocusTick: get().inspectorFocusTick + 1 }),

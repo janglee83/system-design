@@ -64,7 +64,12 @@
       "delete": "Xoá",
       "kind": "Kiểu"
     },
-    "zoomLevel": "Mức phóng to {percent}%"
+    "zoomLevel": "Mức phóng to {percent}%",
+    "minimap": {
+      "show": "Hiện bản đồ thu nhỏ",
+      "hide": "Ẩn bản đồ thu nhỏ",
+      "label": "Bản đồ thu nhỏ"
+    }
   },
   "nav": {
     "primary": "Chính",
@@ -711,7 +716,8 @@
       "export": "Xuất tệp thiết kế",
       "import": "Nhập tệp thiết kế",
       "newEmpty": "Thiết kế trống mới",
-      "newWebDb": "Thiết kế mới: người dùng → máy chủ web → cơ sở dữ liệu"
+      "newWebDb": "Thiết kế mới: người dùng → máy chủ web → cơ sở dữ liệu",
+      "minimap": "Bật/tắt bản đồ thu nhỏ"
     }
   },
   "designTitle": {

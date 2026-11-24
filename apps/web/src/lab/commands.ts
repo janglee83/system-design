@@ -1,3 +1,4 @@
+import { minimapVisible, saveMinimapChoice } from "./canvas/minimap-model";
 import type { ComponentMeta } from "@sd/sim";
 import { layoutPositions } from "./canvas/layout";
 import {
@@ -82,6 +83,13 @@ export const redo = (api: DesignStore) => api.getState().redo();
 
 export function toggleSnap(ui: UiStore): void {
   ui.getState().set({ snap: !ui.getState().snap });
+}
+
+/** Flips the minimap from what is shown now; the viewer's choice then wins and is kept in this browser. */
+export function toggleMinimap(ui: UiStore, api: DesignStore): void {
+  const shown = minimapVisible({ nodes: api.getState().design.nodes.length, manual: ui.getState().minimapChoice });
+  ui.getState().set({ minimapChoice: !shown });
+  saveMinimapChoice(!shown);
 }
 
 /** Opens the keyboard connect picker when exactly one node is selected (R13). */

@@ -19,6 +19,7 @@ export const SHORTCUTS = [
   { id: "zoomIn", keys: ["=", "+"], group: "view" },
   { id: "zoomOut", keys: ["-"], group: "view" },
   { id: "toggleSnap", keys: ["Shift+G"], group: "view" },
+  { id: "toggleMinimap", keys: ["M"], group: "view" },
   { id: "palette", keys: ["Mod+K"], group: "general" },
   { id: "save", keys: ["Mod+S"], group: "general" },
   { id: "open", keys: ["Mod+O"], group: "general" },

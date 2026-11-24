@@ -22,10 +22,12 @@ import {
   pasteClipboard,
   redo,
   selectAll,
+  toggleMinimap,
   toggleSnap,
   undo,
   ungroupSelection,
 } from "./commands";
+import { readMinimapChoice } from "./canvas/minimap-model";
 import { useAddComponent } from "./canvas/use-add-component";
 import { useAutoLayout } from "./canvas/use-auto-layout";
 import type { Design } from "./model/design";
@@ -151,6 +153,11 @@ function LabShortcuts() {
   const run = useRunDesign();
   const docActions = useDocActions();
   const runs = useRunsApi();
+  // The viewer's minimap choice from this browser, if they ever made one.
+  useEffect(() => {
+    const saved = readMinimapChoice();
+    if (saved !== null) ui.getState().set({ minimapChoice: saved });
+  }, [ui]);
   useLabShortcuts({
     save: docActions.save,
     open: () => ui.getState().set({ designsOpen: true }),
@@ -171,6 +178,7 @@ function LabShortcuts() {
     zoomIn: () => void flow.zoomIn({ duration: 200 }),
     zoomOut: () => void flow.zoomOut({ duration: 200 }),
     toggleSnap: () => toggleSnap(ui),
+    toggleMinimap: () => toggleMinimap(ui, api),
     layout,
     group: () => groupSelection(api),
     ungroup: () => ungroupSelection(api),
@@ -286,6 +294,7 @@ function LabCommands() {
       cmd("run", "run", run),
       cmd("fit", "fitView", () => void flow.fitView({ duration: 200 })),
       cmd("layout", "layout", layout),
+      cmd("minimap", "minimap", () => toggleMinimap(ui, design)),
       cmd("open", "open", () => ui.getState().set({ designsOpen: true })),
       cmd("save", "save", docActions.save),
       cmd("export", "export", () => {

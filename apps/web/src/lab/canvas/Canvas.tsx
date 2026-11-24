@@ -2,6 +2,7 @@
 import {
   Background,
   BackgroundVariant,
+  MiniMap,
   useConnection,
   useReactFlow,
   ReactFlow,
@@ -31,9 +32,14 @@ import { LabNode } from "./LabNode";
 import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
 import { flowAriaLabels, nodeAccessibleName } from "./aria";
-import { CanvasControls } from "./CanvasControls";
+import { CanvasControls, useMinimapShown } from "./CanvasControls";
+import { categoryColor } from "./kinds";
 
 const nodeTypes = { lab: LabNode, group: GroupNode };
+
+/** Minimap nodes in their category accent; group frames are left out. */
+const minimapNodeColor = (n: FlowNode) =>
+  n.type === "lab" ? categoryColor((n.data as { node: { kind: string } }).node.kind) : "transparent";
 const edgeTypes = { lab: LabEdge };
 
 /** `overlay` (the empty Lab) sits inside the canvas element, so a palette drop over it still lands. */
@@ -44,6 +50,7 @@ export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; ov
   const api = useDesignApi();
   const metas = useMetas();
   const snap = useUi((s) => s.snap);
+  const minimap = useMinimapShown();
   const [drag, setDrag] = useState<Record<string, XY>>({});
   // Fit only a design that opens with nodes. On an empty canvas React Flow would otherwise
   // zoom to fit the first component added (to the max zoom), and later drops would land elsewhere.
@@ -275,6 +282,23 @@ export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; ov
         ariaLabelConfig={ariaLabelConfig}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--sd-grid)" />
+        {minimap ? (
+          <MiniMap
+            ariaLabel={t("minimap.label")}
+            pannable
+            zoomable
+            // Just above the controls cluster, right-aligned with it (design-system §6.3).
+            className="!m-0 !right-4 !bottom-[62px] overflow-hidden rounded-md border border-border shadow-2"
+            style={{ width: 200, height: 130 }}
+            bgColor="var(--sd-surface)"
+            nodeColor={minimapNodeColor}
+            nodeStrokeColor="transparent"
+            nodeBorderRadius={6}
+            maskColor="color-mix(in srgb, var(--sd-bg) 60%, transparent)"
+            maskStrokeColor="var(--sd-accent-text)"
+            maskStrokeWidth={2}
+          />
+        ) : null}
       </ReactFlow>
       {connectingFrom ? (
         <p role="status" className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-surface px-3 py-1 text-caption text-text-2 shadow-1">

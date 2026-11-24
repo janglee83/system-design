@@ -1,20 +1,28 @@
 "use client";
 import * as Popover from "@radix-ui/react-popover";
 import { useReactFlow, useStore } from "@xyflow/react";
-import { Grid3x3, Info, LayoutGrid, Maximize, Minus, Plus } from "lucide-react";
+import { Grid3x3, Info, LayoutGrid, Map as MapIcon, Maximize, Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { EDGE_KINDS } from "@/i18n/engine-codes";
 import { cn } from "@/ui/cn";
 import { IconButton } from "@/ui/IconButton";
-import { toggleSnap } from "../commands";
+import { toggleMinimap, toggleSnap } from "../commands";
 import { formatCombo, SHORTCUTS, type ShortcutId } from "../shortcuts";
-import { useDesign, useUi, useUiApi } from "../store/LabStores";
+import { useDesign, useDesignApi, useUi, useUiApi } from "../store/LabStores";
 import { useIsMac } from "../use-shortcuts";
 import { legendCounts } from "./edge-geometry";
+import { minimapVisible } from "./minimap-model";
 import { useAutoLayout } from "./use-auto-layout";
 
 const LEGEND_KEY = "sd-legend-open";
+
+/** Whether the minimap shows now: the viewer's choice, else automatically above 20 nodes. */
+export function useMinimapShown(): boolean {
+  const choice = useUi((s) => s.minimapChoice);
+  const nodes = useDesign((s) => s.design.nodes.length);
+  return minimapVisible({ nodes, manual: choice });
+}
 const Sep = () => <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />;
 
 /** The one controls cluster at the canvas's bottom-right (design-system §6.3). */
@@ -24,6 +32,8 @@ export function CanvasControls() {
   const ui = useUiApi();
   const layout = useAutoLayout();
   const snap = useUi((s) => s.snap);
+  const minimap = useMinimapShown();
+  const api = useDesignApi();
   const zoom = useStore((s) => s.transform[2]);
   const mac = useIsMac();
   const combo = (id: ShortcutId) => formatCombo(SHORTCUTS.find((s) => s.id === id)!.keys[0], mac);
@@ -54,6 +64,15 @@ export function CanvasControls() {
         <Grid3x3 size={16} aria-hidden />
       </IconButton>
       <Sep />
+      <IconButton
+        label={minimap ? t("minimap.hide") : t("minimap.show")}
+        shortcut={combo("toggleMinimap")}
+        active={minimap}
+        data-testid="minimap-toggle"
+        onClick={() => toggleMinimap(ui, api)}
+      >
+        <MapIcon size={16} aria-hidden />
+      </IconButton>
       <Legend />
     </div>
   );
