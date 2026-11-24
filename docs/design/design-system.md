@@ -449,13 +449,23 @@ It holds, in order:
 - a separator;
 - Sắp xếp gọn · Bám lưới (a toggle, `accent-soft` when on);
 - a separator;
+- **Bản đồ thu nhỏ** (a map icon, a toggle; labels "Hiện bản đồ thu nhỏ" / "Ẩn bản đồ thu nhỏ"; shortcut M);
 - **Chú giải** (an info icon and the label, a toggle).
 
 The legend popover opens above the cluster (250 px). Its title is "Kiểu kết nối trong thiết
 kế". Each row has a 30 px line sample, the name, and a count ("3 đường"); unused kinds are
 dimmed with "chưa dùng". The popover is closed by default and its state is remembered.
 
-There is no minimap.
+**Minimap** (owner override 2026-11-19, replacing "no minimap"):
+
+- Hidden by default. It shows by itself when the design has **more than 20 nodes**.
+- Once the viewer toggles it (button, M, or the command palette), their choice wins from then on
+  and auto-show stops. The choice is kept in this browser (`localStorage`, read and written
+  inside try/catch).
+- It sits just above the controls cluster, right-aligned with it (200 × 130, r-md, `surface`,
+  1 px `border`, `shadow-2`). Nodes are small rounded rects (r 6) in their category accent;
+  the viewport frame is drawn in `accent-text`, with the area outside it washed with `bg` at
+  60 %. It never covers the cluster or the verdict strip.
 
 The fixed legend card, the engine chip and the floating problems pill all go away.
 
