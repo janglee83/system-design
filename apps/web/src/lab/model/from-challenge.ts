@@ -51,6 +51,7 @@ export function designFromChallenge(c: Challenge, modeId?: string): Design | nul
   }));
   let workload: Workload = { ...defaultWorkload(), ...start.workload, params: { ...(start.workload?.params ?? {}) } };
   for (const [k, v] of Object.entries(mode.workloadOverride ?? {})) {
+    if (k === "__proto__" || k === "constructor" || k === "prototype") continue; // no prototype pollution (review)
     if (v === null && k !== "surge") delete (workload as unknown as Record<string, unknown>)[k];
     else (workload as unknown as Record<string, unknown>)[k] = v;
   }

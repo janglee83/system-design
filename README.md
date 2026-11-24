@@ -18,7 +18,7 @@ Internal learning platform for system design. All commands run inside the dev co
 | `./dev cargo run -p sim-cli -- run fixtures/golden/web-tier-surge-single.json fixtures/golden/web-tier-surge-scaled.json` | Compare two designs side by side |
 | `./dev pnpm build:sim` | Build the wasm packages into `packages/sim/wasm/` |
 | `./dev cargo bench -p sim-core` | Native benchmark |
-| `docker compose up web` | Run the app at http://localhost:3000 (Next dev server, hot reload) |
+| `docker compose up web` | Run the app at http://localhost:3000 (Next dev server, hot reload). The server listens on 0.0.0.0 inside the container only; compose publishes it on 127.0.0.1 |
 | `./dev pnpm test:web` | App lint, typecheck, production build and Playwright e2e + axe |
 | `./dev pnpm --filter @sd/web test` | App unit tests only |
 

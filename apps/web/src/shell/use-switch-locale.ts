@@ -1,7 +1,8 @@
 "use client";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { LOCALE_COOKIE, type Locale } from "@/i18n/routing";
+import { type Locale } from "@/i18n/routing";
+import { localeCookie } from "./locale-cookie";
 
 /** The current locale and a switch that keeps the page, query and hash, and remembers the choice (R6). */
 export function useSwitchLocale(): [Locale, (next: Locale) => void] {
@@ -9,9 +10,7 @@ export function useSwitchLocale(): [Locale, (next: Locale) => void] {
   const pathname = usePathname();
   const router = useRouter();
   const set = (next: Locale) => {
-    // The same cookie settings the middleware uses.
-    const { name, maxAge, sameSite } = LOCALE_COOKIE;
-    document.cookie = `${name}=${next}; path=/; max-age=${maxAge}; samesite=${sameSite}`;
+    document.cookie = localeCookie(next, window.location.protocol);
     // The Lab writes its pending draft first (R33).
     window.dispatchEvent(new Event("sd:before-locale-change"));
     const { search, hash } = window.location;

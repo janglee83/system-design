@@ -18,6 +18,8 @@ services:
     extends:
       service: dev
     command: ["pnpm", "--filter", "@sd/web", "dev"]
+    # `next dev -H 0.0.0.0` listens on every interface inside the container only; the host side
+    # is bound to 127.0.0.1, so the dev server is never reachable from the network.
     ports:
       - "127.0.0.1:3000:3000"
 

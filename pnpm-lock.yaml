@@ -180,10 +180,10 @@ importers:
   packages/sim:
     devDependencies:
       '@types/node':
-        specifier: ^24.0.0
+        specifier: 24.19.2
         version: 24.19.2
       binaryen:
-        specifier: ^123.0.0
+        specifier: 123.0.0
         version: 123.0.0
       typescript:
         specifier: 5.9.3

@@ -47,4 +47,23 @@ describe("design from a challenge (R24)", () => {
     expect(d.workload.baseRps).toBe(900);
     expect(d.workload.surge).toBeNull();
   });
+
+  it("ignores __proto__, constructor and prototype keys in a workloadOverride (review)", () => {
+    const override = JSON.parse('{"__proto__": {"polluted": 1}, "constructor": 5, "prototype": 6, "baseRps": 700}') as Record<string, unknown>;
+    const c = {
+      id: "c-y",
+      start: { graph: { nodes: [{ id: "u", kind: "client" }], edges: [] }, workload: { baseRps: 100 } },
+      lockedNodes: [],
+      limits: {},
+      modes: [{ id: "m1", workloadOverride: override }],
+    };
+    const d = designFromChallenge(c as never, "m1")!;
+    expect(d.workload.baseRps).toBe(700);
+    expect(Object.getPrototypeOf(d.workload)).toBe(Object.prototype);
+    expect((d.workload as unknown as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.keys(d.workload)).not.toContain("constructor");
+    expect(Object.keys(d.workload)).not.toContain("prototype");
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
 });
+
