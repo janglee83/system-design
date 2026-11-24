@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Design } from "../model/design";
+import { validateDesign } from "../model/design-file";
 import { parsePreset, type Preset } from "../model/presets";
 
 export interface SavedDesign {
@@ -41,9 +42,21 @@ export const deletePreset = async (id: string): Promise<void> => (await openLabD
 export const getKv = async <T = unknown>(key: string): Promise<T | undefined> => (await (await openLabDb()).get("kv", key)) as T | undefined;
 export const setKv = async (key: string, value: unknown): Promise<void> => void (await (await openLabDb()).put("kv", value, key));
 
+/** A stored record that is a saved design, or null; damaged records are skipped, never trusted (review). */
+function parseSaved(raw: unknown): SavedDesign | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Partial<SavedDesign>;
+  if (typeof r.id !== "string" || typeof r.name !== "string" || typeof r.createdAt !== "number" || typeof r.updatedAt !== "number") return null;
+  const design = validateDesign(r.design);
+  return design ? { id: r.id, name: r.name, createdAt: r.createdAt, updatedAt: r.updatedAt, design } : null;
+}
+
 /** Saved designs, newest `updatedAt` first. No count limit (R22). */
 export const listDesigns = async (): Promise<SavedDesign[]> =>
-  (await (await openLabDb()).getAllFromIndex("designs", "updatedAt")).reverse();
-export const getDesign = async (id: string): Promise<SavedDesign | undefined> => (await openLabDb()).get("designs", id);
+  (await (await openLabDb()).getAllFromIndex("designs", "updatedAt"))
+    .reverse()
+    .map(parseSaved)
+    .filter((d): d is SavedDesign => d !== null);
+export const getDesign = async (id: string): Promise<SavedDesign | undefined> => parseSaved(await (await openLabDb()).get("designs", id)) ?? undefined;
 export const putDesign = async (d: SavedDesign): Promise<void> => void (await (await openLabDb()).put("designs", d));
 export const deleteDesign = async (id: string): Promise<void> => (await openLabDb()).delete("designs", id);

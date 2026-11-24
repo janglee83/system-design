@@ -1,4 +1,5 @@
 "use client";
+import { validateDesign } from "../model/design-file";
 import { useEffect } from "react";
 import type { Design } from "../model/design";
 import type { DesignStore } from "../store/design-store";
@@ -52,4 +53,12 @@ export function useAutosave(): void {
   }, [design, doc]);
 }
 
-export const loadDraft = (): Promise<Draft | undefined> => getKv<Draft>("draft").catch(() => undefined);
+/** The draft, if it is a valid design; a damaged one is ignored so the Lab still opens (review). */
+export const loadDraft = (): Promise<Draft | undefined> =>
+  getKv<Partial<Draft>>("draft")
+    .then((d) => {
+      const design = d ? validateDesign(d.design) : null;
+      if (!d || !design) return undefined;
+      return { design, savedId: typeof d.savedId === "string" ? d.savedId : null, at: typeof d.at === "number" ? d.at : 0 };
+    })
+    .catch(() => undefined);

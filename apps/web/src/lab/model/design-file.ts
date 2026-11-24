@@ -146,6 +146,23 @@ function forbiddenKey(v: unknown, path: string[]): string | null {
   return null;
 }
 
+/**
+ * A design read back from storage (IndexedDB), checked with the same schema as an imported file:
+ * the design, or null when it is not one (an older build, another tab, a hand edit).
+ */
+export function validateDesign(raw: unknown): Design | null {
+  try {
+    if (forbiddenKey(raw, [])) return null;
+    const r = schema.safeParse(raw);
+    if (!r.success) return null;
+    const design: Partial<typeof r.data> = { ...r.data };
+    delete design.engineVersion;
+    return references(design as Design).length ? null : (design as Design);
+  } catch {
+    return null;
+  }
+}
+
 export function parseDesignFile(textIn: string): { ok: true; design: Design } | { ok: false; issues: FileIssue[] } {
   let raw: unknown;
   try {

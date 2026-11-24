@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import { emptyDesign } from "../model/design";
+import { loadDraft } from "./use-autosave";
 import { deleteDesign, deletePreset, getDesign, getKv, listDesigns, listPresets, openLabDb, putDesign, putPreset, setKv } from "./db";
 
 describe("lab database", () => {
@@ -50,3 +51,27 @@ describe("stored presets are checked on load", () => {
     expect(ids).not.toContain("bad2");
   });
 });
+
+describe("stored records are validated when read (review)", () => {
+  it("skips a saved design that is not a valid design instead of crashing the Lab", async () => {
+    const db = await openLabDb();
+    await putDesign({ id: "good", name: "Good", createdAt: 1, updatedAt: 9_000_001, design: emptyDesign("Good") });
+    // Written by an older build, another tab, or by hand in devtools.
+    await db.put("designs", { id: "bad", name: "Bad", createdAt: 1, updatedAt: 9_000_002, design: { nodes: "oops" } } as never);
+    await db.put("designs", { id: "worse", name: 5, updatedAt: "x" } as never);
+    const ids = (await listDesigns()).map((d) => d.id);
+    expect(ids).toContain("good");
+    expect(ids).not.toContain("bad");
+    expect(ids).not.toContain("worse");
+    expect(await getDesign("bad")).toBeUndefined();
+    expect((await getDesign("good"))?.name).toBe("Good");
+  });
+
+  it("ignores a damaged draft", async () => {
+    await setKv("draft", { design: { designFormatVersion: 1, nodes: [{ id: "__proto__" }] }, savedId: null, at: 1 });
+    expect(await loadDraft()).toBeUndefined();
+    await setKv("draft", { design: emptyDesign("Ok"), savedId: null, at: 2 });
+    expect((await loadDraft())?.design.name).toBe("Ok");
+  });
+});
+
