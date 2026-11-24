@@ -12,8 +12,11 @@ export interface DocStores {
 async function write(stores: DocStores, id: string, name: string, createdAt: number): Promise<string> {
   if (stores.design.getState().design.name !== name) stores.design.getState().apply((d) => setName(d, name));
   const now = Date.now();
-  await putDesign({ id, name, createdAt, updatedAt: now, design: stores.design.getState().design });
+  // The design as written; an edit made while the write is in flight must stay unsaved (review).
+  const written = stores.design.getState().design;
+  await putDesign({ id, name, createdAt, updatedAt: now, design: written });
   stores.doc.getState().markSaved(id, now);
+  if (stores.design.getState().design !== written) stores.doc.getState().markDirty();
   await flushDraft(stores.design, stores.doc); // a reload right after saving keeps everything
   return id;
 }

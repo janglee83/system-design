@@ -62,4 +62,18 @@ describe("saving designs", () => {
   it("refuses to save without a name for a design that was never saved", async () => {
     await expect(saveCurrent(stores())).rejects.toThrow(/name/);
   });
+
+  it("an edit made while the save is being written keeps the design dirty (review)", async () => {
+    const t = stores(3);
+    const saving = saveCurrent(t, "Racing");
+    // Let the save reach the IndexedDB write (fake-indexeddb answers on a later macrotask), then
+    // edit while that write is in flight.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    t.design.getState().apply((d) => ({ ...d, seed: 99 }));
+    const id = await saving;
+    expect(t.doc.getState()).toMatchObject({ savedId: id, dirty: true });
+    // What was saved is the design as it was when the save started.
+    expect((await getDesign(id))!.design.seed).toBe(3);
+  });
 });
+
