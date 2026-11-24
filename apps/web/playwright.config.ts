@@ -10,6 +10,8 @@ export default defineConfig({
   workers: 2,
   retries: 0,
   forbidOnly: !!process.env.CI,
+  // The screenshot sweep (Task 35a) runs only on demand: playwright test --grep @sweep.
+  grepInvert: process.env.SWEEP ? undefined : /@sweep/,
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   use: {

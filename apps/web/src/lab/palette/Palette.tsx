@@ -11,14 +11,19 @@ export { DRAG_MIME } from "./PaletteDrawer";
 
 const OPEN_KEY = "sd-palette-open";
 
-/** The open category, remembered in this browser ("" = closed). */
+/**
+ * The open category, remembered in this browser ("" = closed). Without a remembered choice the
+ * drawer starts open on wide screens and closed at 1400 px or less, where the canvas needs the room.
+ */
 function readOpen(): Category | null {
+  const fallback: Category | null = window.innerWidth > 1400 ? "entry" : null;
   try {
     const v = window.localStorage.getItem(OPEN_KEY);
+    if (v === null) return fallback;
     if (v === "") return null;
-    return CATEGORIES.includes(v as Category) ? (v as Category) : "entry";
+    return CATEGORIES.includes(v as Category) ? (v as Category) : fallback;
   } catch {
-    return "entry";
+    return fallback;
   }
 }
 

@@ -22,7 +22,10 @@ function setup({ onAdd = vi.fn<(kind: string) => void>(), allowedKinds, running 
   return onAdd;
 }
 
-beforeEach(() => window.localStorage.clear());
+beforeEach(() => {
+  window.localStorage.clear();
+  window.innerWidth = 1440; // a wide screen: the drawer starts open
+});
 
 describe("Palette (4C)", () => {
   it("has a vertical tablist of seven categories, Entry open by default", () => {
@@ -89,4 +92,12 @@ describe("Palette (4C)", () => {
     expect(screen.queryByRole("tabpanel")).toBeNull();
     expect(screen.getByRole("tab", { name: "Entry" })).toHaveAttribute("aria-disabled", "true");
   });
+
+  it("starts with the drawer closed at 1400 px or less, unless the viewer chose otherwise", () => {
+    window.innerWidth = 1280;
+    setup();
+    expect(screen.queryByRole("tabpanel")).toBeNull();
+    expect(screen.getAllByRole("tab")).toHaveLength(7);
+  });
 });
+

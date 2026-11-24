@@ -112,6 +112,7 @@ function RatePill({ x, y, rate, state }: { x: number; y: number; rate: number; s
 /** Below the target end of the selected edge: what it connects, its kind, Reverse and Delete. */
 function EdgePopover({ id, source, target, x, y }: { id: string; source: string; target: string; x: number; y: number }) {
   const t = useTranslations();
+  const zoom = useStore((s) => s.transform[2]);
   const api = useDesignApi();
   const metas = useMetas();
   const nodes = useDesign((s) => s.design.nodes);
@@ -127,7 +128,9 @@ function EdgePopover({ id, source, target, x, y }: { id: string; source: string;
         aria-label={t("lab.edgePopover.title")}
         data-testid="edge-popover"
         className="nodrag nopan pointer-events-auto absolute z-10 w-60 rounded-lg border border-border bg-surface p-3 text-body shadow-2"
-        style={{ transform: `translate(-50%, 0) translate(${x}px, ${y + 92}px)` }}
+        // Just below the target tile (its bottom is 106 px under the port), counter-scaled so it
+        // stays readable at any zoom (it lives inside the zoomed viewport).
+        style={{ transform: `translate(${x}px, ${y + 118 * zoom}px) translate(-50%, 0) scale(${1 / zoom})`, transformOrigin: "top center" }}
       >
         <p className="text-caption text-text-3">{t("lab.edgePopover.title")}</p>
         <p className="truncate font-semibold">
