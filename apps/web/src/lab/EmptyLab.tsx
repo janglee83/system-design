@@ -100,13 +100,18 @@ export function EmptyLab({ starts }: { starts: readonly ChallengeStart[] }) {
                 ) : null}
               </li>
             ) : (
-              <li key="challenges" className={cn(card, "justify-start")}>
+              <li key="challenges" className={cn(card, "min-w-0 justify-start")}>
                 <Strip kinds={c.starts[0]?.kinds ?? []} />
                 <span className="text-body font-semibold">{t("lab.empty.challenges")}</span>
-                <ul className="flex flex-col gap-0.5">
+                <ul className="flex min-w-0 flex-col gap-0.5">
                   {c.starts.map((s) => (
-                    <li key={s.id}>
-                      <button type="button" onClick={() => router.push(`/lab?challenge=${s.id}`)} className="truncate text-left text-caption text-accent-text hover:underline">
+                    <li key={s.id} className="min-w-0">
+                      <button
+                        type="button"
+                        title={s.title}
+                        onClick={() => router.push(`/lab?challenge=${s.id}`)}
+                        className="block w-full truncate text-left text-caption text-accent-text hover:underline"
+                      >
                         {s.title}
                       </button>
                     </li>

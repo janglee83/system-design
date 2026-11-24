@@ -78,7 +78,8 @@ export function Verdict({ onRunAgain }: { onRunAgain: () => void }) {
     if (!graded || !view.failing?.nodeId) return;
     const id = view.failing.nodeId;
     api.getState().select({ nodes: [id], edges: [], groups: [] });
-    void flow.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1, padding: 0.6 });
+    // The node and its callout, clear of the verdict strip at the top (§7.3).
+    void flow.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1, padding: { top: "120px", bottom: "160px", left: "120px", right: "120px" } });
     setWhy(run.id);
   };
 
