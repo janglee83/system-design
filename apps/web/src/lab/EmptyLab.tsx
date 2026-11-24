@@ -110,7 +110,7 @@ export function EmptyLab({ starts }: { starts: readonly ChallengeStart[] }) {
                         type="button"
                         title={s.title}
                         onClick={() => router.push(`/lab?challenge=${s.id}`)}
-                        className="block w-full truncate text-left text-caption text-accent-text hover:underline"
+                        className="block min-h-6 w-full truncate py-1 text-left text-caption text-accent-text hover:underline"
                       >
                         {s.title}
                       </button>

@@ -67,22 +67,28 @@ export function BottomPanel() {
           ) : null}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {run ? (
-            <>
-              <TabsContent value="metrics">
-                <MetricsTab run={run} previous={previous} />
-              </TabsContent>
-              <TabsContent value="events">
-                <EventsTab run={run} />
-              </TabsContent>
-              <TabsContent value="logs">
-                <LogsTab run={run} />
-              </TabsContent>
-              <TabsContent value="simulation">
-                <SimulationTab run={run} epoch={epoch} engineVersion={engineVersion} client={client} />
-              </TabsContent>
-            </>
-          ) : (
+          {/* Every tab has its panel (aria-controls must point somewhere), with or without a run. */}
+          <TabsContent value="metrics" className="h-full">
+            {run ? <MetricsTab run={run} previous={previous} /> : <NoRun />}
+          </TabsContent>
+          <TabsContent value="events" className="h-full">
+            {run ? <EventsTab run={run} /> : <NoRun />}
+          </TabsContent>
+          <TabsContent value="logs" className="h-full">
+            {run ? <LogsTab run={run} /> : <NoRun />}
+          </TabsContent>
+          <TabsContent value="simulation" className="h-full">
+            {run ? <SimulationTab run={run} epoch={epoch} engineVersion={engineVersion} client={client} /> : <NoRun />}
+          </TabsContent>
+        </div>
+      </Tabs>
+    </section>
+  );
+}
+
+function NoRun() {
+  const t = useTranslations();
+  return (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center" data-testid="no-run">
               <span className="flex size-16 items-center justify-center rounded-full bg-surface-2 text-text-3">
                 <BarChart3 size={32} aria-hidden />
@@ -90,10 +96,6 @@ export function BottomPanel() {
               <p className="text-heading font-semibold">{t("panel.noRun")}</p>
               <p className="text-body text-text-2">{t("panel.noRunBody")}</p>
             </div>
-          )}
-        </div>
-      </Tabs>
-    </section>
   );
 }
 

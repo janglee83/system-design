@@ -20,7 +20,7 @@ import { toast } from "@/ui/toast-store";
 import { connectNodes } from "../commands";
 import { displayLabel } from "../labels";
 import type { XY } from "../model/design";
-import { moveGroup, moveNodes } from "../model/ops";
+import { moveGroup, moveNodes, refitGroupsOf } from "../model/ops";
 import { issueCounts } from "../store/check-store";
 import { useCheck, useDesign, useDesignApi, useTrace, useUi } from "../store/LabStores";
 import { tracePath } from "../run/trace-model";
@@ -236,8 +236,9 @@ export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; ov
         if (n.type === "lab") commit[n.id] = toAbsolute(n.id, n.position, d);
         else if (n.type === "group") groupMoves.push([n.id, n.position]);
       }
-      // One history step for the whole drag, frames and loose nodes together.
-      api.getState().apply((x) => groupMoves.reduce((acc, [id, p]) => moveGroup(acc, id, p), moveNodes(x, commit)));
+      // One history step for the whole drag, frames and loose nodes together; a member dragged
+      // past its frame's edge grows the frame in the same step.
+      api.getState().apply((x) => refitGroupsOf(groupMoves.reduce((acc, [id, p]) => moveGroup(acc, id, p), moveNodes(x, commit)), Object.keys(commit)));
       setDrag({});
     },
     [api],

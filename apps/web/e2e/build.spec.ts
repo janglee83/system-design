@@ -60,12 +60,28 @@ test("group nodes, move the frame, ungroup, and tidy the layout", async ({ page 
 
   const before = (await page.getByTestId("node-postgres-1").boundingBox())!;
   const f = (await frame.boundingBox())!;
-  await page.mouse.move(f.x + 12, f.y + 8);
+  // Grab the frame's own background in its left padding, at the canvas's middle (the frame can be
+  // taller than the visible canvas, so its top and bottom edges may be off screen).
+  const c = (await page.getByTestId("lab-canvas").boundingBox())!;
+  const y = Math.max(f.y, c.y) + (Math.min(f.y + f.height, c.y + c.height) - Math.max(f.y, c.y)) / 2;
+  await page.mouse.move(f.x + 12, y);
   await page.mouse.down();
-  await page.mouse.move(f.x + 92, f.y + 48, { steps: 8 });
+  await page.mouse.move(f.x + 92, y + 40, { steps: 8 });
   await page.mouse.up();
   const after = (await page.getByTestId("node-postgres-1").boundingBox())!;
   expect(Math.round(after.x - before.x)).toBeGreaterThan(40);
+
+  // Dragging a member past the frame's bottom edge grows the frame to hold it (Phase 2 review).
+  const f2 = (await frame.boundingBox())!;
+  const pg = (await page.getByTestId("node-postgres-1").boundingBox())!;
+  await page.mouse.move(pg.x + pg.width / 2, pg.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(pg.x + pg.width / 2, pg.y + 20 + 160, { steps: 10 });
+  await page.mouse.up();
+  const f3 = (await frame.boundingBox())!;
+  const pg2 = (await page.getByTestId("node-postgres-1").boundingBox())!;
+  expect(f3.y + f3.height).toBeGreaterThan(f2.y + f2.height);
+  expect(pg2.y + pg2.height).toBeLessThanOrEqual(f3.y + f3.height + 1);
 
   await page.keyboard.press(`${mod}+Shift+g`);
   await expect(frame).toHaveCount(0);

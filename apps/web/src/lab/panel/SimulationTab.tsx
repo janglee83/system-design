@@ -71,7 +71,8 @@ export function SimulationTab({
       </div>
       {available ? null : <p className="text-caption text-text-3">{t("run.unavailable")}</p>}
       <h3 className="section-label">{t("simulation.input")}</h3>
-      <pre data-testid="sim-input" className="num max-h-64 overflow-auto rounded-md border border-border bg-surface p-2 text-caption">
+      {/* Focusable, so the keyboard can scroll it (axe: scrollable-region-focusable). */}
+      <pre data-testid="sim-input" tabIndex={0} aria-label={t("simulation.input")} className="num max-h-64 overflow-auto rounded-md border border-border bg-surface p-2 text-caption">
         {inputText}
       </pre>
     </div>

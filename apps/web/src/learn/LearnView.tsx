@@ -101,7 +101,7 @@ export function ChallengesView({ levels }: { levels: readonly LearnLevel[] }) {
                 {t("learn.levelHeading", { id: l.id, title: l.title })}
               </h2>
               {locked ? <p className="pb-2 text-caption text-text-3">{t("learn.locked", { level: locked.replace("L", "") })}</p> : null}
-              <ol className={locked ? "flex flex-col gap-3 opacity-55" : "flex flex-col gap-3"}>
+              <ol className="flex flex-col gap-3" data-locked={locked ? "" : undefined}>
                 {l.challenges.map((c) => (
                   <Milestone key={c.id} c={c} locked={!!locked} />
                 ))}

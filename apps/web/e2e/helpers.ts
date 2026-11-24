@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 
 export async function openLab(page: Page, locale = "en", query = "") {
@@ -103,4 +104,38 @@ export async function runOnce(page: Page): Promise<string> {
   await expect(bar).not.toHaveAttribute("data-run-id", before ?? "");
   await expect(bar).toHaveAttribute("data-status", "idle");
   return (await bar.getAttribute("data-run-id"))!;
+}
+
+/** Spec §7: no serious or critical axe violations (WCAG 2.2 A and AA rules). */
+export async function expectAccessible(page: Page, label: string) {
+  const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+  const bad = r.violations
+    .filter((v) => v.impact === "serious" || v.impact === "critical")
+    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 5).join(" | ")}`);
+  expect(bad, label).toEqual([]);
+}
+
+/** Presses Tab until the canvas node `id` has focus (keyboard-only tests). */
+export async function focusNode(page: Page, id: string) {
+  for (let i = 0; i < 120; i++) {
+    const current = await page.evaluate(() => document.activeElement?.closest<HTMLElement>(".react-flow__node")?.dataset.id ?? null);
+    if (current === id) return;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error(`could not reach node ${id} with Tab`);
+}
+
+/** Presses Tab until the focused element has this accessible name. */
+export async function tabTo(page: Page, name: string) {
+  for (let i = 0; i < 120; i++) {
+    const n = await page.evaluate(() => {
+      const el = document.activeElement;
+      const id = el?.getAttribute("id");
+      const byLabel = id ? document.querySelector(`label[for="${id}"]`)?.textContent?.trim() : null;
+      return el?.getAttribute("aria-label") ?? byLabel ?? el?.textContent?.trim() ?? "";
+    });
+    if (n === name) return;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error(`could not reach "${name}" with Tab`);
 }

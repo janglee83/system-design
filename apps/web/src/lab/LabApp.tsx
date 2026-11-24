@@ -195,7 +195,7 @@ function LabShortcuts() {
     copy: () => copySelection(api),
     paste: () => pasteClipboard(api),
     selectAll: () => selectAll(api),
-    connect: () => openConnect(api, ui),
+    connect: () => openConnect(api, ui, (document.activeElement as HTMLElement | null)?.closest<HTMLElement>(".react-flow__node-lab")?.dataset.id),
     inspect: () => {
       const id = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>(".react-flow__node")?.dataset.id;
       if (id) inspectNode(api, ui, id);

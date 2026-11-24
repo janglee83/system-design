@@ -19,6 +19,7 @@ import {
   ungroup,
   updateNode,
   reverseEdge,
+  refitGroupsOf,
 } from "./ops";
 import { META_BY_KIND, meta } from "../../test/metas";
 
@@ -109,8 +110,9 @@ describe("design ops", () => {
     const g = groupNodes(build(), ["lb-1", "web-server-1"])!;
     expect(g.id).toBe("g1");
     const frame = g.design.groups[0]!;
-    expect(frame.position).toEqual({ x: 240 - 32, y: 0 - 32 - 24 });
-    expect(frame.size).toEqual({ width: 480 + 172 - 240 + 64, height: 148 + 64 + 24 });
+    // Padded (32, plus 24 for the label) and snapped outwards to the 16 px grid.
+    expect(frame.position).toEqual({ x: 208, y: -64 });
+    expect(frame.size).toEqual({ width: 688 - 208, height: 192 + 64 });
     const moved = moveGroup(g.design, "g1", { x: frame.position.x + 100, y: frame.position.y + 50 });
     expect(moved.nodes.find((n) => n.id === "lb-1")!.position).toEqual({ x: 340, y: 50 });
     expect(moved.nodes.find((n) => n.id === "client-1")!.position).toEqual({ x: 0, y: 0 });
@@ -181,6 +183,28 @@ describe("design ops", () => {
     // Users accept nothing, so an edge cannot point at them.
     const refused = reverseEdge(d, "e2", META_BY_KIND);
     expect(refused).toEqual({ design: d, refused: "not-accepted" });
+  });
+
+  it("group frames sit on the 16 px grid, origin and size", () => {
+    let d = emptyDesign();
+    d = addNode(d, meta("web-server"), { x: 100, y: 100 }).design;
+    d = addNode(d, meta("postgres"), { x: 403, y: 251 }).design;
+    const g = groupNodes(d, ["web-server-1", "postgres-1"])!.design.groups[0]!;
+    for (const v of [g.position.x, g.position.y, g.size.width, g.size.height]) expect(v % 16).toBe(0);
+  });
+
+  it("refitGroupsOf grows a frame when a member was dragged past its edge, and leaves others alone", () => {
+    let d = emptyDesign();
+    d = addNode(d, meta("web-server"), { x: 96, y: 96 }).design;
+    d = addNode(d, meta("postgres"), { x: 400, y: 96 }).design;
+    d = groupNodes(d, ["web-server-1", "postgres-1"])!.design;
+    const before = d.groups[0]!;
+    // Inside the frame: nothing to do.
+    expect(refitGroupsOf(moveNodes(d, { "web-server-1": { x: 112, y: 112 } }), ["web-server-1"]).groups[0]).toEqual(before);
+    // Past its right edge: the frame grows to hold it.
+    const moved = moveNodes(d, { "postgres-1": { x: 900, y: 96 } });
+    const g = refitGroupsOf(moved, ["postgres-1"]).groups[0]!;
+    expect(g.position.x + g.size.width).toBeGreaterThanOrEqual(900 + 172);
   });
 });
 

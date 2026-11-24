@@ -33,7 +33,8 @@ export function LevelStrip({ levels, current, selected, onSelect }: { levels: re
               "flex min-h-[84px] flex-col gap-1 rounded-md border border-border bg-surface p-2.5 text-left hover:bg-surface-2",
               l.id === current && "border-accent-text shadow-[0_0_0_3px_var(--sd-accent-soft)]",
               selected === l.id && l.id !== current && "border-border-strong",
-              l.lockedBy && "opacity-55",
+              // Locked: muted but readable (not opacity, which fails contrast), dashed, with a lock icon.
+              l.lockedBy && "border-dashed bg-surface-2 text-text-2",
             )}
           >
             <span className="num flex items-center gap-1 text-[11.5px] text-text-3">

@@ -118,3 +118,20 @@ test("validate and run go through the real worker and structured clone", async (
   expect(out.firstStep).toBe("users");
   expect(out.costSum).toBeCloseTo(out.costPerMonth, 6);
 });
+
+test("pages carry a nonce CSP and the hardening headers; the engine still starts with no violation", async ({ page }) => {
+  const violations: string[] = [];
+  page.on("console", (m) => {
+    if (/Content Security Policy|Refused to/i.test(m.text())) violations.push(m.text());
+  });
+  const res = (await page.goto("/en/lab"))!;
+  const h = res.headers();
+  expect(h["content-security-policy"]).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic' 'wasm-unsafe-eval'/);
+  expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(h["x-content-type-options"]).toBe("nosniff");
+  expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(h["permissions-policy"]).toContain("camera=()");
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", /light|dark/); // the nonced head script ran
+  expect(violations).toEqual([]);
+});

@@ -93,8 +93,13 @@ export function toggleMinimap(ui: UiStore, api: DesignStore): void {
 }
 
 /** Opens the keyboard connect picker when exactly one node is selected (R13). */
-export function openConnect(api: DesignStore, ui: UiStore): void {
-  if (api.getState().selection.nodes.length === 1) ui.getState().set({ connectOpen: true });
+export function openConnect(api: DesignStore, ui: UiStore, focusedNodeId?: string | null): void {
+  // The one selected node, or the canvas node that has keyboard focus (Tab, then C).
+  const sel = api.getState().selection.nodes;
+  const source = sel.length === 1 ? sel[0] : focusedNodeId;
+  if (!source) return;
+  if (sel.length !== 1 || sel[0] !== source) api.getState().select({ nodes: [source], edges: [], groups: [] });
+  ui.getState().set({ connectOpen: true });
 }
 
 /** Selects a node and moves focus to the inspector's first control. */

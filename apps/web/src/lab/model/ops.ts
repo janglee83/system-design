@@ -180,12 +180,36 @@ export function duplicateItems(d: Design, ids: readonly string[]): { design: Des
   return pasteItems(d, copyItems(d, ids), { x: 2 * GRID, y: 2 * GRID });
 }
 
+/** The frame around members, padded and snapped outwards to the 16 px grid (Phase 2 review). */
 function frameAround(members: readonly LabNode[]): Pick<LabGroup, "position" | "size"> {
-  const minX = Math.min(...members.map((n) => n.position.x)) - GROUP_PAD;
-  const minY = Math.min(...members.map((n) => n.position.y)) - GROUP_PAD - GROUP_LABEL;
-  const maxX = Math.max(...members.map((n) => n.position.x + NODE_SIZE.width)) + GROUP_PAD;
-  const maxY = Math.max(...members.map((n) => n.position.y + NODE_SIZE.height)) + GROUP_PAD;
+  const down = (v: number) => Math.floor(v / GRID) * GRID;
+  const up = (v: number) => Math.ceil(v / GRID) * GRID;
+  const minX = down(Math.min(...members.map((n) => n.position.x)) - GROUP_PAD);
+  const minY = down(Math.min(...members.map((n) => n.position.y)) - GROUP_PAD - GROUP_LABEL);
+  const maxX = up(Math.max(...members.map((n) => n.position.x + NODE_SIZE.width)) + GROUP_PAD);
+  const maxY = up(Math.max(...members.map((n) => n.position.y + NODE_SIZE.height)) + GROUP_PAD);
   return { position: { x: minX, y: minY }, size: { width: maxX - minX, height: maxY - minY } };
+}
+
+/** Refits the frames of moved members that now stick out of them (a drag past the frame's edge). */
+export function refitGroupsOf(d: Design, movedIds: readonly string[]): Design {
+  const ids = new Set(movedIds);
+  let changed = false;
+  const groups = d.groups.map((g) => {
+    const members = d.nodes.filter((n) => n.groupId === g.id);
+    const outside = members.some(
+      (n) =>
+        ids.has(n.id) &&
+        (n.position.x < g.position.x ||
+          n.position.y < g.position.y ||
+          n.position.x + NODE_SIZE.width > g.position.x + g.size.width ||
+          n.position.y + NODE_SIZE.height > g.position.y + g.size.height),
+    );
+    if (!outside) return g;
+    changed = true;
+    return { ...g, ...frameAround(members) };
+  });
+  return changed ? { ...d, groups } : d;
 }
 
 function dropEmptyGroups(d: Design): Design {
