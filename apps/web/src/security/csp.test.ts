@@ -6,9 +6,10 @@ describe("content security policy (Phase 1 review M11)", () => {
     const csp = pageCsp("abc123", false);
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("script-src 'self' 'nonce-abc123' 'strict-dynamic' 'wasm-unsafe-eval'");
-    expect(csp).toContain("worker-src 'self' blob:");
+    expect(csp).toContain("worker-src 'self';");
     expect(csp).toContain("style-src 'self' 'unsafe-inline'");
-    expect(csp).toContain("img-src 'self' data: blob:");
+    expect(csp).toContain("img-src 'self' data:;");
+    expect(csp).not.toContain("blob:"); // nothing needs it (review)
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
@@ -26,5 +27,6 @@ describe("content security policy (Phase 1 review M11)", () => {
     expect(h["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     expect(h["Permissions-Policy"]).toContain("camera=()");
     expect(h["X-Frame-Options"]).toBe("DENY");
+    expect(h["Cross-Origin-Opener-Policy"]).toBe("same-origin");
   });
 });

@@ -147,6 +147,9 @@ test("pages carry a nonce CSP and the hardening headers; the engine still starts
   expect(h["x-content-type-options"]).toBe("nosniff");
   expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(h["permissions-policy"]).toContain("camera=()");
+  expect(h["cross-origin-opener-policy"]).toBe("same-origin");
+  expect(h["content-security-policy"]).toContain("worker-src 'self';");
+  expect(h["content-security-policy"]).not.toContain("blob:");
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
   await expect(page.locator("html")).toHaveAttribute("data-theme", /light|dark/); // the nonced head script ran
   expect(violations).toEqual([]);

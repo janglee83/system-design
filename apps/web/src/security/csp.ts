@@ -6,10 +6,10 @@ export function pageCsp(nonce: string, dev: boolean): string {
     "default-src 'self'",
     // 'strict-dynamic' lets the nonced scripts load Next's chunks; 'wasm-unsafe-eval' compiles the engine.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ""}`,
-    "worker-src 'self' blob:",
+    "worker-src 'self'",
     // React Flow and Radix position things with inline styles.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data:",
     "font-src 'self'",
     `connect-src 'self'${dev ? " ws:" : ""}`,
     "object-src 'none'",
@@ -30,5 +30,6 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Permissions-Policy", value: OFF.map((f) => `${f}=()`).join(", ") },
 ];
