@@ -124,6 +124,16 @@ describe("React Flow adapter", () => {
     expect(toFlowNodes(design(), ctx).find((n) => n.id === "client-1")!.data.target).toBeUndefined();
   });
 
+  it("does not reuse an edge whose running state or traffic changed", () => {
+    const d = { ...design(), edges: [{ id: "e1", from: "client-1", to: "lb-1", kind: "http" as const }] };
+    const first = toFlowEdges(d, ctx);
+    const hot = reuseFlowEdges(toFlowEdges(d, { ...ctx, edgeStates: { e1: "hot" }, edgeRates: { e1: 4 } }), first);
+    expect(hot[0]).not.toBe(first[0]);
+    expect(hot[0]!.data).toMatchObject({ state: "hot", rate: 4 });
+    const moreTraffic = reuseFlowEdges(toFlowEdges(d, { ...ctx, edgeStates: { e1: "hot" }, edgeRates: { e1: 9 } }), hot);
+    expect(moreTraffic[0]!.data!.rate).toBe(9);
+  });
+
   it("dims kinds the challenge does not allow", () => {
     const nodes = toFlowNodes(design(), { ...ctx, allowedKinds: ["client"] });
     expect(nodes.find((n) => n.id === "client-1")!.data.disallowed).toBe(false);

@@ -45,7 +45,13 @@
       },
       "cost": "${cost}/mo",
       "free": "Free",
-      "noPrice": "No price yet"
+      "noPrice": "No price yet",
+      "live": {
+        "down": "Down since {seconds} s",
+        "rejected": "Rejecting {count}",
+        "inFlight": "{count} in flight",
+        "load": "{percent}% load"
+      }
     },
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -69,7 +75,8 @@
       "show": "Show the minimap",
       "hide": "Hide the minimap",
       "label": "Overview map"
-    }
+    },
+    "edgeRate": "{count} requests on the way"
   },
   "nav": {
     "primary": "Main",
@@ -825,6 +832,14 @@
     "time": "Playback time",
     "timeValue": "{now} / {total} s",
     "marker": "{time} s: {text}",
-    "bar": "Run playback"
+    "bar": "Run playback",
+    "stale": "The design changed after this run. Run again to see it play."
+  },
+  "state": {
+    "title": "Component state",
+    "normal": "Normal",
+    "busy": "Busy (70% or more)",
+    "overloaded": "Overloaded (rejecting or 95%+)",
+    "down": "Down"
   }
 }

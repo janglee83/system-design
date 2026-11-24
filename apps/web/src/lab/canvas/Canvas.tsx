@@ -32,6 +32,7 @@ import { LabNode } from "./LabNode";
 import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, type AdapterContext } from "./rf-adapter";
 import { useAddComponent } from "./use-add-component";
 import { flowAriaLabels, nodeAccessibleName } from "./aria";
+import { usePlaybackView } from "../run/use-playback-view";
 import { CanvasControls, useMinimapShown } from "./CanvasControls";
 import { categoryColor } from "./kinds";
 
@@ -148,10 +149,28 @@ export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; ov
 
   const allowedKinds = design.challenge?.limits.allowedKinds ?? null;
   const baseRps = design.workload.baseRps;
+  const pv = usePlaybackView();
+  const playing = pv?.active ? pv : null;
   const nodeRole = t("nodeRole");
   const ctx = useMemo<AdapterContext>(
-    () => ({ metas, selection, costs, issues: counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, ...extra }),
-    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, extra],
+    () => ({
+      metas,
+      selection,
+      costs,
+      issues: counts,
+      nodeRole,
+      aria,
+      drag,
+      allowedKinds,
+      baseRps,
+      connecting,
+      states: playing?.states,
+      live: playing?.live,
+      edgeStates: playing?.edgeStates,
+      edgeRates: playing?.edgeRates,
+      ...extra,
+    }),
+    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, playing, extra],
   );
   // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
   const lastNodes = useRef<FlowNode[]>([]);

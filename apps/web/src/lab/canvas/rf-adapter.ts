@@ -19,6 +19,8 @@ export interface LabNodeData extends Record<string, unknown> {
   baseRps?: number;
   /** While a connection is being dragged (design-system §6.2). */
   target?: "source" | "valid" | "invalid";
+  /** Live numbers while a run plays (design-system §5). */
+  live?: { load: number; inFlight: number; rejected: number; downSinceMs: number | null };
   /** The tooltip over the node under the pointer while connecting ("Thả để nối · …" or the reason). */
   targetTip?: string;
 }
@@ -26,6 +28,9 @@ export interface LabEdgeData extends Record<string, unknown> {
   kind: EdgeKind;
   issues: number;
   onPath?: boolean;
+  /** While a run plays: hot into an overloaded node, dead next to a down one, and the approximate traffic. */
+  state?: "normal" | "hot" | "dead";
+  rate?: number;
 }
 export interface GroupData extends Record<string, unknown> {
   group: LabGroup;
@@ -39,6 +44,9 @@ export interface AdapterContext {
   /** Absolute positions of nodes being dragged (not yet committed). */
   drag: Readonly<Record<string, XY>>;
   states?: Readonly<Record<string, NodeState>>;
+  live?: Readonly<Record<string, { load: number; inFlight: number; rejected: number; downSinceMs: number | null }>>;
+  edgeStates?: Readonly<Record<string, "normal" | "hot" | "dead">>;
+  edgeRates?: Readonly<Record<string, number>>;
   path?: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null;
   allowedKinds?: readonly string[] | null;
   /** The workload's requests per second (shown on Users tiles). */
@@ -105,6 +113,7 @@ export function toFlowNodes(d: Design, ctx: AdapterContext): FlowNode[] {
         disallowed: ctx.allowedKinds ? !ctx.allowedKinds.includes(n.kind) : false,
         // Sources (kinds that accept nothing, like Users) show the workload's rate.
         baseRps: meta && meta.accepts.length === 0 ? ctx.baseRps : undefined,
+        live: ctx.live?.[n.id],
         target: !ctx.connecting ? undefined : ctx.connecting.from === n.id ? "source" : ctx.connecting.valid[n.id] ? "valid" : "invalid",
         targetTip: ctx.connecting && ctx.connecting.hover === n.id && ctx.connecting.from !== n.id ? (ctx.connecting.tip ?? undefined) : undefined,
       },
@@ -124,7 +133,13 @@ export function toFlowEdges(d: Design, ctx: AdapterContext): FlowEdge<LabEdgeDat
     type: "lab",
     selected: sel.has(e.id),
     ariaLabel: ctx.aria?.edge(e),
-    data: { kind: e.kind, issues: ctx.issues.edges[e.id] ?? 0, onPath: ctx.path ? ctx.path.edges.has(e.id) : undefined },
+    data: {
+      kind: e.kind,
+      issues: ctx.issues.edges[e.id] ?? 0,
+      onPath: ctx.path ? ctx.path.edges.has(e.id) : undefined,
+      state: ctx.edgeStates?.[e.id],
+      rate: ctx.edgeRates?.[e.id],
+    },
   }));
 }
 
@@ -195,7 +210,9 @@ export function reuseFlowEdges(next: FlowEdge<LabEdgeData>[], prev: readonly Flo
       p.ariaLabel === e.ariaLabel &&
       p.data?.kind === e.data?.kind &&
       p.data?.issues === e.data?.issues &&
-      p.data?.onPath === e.data?.onPath;
+      p.data?.onPath === e.data?.onPath &&
+      p.data?.state === e.data?.state &&
+      p.data?.rate === e.data?.rate;
     return same ? p : e;
   });
 }

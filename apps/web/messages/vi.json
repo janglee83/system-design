@@ -45,7 +45,13 @@
       },
       "cost": "{cost} $/tháng",
       "free": "Miễn phí",
-      "noPrice": "Chưa có giá"
+      "noPrice": "Chưa có giá",
+      "live": {
+        "down": "Ngừng từ giây {seconds}",
+        "rejected": "Từ chối {count}",
+        "inFlight": "{count} đang xử lý",
+        "load": "{percent}% tải"
+      }
     },
     "zoomIn": "Phóng to",
     "zoomOut": "Thu nhỏ",
@@ -69,7 +75,8 @@
       "show": "Hiện bản đồ thu nhỏ",
       "hide": "Ẩn bản đồ thu nhỏ",
       "label": "Bản đồ thu nhỏ"
-    }
+    },
+    "edgeRate": "{count} yêu cầu đang đi qua"
   },
   "nav": {
     "primary": "Chính",
@@ -825,6 +832,14 @@
     "time": "Thời điểm phát",
     "timeValue": "{now} / {total} giây",
     "marker": "giây {time}: {text}",
-    "bar": "Phát lại lần chạy"
+    "bar": "Phát lại lần chạy",
+    "stale": "Thiết kế đã đổi sau lần chạy này. Hãy chạy lại để xem diễn biến."
+  },
+  "state": {
+    "title": "Trạng thái thành phần",
+    "normal": "Bình thường",
+    "busy": "Bận (từ 70%)",
+    "overloaded": "Quá tải (từ chối hoặc từ 95%)",
+    "down": "Ngừng chạy"
   }
 }

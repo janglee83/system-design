@@ -1,7 +1,7 @@
 "use client";
 import * as Popover from "@radix-ui/react-popover";
 import { useReactFlow, useStore } from "@xyflow/react";
-import { Grid3x3, Info, LayoutGrid, Map as MapIcon, Maximize, Minus, Plus } from "lucide-react";
+import { CircleCheck, Gauge, Grid3x3, Info, LayoutGrid, Map as MapIcon, Maximize, Minus, Plus, PowerOff, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { EDGE_KINDS } from "@/i18n/engine-codes";
@@ -11,6 +11,7 @@ import { toggleMinimap, toggleSnap } from "../commands";
 import { formatCombo, SHORTCUTS, type ShortcutId } from "../shortcuts";
 import { useDesign, useDesignApi, useUi, useUiApi } from "../store/LabStores";
 import { useIsMac } from "../use-shortcuts";
+import { usePlaybackView } from "../run/use-playback-view";
 import { legendCounts } from "./edge-geometry";
 import { minimapVisible } from "./minimap-model";
 import { useAutoLayout } from "./use-auto-layout";
@@ -78,6 +79,38 @@ export function CanvasControls() {
   );
 }
 
+const STATE_ICON = { normal: CircleCheck, busy: Gauge, overloaded: TriangleAlert, down: PowerOff } as const;
+const STATE_TONE = { normal: "ok", busy: "busy", overloaded: "over", down: "down" } as const;
+const STATES = ["normal", "busy", "overloaded", "down"] as const;
+
+/** While a run plays, the legend also explains the component states (icon and word, never colour alone). */
+function StateLegend() {
+  const t = useTranslations("state");
+  return (
+    <div className="mt-3 border-t border-border pt-2">
+      <p className="pb-1.5 text-label font-semibold">{t("title")}</p>
+      <ul className="flex flex-col gap-1">
+        {STATES.map((s) => {
+          const Icon = STATE_ICON[s];
+          const tone = STATE_TONE[s];
+          return (
+            <li key={s} className="flex items-center gap-2 text-caption">
+              <span
+                aria-hidden
+                className="grid size-4 place-items-center rounded-xs border-2"
+                style={{ background: `var(--sd-${tone}-soft)`, borderColor: tone === "busy" ? "var(--sd-busy-line)" : `var(--sd-${tone})`, color: `var(--sd-${tone})` }}
+              >
+                <Icon size={9} />
+              </span>
+              {t(s)}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /** Chú giải: the connection kinds with how many edges use each; closed by default, remembered. */
 function Legend() {
   const t = useTranslations();
@@ -91,6 +124,7 @@ function Legend() {
     }
   }, []);
   const counts = legendCounts(edges);
+  const active = usePlaybackView()?.active ?? false;
   return (
     <Popover.Root
       open={open}
@@ -133,6 +167,7 @@ function Legend() {
               </li>
             ))}
           </ul>
+          {active ? <StateLegend /> : null}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

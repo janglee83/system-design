@@ -1,17 +1,19 @@
 "use client";
 import { BaseEdge, EdgeLabelRenderer, useStore, type ConnectionLineComponentProps, type Edge, type EdgeProps } from "@xyflow/react";
-import { ArrowLeftRight, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ArrowLeftRight, Trash2, TriangleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { memo } from "react";
 import { EDGE_KINDS } from "@/i18n/engine-codes";
 import { Button } from "@/ui/Button";
+import { cn } from "@/ui/cn";
 import { toast } from "@/ui/toast-store";
 import { deleteSelection } from "../commands";
+import { formatNumber } from "../format";
 import { displayLabel } from "../labels";
 import { reverseEdge } from "../model/ops";
 import { useDesign, useDesignApi } from "../store/LabStores";
 import { useMetas } from "../use-metas";
-import { bezierPath } from "./edge-geometry";
+import { bezierMidpoint, bezierPath } from "./edge-geometry";
 import type { LabEdgeData } from "./rf-adapter";
 
 /** A typed connection (design-system §6.1): a Bézier, colour and dash per kind, a fixed-size arrowhead. */
@@ -20,29 +22,66 @@ function LabEdgeView({ id, source, target, sourceX, sourceY, targetX, targetY, d
   const path = bezierPath(sourceX, sourceY, targetX, targetY);
   const onPath = data?.onPath;
   const accent = selected || onPath === true;
+  const state = data?.state ?? "normal";
+  const running = data?.state !== undefined;
+  const stroke = onPath ? "var(--sd-accent-text)" : state === "hot" ? "var(--sd-over)" : state === "dead" ? "var(--sd-down)" : `var(--sd-edge-${kind})`;
+  // §6.1 running: HTTP stays solid; other kinds keep their dash.
+  const dash = onPath || (running && kind === "http") ? "none" : `var(--sd-dash-${kind})`;
+  const mid = bezierMidpoint(sourceX, sourceY, targetX, targetY);
   return (
     <>
-      <g data-testid={`edge-${id}`} data-kind={kind} data-selected={selected ? "" : undefined} opacity={onPath === false ? 0.18 : 1}>
+      <g
+        data-testid={`edge-${id}`}
+        data-kind={kind}
+        data-state={running ? state : undefined}
+        data-selected={selected ? "" : undefined}
+        opacity={onPath === false ? 0.18 : state === "dead" ? 0.45 : 1}
+      >
         <BaseEdge
           id={id}
           path={path}
           markerEnd={`url(#sd-arrow-${onPath ? "path" : kind})`}
           interactionWidth={16}
           style={{
-            stroke: onPath ? "var(--sd-accent-text)" : `var(--sd-edge-${kind})`,
-            strokeWidth: accent ? 3 : 1.8,
-            strokeDasharray: onPath ? "none" : `var(--sd-dash-${kind})`,
+            stroke,
+            strokeWidth: accent ? 3 : state === "hot" ? 2.4 : 1.8,
+            strokeDasharray: dash,
             strokeLinecap: "round",
             filter: selected ? "drop-shadow(0 0 3px color-mix(in srgb, var(--sd-accent-text) 50%, transparent))" : undefined,
           }}
         />
       </g>
+      {running && data?.rate !== undefined ? <RatePill x={mid.x} y={mid.y} rate={data.rate} state={state} /> : null}
       {selected ? <EdgePopover id={id} source={source} target={target} x={targetX} y={targetY} /> : null}
     </>
   );
 }
 
 export const LabEdge = memo(LabEdgeView);
+
+/** The traffic on an edge while playing (§6.1): a pill at the midpoint; hot shows an alert, dead is struck through. */
+function RatePill({ x, y, rate, state }: { x: number; y: number; rate: number; state: "normal" | "hot" | "dead" }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const n = formatNumber(Math.round(rate), locale, 0);
+  return (
+    <EdgeLabelRenderer>
+      <span
+        role="img"
+        aria-label={t("lab.edgeRate", { count: n })}
+        data-testid="rate-pill"
+        className={cn(
+          "num pointer-events-none absolute inline-flex items-center gap-1 rounded-full border bg-surface px-[7px] text-caption leading-[18px] font-medium whitespace-nowrap shadow-1",
+          state === "hot" ? "border-over/45 text-over" : state === "dead" ? "border-border text-text-3 line-through" : "border-border text-text-2",
+        )}
+        style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}
+      >
+        {state === "hot" ? <TriangleAlert size={11} aria-hidden /> : null}
+        {n}
+      </span>
+    </EdgeLabelRenderer>
+  );
+}
 
 /** Below the target end of the selected edge: what it connects, its kind, Reverse and Delete. */
 function EdgePopover({ id, source, target, x, y }: { id: string; source: string; target: string; x: number; y: number }) {

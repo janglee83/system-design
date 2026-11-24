@@ -321,3 +321,15 @@
 .sd-node[data-target="invalid"]:has(.sd-node-tip) {
   opacity: 1;
 }
+
+/* The load % in the live line takes the state colour (§5, line 3). */
+.sd-node-load {
+  font-weight: 600;
+  color: var(--sd-text);
+}
+.sd-node[data-state="busy"] .sd-node-load {
+  color: var(--sd-busy);
+}
+.sd-node[data-state="overloaded"] .sd-node-load {
+  color: var(--sd-over);
+}

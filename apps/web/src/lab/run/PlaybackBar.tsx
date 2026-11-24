@@ -1,5 +1,5 @@
 "use client";
-import { Pause, Play } from "lucide-react";
+import { Info, Pause, Play } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { cn } from "@/ui/cn";
@@ -13,6 +13,7 @@ import { useIsMac } from "../use-shortcuts";
 import { useMetas } from "../use-metas";
 import { formatClock, SPEEDS } from "./clock";
 import { Scrubber } from "./Scrubber";
+import { usePlaybackView } from "./use-playback-view";
 
 /**
  * The 52 px playback bar under the main row once a run exists (design-system §7.2): pause/play
@@ -26,6 +27,7 @@ export function PlaybackBar() {
   const playing = usePlayback((s) => s.playing);
   const speed = usePlayback((s) => s.speed);
   const durationMs = usePlayback((s) => s.durationMs);
+  const status = useRuns((s) => s.status);
   const api = usePlaybackApi();
   const metas = useMetas();
   const mac = useIsMac();
@@ -33,6 +35,7 @@ export function PlaybackBar() {
     () => (run ? run.events.map((e) => ({ atMs: e.atMs, level: eventLevel(e.code), text: eventText(e, { design: run.snapshot, metas, t }) })) : []),
     [run, metas, t],
   );
+  const view = usePlaybackView();
   if (!run) return null;
   return (
     <section
@@ -55,6 +58,12 @@ export function PlaybackBar() {
       <span className="num text-[13px] text-text-3" aria-hidden>
         {formatClock(durationMs, locale)}
       </span>
+      {view && !view.active && status !== "running" ? (
+        <p role="status" className="flex max-w-[260px] items-center gap-1.5 text-caption text-text-3">
+          <Info size={12} aria-hidden className="shrink-0" />
+          <span className="line-clamp-2">{t("playback.stale")}</span>
+        </p>
+      ) : null}
       <div role="radiogroup" aria-label={t("playback.speed")} className="flex items-center rounded-md border border-border bg-surface-2 p-0.5">
         {SPEEDS.map((sp) => (
           <button

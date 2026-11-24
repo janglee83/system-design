@@ -37,3 +37,38 @@ test("the scrubber is a slider: ArrowRight moves 0.1 s, End jumps to the end; sp
   await speeds.getByRole("radio", { name: "4×" }).click();
   await expect(speeds.getByRole("radio", { name: "4×" })).toHaveAttribute("aria-checked", "true");
 });
+
+test("instance-down turns the node grey with its live line; the edge goes dead; Home brings it back", async ({ page }) => {
+  await page.goto("/en/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await inspector.getByRole("button", { name: "Add fault" }).click(); // instance-down at 3.0 s, any web server
+  const bar = page.getByTestId("run-bar");
+  await bar.getByRole("button", { name: /^Run simulation/ }).click();
+  await expect(bar).toHaveAttribute("data-run-id", /\d+/);
+  const scrub = page.getByRole("slider", { name: "Playback time" });
+  await scrub.focus();
+  await page.keyboard.press("End");
+  const web = page.getByTestId("node-web-server-1");
+  await expect(web).toHaveAttribute("data-state", "down");
+  await expect(web).toContainText("Down since 3.0 s");
+  await expect(page.getByTestId("edge-e1")).toHaveAttribute("data-state", "dead");
+  await page.keyboard.press("Home");
+  await expect(web).not.toHaveAttribute("data-state", "down");
+  await expect(web).toContainText("% load");
+});
+
+test("a design edit after the run makes the playback stale", async ({ page }) => {
+  await page.goto("/en/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  const bar = page.getByTestId("run-bar");
+  await bar.getByRole("button", { name: /^Run simulation/ }).click();
+  await expect(bar).toHaveAttribute("data-run-id", /\d+/);
+  await expect(page.getByTestId("node-web-server-1")).toContainText("% load");
+  await page.getByTestId("node-web-server-1").click();
+  const r = page.getByRole("complementary", { name: "Inspector" }).getByRole("spinbutton", { name: "Replicas" });
+  await r.fill("3");
+  await r.press("Enter");
+  await expect(page.getByText("The design changed after this run.", { exact: false })).toBeVisible();
+  await expect(page.getByTestId("node-web-server-1")).not.toContainText("% load");
+});
