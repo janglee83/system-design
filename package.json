@@ -13,5 +13,10 @@
     "test:parity": "cargo run -q -p sim-cli -- parity fixtures/parity",
     "dev:web": "pnpm --filter @sd/web dev",
     "test:web": "pnpm --filter @sd/web lint && pnpm --filter @sd/web typecheck && NEXT_PUBLIC_E2E=1 pnpm --filter @sd/web build && pnpm --filter @sd/web test:e2e"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.33"
+    }
   }
 }
