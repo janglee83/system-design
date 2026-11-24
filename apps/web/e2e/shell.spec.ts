@@ -117,3 +117,32 @@ test("switching language keeps the theme", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme-pref", "dark");
 });
+
+test("the Learn page shows the 7 levels and the path; locked levels say why on focus", async ({ page }) => {
+  await page.goto("/vi/learn");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Học");
+  const levels = page.getByRole("navigation", { name: "Các cấp" });
+  await expect(levels.getByRole("button")).toHaveCount(7);
+  await expect(page.getByTestId("learning-path")).toContainText("Ai hỏi, ai trả lời: client và server");
+  await page.getByTestId("level-L1").focus();
+  await expect(page.getByRole("tooltip")).toContainText("Cần qua bài kiểm tra cuối cấp 0");
+  // A locked level still opens, as a read-only preview.
+  await page.getByTestId("level-L1").click();
+  await expect(page.getByText("Xem trước. Cần qua bài kiểm tra cuối cấp 0")).toBeVisible();
+  await page.getByRole("button", { name: "Xem dạng danh sách" }).click();
+  await expect(page.getByTestId("learn-list").locator("li")).toHaveCount(136);
+  // Default 4: progress is local; nothing mentions an account (lesson titles may still talk about logins).
+  await expect(page.locator("body")).not.toContainText(/tài khoản/i);
+});
+
+test("the Challenges page lists every milestone; a ready one opens its start in the Lab", async ({ page }) => {
+  await page.goto("/vi/challenges");
+  await expect(page.getByTestId("challenge-progress")).toHaveText("0 / 44");
+  const shop = page.locator("li", { hasText: "Mở bán cửa hàng nhỏ" });
+  await expect(shop).toContainText("Chạy được trong Lab");
+  await shop.getByRole("link", { name: "Vào Lab" }).click();
+  await expect(page).toHaveURL(/\/vi\/lab\?challenge=c-l0-first-launch/);
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  await expect(page.locator('[data-testid^="node-"]')).toHaveCount(1);
+  await expect(page.getByTestId("node-users")).toHaveAttribute("data-locked", "");
+});

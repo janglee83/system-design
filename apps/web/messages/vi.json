@@ -119,7 +119,34 @@
     "placeholder": "Bài học sẽ có trong bản cập nhật tới. Dưới đây là lộ trình các bài sẽ đi theo.",
     "level": "Cấp {level}",
     "minutes": "{n} phút",
-    "lesson": "Bài học"
+    "lesson": "Bài học",
+    "description": "Đi từ con số 0: mỗi cấp mở khi bạn qua bài kiểm tra cuối cấp trước.",
+    "listView": "Xem dạng danh sách",
+    "pathView": "Xem dạng lộ trình",
+    "levelCard": "{id} · {count} bài",
+    "locked": "Cần qua bài kiểm tra cuối cấp {level}",
+    "preview": "Xem trước. {reason}",
+    "kind": {
+      "experiment": "Thí nghiệm",
+      "reading": "Bài đọc"
+    },
+    "meta": "{kind} · {minutes} phút",
+    "difficulty": "Độ khó {n} trên 3",
+    "current": "Đang học",
+    "continue": "Tiếp tục",
+    "soon": "Sắp có",
+    "soonHint": "Trang bài học sẽ có ở bản cập nhật tới.",
+    "outcomes": "Xong cấp {level}, bạn sẽ",
+    "milestone": "{modes} chế độ · {rps} yêu cầu/giây",
+    "ready": {
+      "ready": "Chạy được trong Lab",
+      "waiting": "Chờ bộ mô phỏng",
+      "noLab": "Không cần Lab"
+    },
+    "openLab": "Vào Lab",
+    "levels": "Các cấp",
+    "levelHeading": "{id} · {title}",
+    "continueSoon": "Tiếp tục · Sắp có"
   },
   "challenges": {
     "title": "Thử thách",
@@ -129,7 +156,13 @@
     "modes": "Chế độ",
     "level": "Cấp {level}",
     "fromChallenge": "Thiết kế ban đầu của “{title}” ({mode})",
-    "notFound": "Không có thử thách hoặc chế độ đó, nên Lab mở thiết kế gần nhất của bạn."
+    "notFound": "Không có thử thách hoặc chế độ đó, nên Lab mở thiết kế gần nhất của bạn.",
+    "description": "Mỗi thử thách là một cột mốc: dựng một hệ thống đạt các mục tiêu dưới tải thật.",
+    "progressTitle": "Tiến độ",
+    "progressValue": "{done} / {total}",
+    "scoringTitle": "Cách chấm",
+    "scoring": "Mỗi lần chạy được chấm theo các mục tiêu của chế độ bạn chọn và ngân sách của nó. Đạt hết là qua.",
+    "prereqs": "Nên học trước:"
   },
   "leaderboard": {
     "title": "Bảng xếp hạng",

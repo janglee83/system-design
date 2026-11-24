@@ -119,7 +119,34 @@
     "placeholder": "Lessons arrive in the next update. Here is the path they will follow.",
     "level": "Level {level}",
     "minutes": "{n} min",
-    "lesson": "Lesson"
+    "lesson": "Lesson",
+    "description": "From zero: each level opens when you pass the previous level's exit check.",
+    "listView": "Show as a list",
+    "pathView": "Show as a path",
+    "levelCard": "{id} · {count} lessons",
+    "locked": "Pass the level {level} exit check first",
+    "preview": "Preview. {reason}",
+    "kind": {
+      "experiment": "Experiment",
+      "reading": "Reading"
+    },
+    "meta": "{kind} · {minutes} min",
+    "difficulty": "Difficulty {n} of 3",
+    "current": "Learning now",
+    "continue": "Continue",
+    "soon": "Coming soon",
+    "soonHint": "Lesson pages arrive in the next update.",
+    "outcomes": "After level {level}, you will",
+    "milestone": "{modes} modes · {rps} requests/s",
+    "ready": {
+      "ready": "Runs in the Lab",
+      "waiting": "Waiting for the simulator",
+      "noLab": "No Lab needed"
+    },
+    "openLab": "Open in the Lab",
+    "levels": "Levels",
+    "levelHeading": "{id} · {title}",
+    "continueSoon": "Continue · Coming soon"
   },
   "challenges": {
     "title": "Challenges",
@@ -129,7 +156,13 @@
     "modes": "Modes",
     "level": "Level {level}",
     "fromChallenge": "Starting design of “{title}” ({mode})",
-    "notFound": "That challenge or mode does not exist, so the Lab opened your last design."
+    "notFound": "That challenge or mode does not exist, so the Lab opened your last design.",
+    "description": "Each challenge is a milestone: build a system that meets its goals under real load.",
+    "progressTitle": "Progress",
+    "progressValue": "{done} / {total}",
+    "scoringTitle": "How it is scored",
+    "scoring": "Each run is checked against the goals of the mode you pick and its budget. Meet them all to pass.",
+    "prereqs": "Learn first:"
   },
   "leaderboard": {
     "title": "Leaderboard",

@@ -1,30 +1,22 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { loadCurriculum } from "@/content/load";
-import { Placeholder } from "@/shell/Placeholder";
+import { learnLevels } from "@/learn/learn-data";
+import { LearnView } from "@/learn/LearnView";
 
-/** The learning path as a plain list (sub-project 4 brings lesson pages; Design v2 DV-11 the path view). */
+/** The learning path (design-system §11, 11A) from curriculum.json; lesson pages come in sub-project 4. */
 export default async function LearnPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("learn");
-  const curriculum = await loadCurriculum();
-  const vi = locale === "vi";
+  const levels = await learnLevels(locale);
   return (
-    <Placeholder title={t("title")} body={t("placeholder")}>
-      {curriculum.levels.map((level, i) => (
-        <section key={level.id} className="mb-6">
-          <h2 className="section-label pb-1">{t("level", { level: i })}</h2>
-          <p className="pb-2 text-heading font-semibold">{vi ? level.titleVi : level.titleEn}</p>
-          <ol className="flex flex-col gap-1">
-            {level.lessons.map((lesson) => (
-              <li key={lesson.id} id={lesson.id} className="flex items-baseline justify-between gap-3 text-body">
-                <span>{vi ? lesson.titleVi : lesson.titleEn}</span>
-                <span className="num text-caption text-text-3">{t("minutes", { n: lesson.minutes })}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))}
-    </Placeholder>
+    <main className="min-h-0 flex-1 overflow-y-auto bg-bg">
+      <div className="mx-auto w-full max-w-[1180px] px-7 py-6">
+        <h1 className="text-display">{t("title")}</h1>
+        <p className="mt-1 text-body text-text-2">{t("description")}</p>
+        <div className="mt-4">
+          <LearnView levels={levels} />
+        </div>
+      </div>
+    </main>
   );
 }
