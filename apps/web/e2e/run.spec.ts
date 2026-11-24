@@ -132,3 +132,36 @@ test("the free Lab shows a neutral result with the headline numbers", async ({ p
   await verdict.getByRole("button", { name: "Close the result" }).click();
   await expect(verdict).toHaveCount(0);
 });
+
+test("where it broke shows the failing node and its neighbours inside the canvas, below the strip", async ({ page }) => {
+  await page.goto("/vi/lab?challenge=c-l0-first-launch");
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  await addAt(page, "Máy chủ web", 150, 470);
+  await addAt(page, "PostgreSQL", 600, 470);
+  await connectByDrag(page, "users", "web-server-1");
+  await connectByDrag(page, "web-server-1", "postgres-1");
+  await page.getByTestId("node-web-server-1").click();
+  const cpu = page.getByRole("complementary", { name: "Thuộc tính" }).getByRole("spinbutton", { name: "Số vCPU" });
+  await cpu.fill("8");
+  await cpu.press("Enter");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("Escape");
+  await runVi(page);
+  const verdict = page.getByTestId("verdict");
+  await verdict.getByRole("button", { name: "Hỏng ở đâu?" }).click();
+  await expect(page.getByTestId("why-callout")).toBeVisible();
+  const failing = await page.locator('[data-testid^="node-"][data-selected]').getAttribute("data-testid");
+  const id = failing!.replace("node-", "");
+  // The design's direct neighbours of the failing node.
+  const neighbours: Record<string, string[]> = { "web-server-1": ["users", "postgres-1"], "postgres-1": ["web-server-1"], users: ["web-server-1"] };
+  await page.waitForTimeout(500); // the 300 ms viewport animation
+  const canvas = (await page.getByTestId("lab-canvas").boundingBox())!;
+  const strip = (await verdict.boundingBox())!;
+  for (const n of [id, ...neighbours[id]!]) {
+    const b = (await page.getByTestId(`node-${n}`).boundingBox())!;
+    expect(b.x, n).toBeGreaterThanOrEqual(canvas.x);
+    expect(b.x + b.width, n).toBeLessThanOrEqual(canvas.x + canvas.width);
+    expect(b.y, n).toBeGreaterThanOrEqual(strip.y + strip.height);
+    expect(b.y + b.height, n).toBeLessThanOrEqual(canvas.y + canvas.height);
+  }
+});

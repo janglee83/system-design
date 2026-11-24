@@ -15,6 +15,7 @@ import { NODE_SIZE } from "../model/design";
 import { currentRun } from "../store/run-store";
 import { useDesign, useDesignApi, useRuns } from "../store/LabStores";
 import { useMetas } from "../use-metas";
+import { focusViewport } from "./focus-viewport";
 import { verdictView, type GoalChip } from "./verdict-model";
 
 const HEADLINE: (keyof Metrics)[] = ["p95", "availability", "throughputRps", "costPerMonth"];
@@ -78,8 +79,26 @@ export function Verdict({ onRunAgain }: { onRunAgain: () => void }) {
     if (!graded || !view.failing?.nodeId) return;
     const id = view.failing.nodeId;
     api.getState().select({ nodes: [id], edges: [], groups: [] });
-    // The node and its callout, clear of the verdict strip at the top (§7.3).
-    void flow.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1, padding: { top: "120px", bottom: "160px", left: "120px", right: "120px" } });
+    // The node, its direct neighbours and the callout, fitted into the canvas below the strip (§7.3).
+    const canvasEl = document.querySelector<HTMLElement>('[data-testid="lab-canvas"]');
+    const stripEl = document.querySelector<HTMLElement>('[data-testid="verdict"]');
+    if (canvasEl) {
+      const c = canvasEl.getBoundingClientRect();
+      const stripBottom = stripEl ? stripEl.getBoundingClientRect().bottom - c.top : 0;
+      const d = api.getState().design;
+      void flow.setViewport(
+        focusViewport({
+          nodes: d.nodes,
+          edges: d.edges,
+          failingId: id,
+          nodeSize: NODE_SIZE,
+          canvas: { width: c.width, height: c.height },
+          area: { top: stripBottom + 24, side: 48, bottom: 72 },
+          calloutHeight: 120,
+        }),
+        { duration: 300 },
+      );
+    }
     setWhy(run.id);
   };
 
