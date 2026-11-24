@@ -863,5 +863,48 @@
     "unavailable": "Không tải được yêu cầu này: bộ mô phỏng đã khởi động lại. Hãy chạy lại.",
     "delta": "+{ms} ms",
     "ms": "{ms} ms"
+  },
+  "onboarding": {
+    "title": "Làm quen với Lab",
+    "label": "Làm quen với Lab · {done}/5",
+    "progress": "{done}/5 việc · khoảng 3 phút",
+    "collapse": "Thu gọn",
+    "expand": "Mở rộng",
+    "showMe": "Chỉ cho tôi",
+    "footer": "Mở lại bất cứ lúc nào ở nút ?",
+    "hide": "Ẩn",
+    "doneTitle": "Hoàn thành phần làm quen",
+    "next": "Tiếp theo: thử thách đầu tiên · {title}",
+    "start": "Bắt đầu",
+    "help": "Làm quen với Lab",
+    "task": {
+      "addClient": "Thêm Người dùng",
+      "connectWeb": "Thêm một Máy chủ web và nối lại",
+      "addDatabase": "Thêm PostgreSQL để lưu dữ liệu",
+      "firstRun": "Chạy mô phỏng lần đầu",
+      "whereItBroke": "Mở “Hỏng ở đâu?” sau khi chạy"
+    },
+    "coach": {
+      "step": "Bước {n}/4",
+      "skip": "Bỏ qua",
+      "next": "Tiếp",
+      "done": "Xong",
+      "addClient": {
+        "title": "Bắt đầu từ người dùng",
+        "text": "Mở nhóm Lối vào và kéo Người dùng vào khung vẽ. Đây là nơi yêu cầu xuất phát."
+      },
+      "connectWeb": {
+        "title": "Nối tới một máy chủ",
+        "text": "Thêm Máy chủ web, rồi kéo từ cổng bên phải của Người dùng sang cổng bên trái của máy chủ."
+      },
+      "addDatabase": {
+        "title": "Thêm nơi lưu dữ liệu",
+        "text": "Trong nhóm Dữ liệu, kéo PostgreSQL vào và nối máy chủ web tới nó."
+      },
+      "firstRun": {
+        "title": "Chạy thử",
+        "text": "Bấm Chạy mô phỏng. Sau vài giây bạn sẽ thấy hệ thống chịu tải ra sao."
+      }
+    }
   }
 }

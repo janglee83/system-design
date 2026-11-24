@@ -863,5 +863,48 @@
     "unavailable": "This request cannot be loaded: the simulator restarted. Run again.",
     "delta": "+{ms} ms",
     "ms": "{ms} ms"
+  },
+  "onboarding": {
+    "title": "Get to know the Lab",
+    "label": "Get to know the Lab · {done}/5",
+    "progress": "{done}/5 tasks · about 3 minutes",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "showMe": "Show me",
+    "footer": "Reopen it any time from the ? button",
+    "hide": "Hide",
+    "doneTitle": "You know your way around",
+    "next": "Next: your first challenge · {title}",
+    "start": "Start",
+    "help": "Get to know the Lab",
+    "task": {
+      "addClient": "Add Users",
+      "connectWeb": "Add a Web server and connect it",
+      "addDatabase": "Add PostgreSQL to keep data",
+      "firstRun": "Run your first simulation",
+      "whereItBroke": "Open “Where did it break?” after a run"
+    },
+    "coach": {
+      "step": "Step {n}/4",
+      "skip": "Skip",
+      "next": "Next",
+      "done": "Done",
+      "addClient": {
+        "title": "Start with the users",
+        "text": "Open Entry and drag Users onto the canvas. That is where requests come from."
+      },
+      "connectWeb": {
+        "title": "Connect a server",
+        "text": "Add a Web server, then drag from the right-hand port of Users to the server's left-hand port."
+      },
+      "addDatabase": {
+        "title": "Add somewhere to keep data",
+        "text": "From Data, drag PostgreSQL in and connect the web server to it."
+      },
+      "firstRun": {
+        "title": "Give it a run",
+        "text": "Press Run simulation. In a few seconds you will see how the system copes."
+      }
+    }
   }
 }

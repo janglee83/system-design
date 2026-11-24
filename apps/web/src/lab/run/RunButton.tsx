@@ -21,7 +21,7 @@ export function RunButton({ onRun }: { onRun: () => void }) {
   const currentId = useRuns((s) => s.currentId);
   const running = status === "running";
   return (
-    <div data-testid="run-bar" data-status={status} data-run-id={currentId ?? ""} className="flex h-9 w-[264px] items-center justify-end gap-2">
+    <div data-testid="run-bar" data-tour="run" data-status={status} data-run-id={currentId ?? ""} className="flex h-9 w-[264px] items-center justify-end gap-2">
       {running ? <Progress /> : <Split onRun={onRun} />}
     </div>
   );

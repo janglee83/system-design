@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { IconButton } from "@/ui/IconButton";
 import { useMediaQuery } from "@/ui/use-media-query";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { AboutDialog } from "./AboutDialog";
+import { useOnboarding } from "./onboarding-store";
 import { LanguageItems } from "./LanguageSwitch";
 import { MENU_CONTENT_CLASS, MENU_ITEM_CLASS, MENU_LABEL_CLASS } from "./menu-styles";
 
@@ -17,6 +19,8 @@ export function HelpMenu({ extraItems }: { extraItems?: React.ReactNode }) {
   const t = useTranslations();
   const [aboutOpen, setAboutOpen] = useState(false);
   const narrow = useMediaQuery(NARROW_TOP_BAR);
+  const pathname = usePathname();
+  const router = useRouter();
   return (
     <>
       <DM.Root modal={false}>
@@ -29,6 +33,15 @@ export function HelpMenu({ extraItems }: { extraItems?: React.ReactNode }) {
           <DM.Content align="end" sideOffset={6} className={MENU_CONTENT_CLASS}>
             {extraItems}
             {extraItems ? <DM.Separator className="my-1 h-px bg-border" /> : null}
+            <DM.Item
+              className={MENU_ITEM_CLASS}
+              onSelect={() => {
+                useOnboarding.getState().reopen();
+                if (pathname !== "/lab") router.push("/lab");
+              }}
+            >
+              {t("onboarding.help")}
+            </DM.Item>
             <DM.Item className={MENU_ITEM_CLASS} onSelect={() => setAboutOpen(true)}>
               {t("help.about")}
             </DM.Item>

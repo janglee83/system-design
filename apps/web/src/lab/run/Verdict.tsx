@@ -13,7 +13,7 @@ import { formatMetric } from "../format";
 import { displayLabel, type Translate } from "../labels";
 import { NODE_SIZE } from "../model/design";
 import { currentRun } from "../store/run-store";
-import { useDesign, useDesignApi, usePlayback, useRuns, useTrace } from "../store/LabStores";
+import { useDesign, useDesignApi, usePlayback, useRuns, useTrace, useUiApi } from "../store/LabStores";
 import { useMetas } from "../use-metas";
 import { focusViewport } from "./focus-viewport";
 import { verdictView, type GoalChip } from "./verdict-model";
@@ -36,6 +36,7 @@ export function Verdict({ onRunAgain }: { onRunAgain: () => void }) {
   const status = useRuns((s) => s.status);
   const api = useDesignApi();
   const flow = useReactFlow();
+  const ui = useUiApi();
   const narrow = useMediaQuery("(max-width: 1280px)");
   const [closed, setClosed] = useState<number | null>(null);
   const [why, setWhy] = useState<number | null>(null);
@@ -83,6 +84,7 @@ export function Verdict({ onRunAgain }: { onRunAgain: () => void }) {
     if (!graded || !view.failing?.nodeId) return;
     const id = view.failing.nodeId;
     api.getState().select({ nodes: [id], edges: [], groups: [] });
+    ui.getState().set({ whyUsed: true });
     // The node, its direct neighbours and the callout, fitted into the canvas below the strip (§7.3).
     const canvasEl = document.querySelector<HTMLElement>('[data-testid="lab-canvas"]');
     const stripEl = document.querySelector<HTMLElement>('[data-testid="verdict"]');

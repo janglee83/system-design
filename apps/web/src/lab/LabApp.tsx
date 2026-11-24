@@ -43,6 +43,7 @@ import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
 import { useKindPrices } from "./palette/use-kind-prices";
 import { BottomPanel } from "./panel/BottomPanel";
+import { Onboarding } from "@/shell/Onboarding";
 import { EmptyLab } from "./EmptyLab";
 import { EngineBoot } from "./EngineBoot";
 import { EngineError } from "./EngineError";
@@ -229,6 +230,7 @@ function CanvasArea({ starts }: { starts: readonly ChallengeStart[] }) {
       </div>
       <EngineBoot />
       <EngineError />
+      {status === "ready" ? <Onboarding firstChallenge={starts[0] ?? null} /> : null}
       <RunFeedback />
     </section>
   );

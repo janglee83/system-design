@@ -15,6 +15,8 @@ export interface UiState {
   minimapChoice: boolean | null;
   /** The last design was looked for (and restored if there was one): the boot card's last step. */
   draftChecked: boolean;
+  /** "Hỏng ở đâu?" was used (the checklist's last task). */
+  whyUsed: boolean;
   /** The engine error card was put aside to edit the design while the engine is down. */
   errorDismissed: boolean;
   /** Incremented to ask the inspector to focus its first control (Enter on a node). */
@@ -35,6 +37,7 @@ export function createUiStore() {
     draftChecked: false,
     minimapChoice: null,
     errorDismissed: false,
+    whyUsed: false,
     set: (patch) => set(patch),
     focusInspector: () => set({ inspectorFocusTick: get().inspectorFocusTick + 1 }),
   }));

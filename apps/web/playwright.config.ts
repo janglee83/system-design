@@ -18,6 +18,11 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     locale: "en-US",
     colorScheme: "light",
+    // The first-run checklist starts hidden so it does not sit under drag targets; help.spec.ts opts back in.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: `http://127.0.0.1:${PORT}`, localStorage: [{ name: "sd-onboarding", value: JSON.stringify({ hidden: true, done: [] }) }] }],
+    },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
   // Runs the production build; `pnpm build` must have run first (root script test:web does).
