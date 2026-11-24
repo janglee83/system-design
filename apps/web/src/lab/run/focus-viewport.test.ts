@@ -34,6 +34,15 @@ describe("focusViewport (where it broke)", () => {
     expect(box(nodes[1]!, v).bottom + 120 * v.zoom).toBeLessThanOrEqual(canvas.height - area.bottom + 0.5);
   });
 
+  it("fits exactly the given nodes when told to (a followed path)", () => {
+    const v = focusViewport({ nodes, edges: [], failingId: "users", only: ["users", "web", "pg"], nodeSize: size, canvas, area, calloutHeight: 0 });
+    for (const id of ["users", "pg"]) {
+      const b = box(nodes.find((n) => n.id === id)!, v);
+      expect(b.left, id).toBeGreaterThanOrEqual(area.side - 0.5);
+      expect(b.right, id).toBeLessThanOrEqual(canvas.width - area.side + 0.5);
+    }
+  });
+
   it("does not zoom in past 100 % for a lone node", () => {
     const v = focusViewport({ nodes, edges: [], failingId: "web", nodeSize: size, canvas, area, calloutHeight: 120 });
     expect(v.zoom).toBe(1);

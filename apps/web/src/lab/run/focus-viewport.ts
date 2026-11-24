@@ -9,14 +9,16 @@ export function focusViewport(s: {
   nodes: readonly { id: string; position: { x: number; y: number } }[];
   edges: readonly { from: string; to: string }[];
   failingId: string;
+  /** Fit exactly these nodes instead of the failing node and its neighbours (a followed request's path). */
+  only?: readonly string[];
   nodeSize: { width: number; height: number };
   canvas: { width: number; height: number };
   /** Free space to keep: below the strip (top), at the sides and at the bottom, in screen px. */
   area: { top: number; side: number; bottom: number };
   calloutHeight: number;
 }): { x: number; y: number; zoom: number } {
-  const ids = new Set([s.failingId]);
-  for (const e of s.edges) {
+  const ids = new Set(s.only ?? [s.failingId]);
+  for (const e of s.only ? [] : s.edges) {
     if (e.from === s.failingId) ids.add(e.to);
     if (e.to === s.failingId) ids.add(e.from);
   }
