@@ -51,10 +51,12 @@ import type { ChallengeStart } from "./templates";
 import { StatusStrip } from "./StatusStrip";
 import { UndoRedo } from "./UndoRedo";
 import { LiveChip } from "./run/LiveChip";
+import { PlaybackBar } from "./run/PlaybackBar";
+import { usePlaybackLoop } from "./run/use-playback-loop";
 import { RunButton } from "./run/RunButton";
 import { Verdict } from "./run/Verdict";
 import { useRunDesign } from "./run/use-run-design";
-import { LabStoresProvider, useDesign, useDesignApi, useDocApi, useRuns, useRunsApi, useUiApi } from "./store/LabStores";
+import { LabStoresProvider, useDesign, useDesignApi, useDocApi, usePlaybackApi, useRuns, useRunsApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
 import { useMetas } from "./use-metas";
@@ -95,14 +97,17 @@ export function LabApp({
           <RunPane />
         </TopBarPortal>
         <div data-testid="lab-page" className="flex min-h-0 flex-1 flex-col">
-          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_368px] grid-rows-[minmax(0,1fr)_auto]">
-            <aside aria-label={t("palette")} className="row-span-2 min-h-0" data-tour="palette">
+          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_368px] grid-rows-[minmax(0,1fr)_auto_auto]">
+            <aside aria-label={t("palette")} className="row-span-3 min-h-0" data-tour="palette">
               <PalettePane planned={planned} />
             </aside>
             <CanvasArea starts={starts} />
             <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
               <Inspector />
             </aside>
+            <div className="col-span-2 min-w-0">
+              <PlaybackBar />
+            </div>
             <div className="col-span-2 min-w-0" data-tour="panel">
               <BottomPanel />
             </div>
@@ -153,6 +158,8 @@ function LabShortcuts() {
   const run = useRunDesign();
   const docActions = useDocActions();
   const runs = useRunsApi();
+  const playback = usePlaybackApi();
+  usePlaybackLoop();
   // The viewer's minimap choice from this browser, if they ever made one.
   useEffect(() => {
     const saved = readMinimapChoice();
@@ -179,6 +186,7 @@ function LabShortcuts() {
     zoomOut: () => void flow.zoomOut({ duration: 200 }),
     toggleSnap: () => toggleSnap(ui),
     toggleMinimap: () => toggleMinimap(ui, api),
+    playPause: () => playback.getState().toggle(),
     layout,
     group: () => groupSelection(api),
     ungroup: () => ungroupSelection(api),

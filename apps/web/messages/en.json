@@ -816,5 +816,15 @@
     "safe": "The design “{name}” is still safe in this browser",
     "edit": "Edit the design while it cannot run",
     "details": "Technical details"
+  },
+  "playback": {
+    "play": "Play",
+    "pause": "Pause",
+    "speed": "Playback speed",
+    "speedValue": "{speed}×",
+    "time": "Playback time",
+    "timeValue": "{now} / {total} s",
+    "marker": "{time} s: {text}",
+    "bar": "Run playback"
   }
 }

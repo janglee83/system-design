@@ -816,5 +816,15 @@
     "safe": "Thiết kế “{name}” vẫn an toàn trên trình duyệt này",
     "edit": "Sửa thiết kế khi chưa chạy được",
     "details": "Chi tiết kỹ thuật"
+  },
+  "playback": {
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "speed": "Tốc độ phát",
+    "speedValue": "{speed}×",
+    "time": "Thời điểm phát",
+    "timeValue": "{now} / {total} giây",
+    "marker": "giây {time}: {text}",
+    "bar": "Phát lại lần chạy"
   }
 }
