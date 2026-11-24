@@ -69,3 +69,16 @@ test("an event's 'Xem trên sơ đồ' selects its component; the events tab cou
   await page.getByRole("button", { name: "Xem trên sơ đồ" }).first().click();
   await expect(page.locator('[data-testid^="node-"][data-selected]')).toHaveCount(1);
 });
+
+test("the Mô phỏng tab holds the workload form in four columns", async ({ page }) => {
+  await page.goto("/vi/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  const bar = page.getByTestId("run-bar");
+  await bar.getByRole("button", { name: /^Chạy mô phỏng/ }).click();
+  await expect(bar).toHaveAttribute("data-run-id", /\d+/);
+  await page.getByRole("tab", { name: "Mô phỏng" }).click();
+  const form = page.getByTestId("sim-form");
+  await expect(form.getByRole("spinbutton", { name: "Tổng số yêu cầu mỗi giây" })).toBeVisible();
+  const cols = await form.locator("[data-section-body]").first().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+  expect(cols).toBe(4);
+});

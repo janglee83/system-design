@@ -25,7 +25,7 @@ export function Milestone({ c, locked }: { c: LearnChallenge; locked: boolean })
   const t = useTranslations();
   const locale = useLocale();
   return (
-    <li className="grid grid-cols-[48px_minmax(0,1fr)] items-start gap-3">
+    <li id={c.id} className="grid grid-cols-[48px_minmax(0,1fr)] items-start gap-3">
       <span aria-hidden className="relative z-[1] grid size-12 place-items-center rounded-lg border-2 border-busy-line bg-busy-soft text-busy">
         <Flag size={18} />
       </span>

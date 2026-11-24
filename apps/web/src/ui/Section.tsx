@@ -65,7 +65,9 @@ export function Section({
             ) : null}
           </A.Trigger>
         </A.Header>
-        <A.Content className="flex flex-col gap-3 px-4 pb-4">{children}</A.Content>
+        <A.Content data-section-body className="flex flex-col gap-3 px-4 pb-4">
+          {children}
+        </A.Content>
       </A.Item>
     </A.Root>
   );

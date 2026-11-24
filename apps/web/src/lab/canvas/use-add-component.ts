@@ -9,6 +9,19 @@ import { addNode, freeSpot } from "../model/ops";
 import { useDesignApi, useRunsApi } from "../store/LabStores";
 import { useMetas } from "../use-metas";
 
+/**
+ * After an add, a node that landed outside the visible canvas brings the whole design into view
+ * (48 px padding, at most 100 %) so nothing is clipped at the edge (Task 35a).
+ */
+function ensureInView(flow: ReturnType<typeof useReactFlow>, node: { position: { x: number; y: number } } | undefined) {
+  const r = document.querySelector('[data-testid="lab-canvas"]')?.getBoundingClientRect();
+  if (!node || !r) return;
+  const a = flow.flowToScreenPosition(node.position);
+  const b = flow.flowToScreenPosition({ x: node.position.x + NODE_SIZE.width, y: node.position.y + NODE_SIZE.height });
+  if (a.x >= r.left && a.y >= r.top && b.x <= r.right && b.y <= r.bottom) return;
+  requestAnimationFrame(() => void flow.fitView({ duration: 200, maxZoom: 1, padding: { top: "48px", left: "48px", right: "48px", bottom: "48px" } }));
+}
+
 /** Adds a component at a screen point, or at the centre of the canvas, and selects it (null when refused). */
 export function useAddComponent() {
   const flow = useReactFlow();
@@ -37,6 +50,7 @@ export function useAddComponent() {
       });
       if (id) {
         api.getState().select({ nodes: [id], edges: [], groups: [] });
+        ensureInView(flow, api.getState().design.nodes.find((n) => n.id === id));
         const node = api.getState().design.nodes.find((n) => n.id === id);
         if (node) announce(t("palette.added", { name: displayLabel(node, meta, t) }));
       }

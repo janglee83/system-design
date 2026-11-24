@@ -78,7 +78,8 @@
       "label": "Overview map"
     },
     "edgeRate": "About {count} requests on this connection right now (estimated from the receiving side)",
-    "edgePill": "{count} on the way"
+    "edgePill": "{count} on the way",
+    "inspectorWidth": "Inspector width"
   },
   "nav": {
     "primary": "Main",

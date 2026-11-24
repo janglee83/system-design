@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useToasts } from "@/ui/toast-store";
 import en from "../../../messages/en.json";
 import { TooltipProvider } from "@/ui/Tooltip";
-import { fourTier } from "../../test/engine-fixtures";
+import { FakeWorker, fourTier } from "../../test/engine-fixtures";
+import { EngineClient as RealClient } from "../../engine/client";
+import { EngineProvider } from "../../engine/EngineProvider";
+import { LabStoresProvider } from "../store/LabStores";
 import type { EngineClient } from "../../engine/client";
 import type { RunRecord } from "../store/run-store";
 import { SimulationTab } from "./SimulationTab";
@@ -27,7 +30,11 @@ function setup(epoch: number, current: number, client: Partial<EngineClient> = {
   render(
     <NextIntlClientProvider locale="en" messages={en}>
       <TooltipProvider>
-        <SimulationTab run={run(epoch)} epoch={current} engineVersion="0.1.0" client={client as EngineClient} />
+        <EngineProvider makeClient={() => new RealClient(() => new FakeWorker())}>
+          <LabStoresProvider>
+            <SimulationTab run={run(epoch)} epoch={current} engineVersion="0.1.0" client={client as EngineClient} />
+          </LabStoresProvider>
+        </EngineProvider>
       </TooltipProvider>
     </NextIntlClientProvider>,
   );

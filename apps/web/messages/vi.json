@@ -78,7 +78,8 @@
       "label": "Bản đồ thu nhỏ"
     },
     "edgeRate": "Khoảng {count} yêu cầu đang đi trên kết nối này lúc này (ước tính từ phía nhận)",
-    "edgePill": "{count} đang đi"
+    "edgePill": "{count} đang đi",
+    "inspectorWidth": "Độ rộng bảng thuộc tính"
   },
   "nav": {
     "primary": "Chính",

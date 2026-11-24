@@ -47,6 +47,7 @@ import { Onboarding } from "@/shell/Onboarding";
 import { EmptyLab } from "./EmptyLab";
 import { EngineBoot } from "./EngineBoot";
 import { EngineError } from "./EngineError";
+import { INSPECTOR_WIDTH, PanelResizer, usePanelWidth } from "./PanelResizer";
 import { Problems } from "./Problems";
 import type { ChallengeStart } from "./templates";
 import { StatusStrip } from "./StatusStrip";
@@ -82,6 +83,7 @@ export function LabApp({
 }) {
   useEngineStart();
   const t = useTranslations("lab");
+  const [inspectorWidth, setInspectorWidth] = usePanelWidth("inspector", INSPECTOR_WIDTH);
   return (
     <LabStoresProvider initial={initial}>
       <ReactFlowProvider>
@@ -99,12 +101,13 @@ export function LabApp({
           <RunPane />
         </TopBarPortal>
         <div data-testid="lab-page" className="flex min-h-0 flex-1 flex-col">
-          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_368px] grid-rows-[minmax(0,1fr)_auto_auto]">
+          <div className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_var(--inspector-w)] grid-rows-[minmax(0,1fr)_auto_auto]" style={{ "--inspector-w": `${inspectorWidth}px` } as React.CSSProperties}>
             <aside aria-label={t("palette")} className="row-span-3 min-h-0" data-tour="palette">
               <PalettePane planned={planned} />
             </aside>
             <CanvasArea starts={starts} />
-            <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
+            <aside aria-label={t("inspector")} className="relative min-h-0 border-l border-border bg-bg" data-tour="inspector">
+              <PanelResizer label={t("inspectorWidth")} value={inspectorWidth} min={INSPECTOR_WIDTH.min} max={INSPECTOR_WIDTH.max} onChange={setInspectorWidth} />
               <Inspector />
             </aside>
             <div className="col-span-2 min-w-0">

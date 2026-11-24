@@ -40,6 +40,29 @@ export function LearnView({ levels }: { levels: readonly LearnLevel[] }) {
   const { done, current, strip, lockedBy } = useLearnState(levels);
   const [selected, setSelected] = useState<string | null>(null);
   const [list, setList] = useState(false);
+  // "#lesson-id" (from the command palette or a challenge's prerequisites) opens that lesson's
+  // level, then scrolls to it once the path has rendered.
+  const [target, setTarget] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      const level = levels.find((l) => l.lessons.some((x) => x.id === id) || l.challenges.some((x) => x.id === id));
+      if (!level) return;
+      setList(false);
+      setSelected(level.id);
+      setTarget(id);
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, [levels]);
+  useEffect(() => {
+    if (!target) return;
+    const el = document.getElementById(target);
+    if (!el) return;
+    el.scrollIntoView({ block: "center" });
+    setTarget(null);
+  }, [target, selected]);
   const level = levels.find((l) => l.id === (selected ?? current.id)) ?? current;
   const locked = lockedBy(level.id);
   const currentLesson = current.lessons.find((x) => !done.has(x.id)) ?? null;

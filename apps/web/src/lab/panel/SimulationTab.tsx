@@ -1,6 +1,8 @@
 "use client";
 import { Copy, Download } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEngineStore } from "@/engine/EngineProvider";
+import { WorkloadForm } from "../inspector/WorkloadForm";
 import { useState } from "react";
 import type { EngineClient } from "@/engine/client";
 import { Button } from "@/ui/Button";
@@ -10,6 +12,8 @@ import { runAvailable, type RunRecord } from "../store/run-store";
 import { runExportFile } from "./export";
 
 /** What was sent to the engine, its version, and the run's export (when the worker still holds it). */
+const NO_PARAMS: string[] = [];
+
 export function SimulationTab({
   run,
   epoch,
@@ -22,6 +26,7 @@ export function SimulationTab({
   client: EngineClient | null;
 }) {
   const t = useTranslations();
+  const workloadParams = useEngineStore((s) => s.info?.capabilities.workloadParams ?? NO_PARAMS);
   const [exporting, setExporting] = useState(false);
   const inputText = JSON.stringify(run.input, null, 2);
   const available = runAvailable(run, epoch);
@@ -58,6 +63,13 @@ export function SimulationTab({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* The workload form in four columns (design-system §8, Mô phỏng). */}
+      <div
+        data-testid="sim-form"
+        className="rounded-md border border-border bg-surface [&_[data-section-body]]:grid [&_[data-section-body]]:grid-cols-4 [&_[data-section-body]]:items-start [&_[data-section-body]]:gap-x-4"
+      >
+        <WorkloadForm workloadParams={workloadParams} />
+      </div>
       <div className="flex items-center gap-2">
         <p className="num flex-1 text-caption text-text-2">{t("simulation.engine", { version: engineVersion })}</p>
         <Button size="sm" onClick={() => void exportRun()} disabled={!client || !available || exporting}>
