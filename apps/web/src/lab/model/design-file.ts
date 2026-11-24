@@ -2,7 +2,14 @@ import { z } from "zod";
 import { ALL_FAULT_KINDS, ARRIVALS, EDGE_KINDS, PROFILES } from "@/i18n/engine-codes";
 import { DESIGN_FORMAT_VERSION, type Design } from "./design";
 
-export const DESIGN_FILE_LIMITS = { nodes: 500, edges: 2000, groups: 100, faults: 100, params: 50, text: 200 } as const;
+export const DESIGN_FILE_LIMITS = { nodes: 500, edges: 2000, groups: 100, faults: 100, params: 50, config: 50, text: 200 } as const;
+
+/**
+ * Upper bounds on every number a run depends on (security review: import DoS). The engine is a
+ * fixed-tick fluid model, so its cost does not grow with traffic, but absurd values still make
+ * nonsense runs and can overflow. Runs last at most 10 minutes of simulated time.
+ */
+export const WORKLOAD_LIMITS = { baseRps: 1e6, clients: 1e7, surgeFactor: 100, timeMs: 600_000 } as const;
 
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/);
 const key = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/); // never "__proto__"
@@ -11,15 +18,16 @@ const text = z.string().max(DESIGN_FILE_LIMITS.text);
 const xy = z.strictObject({ x: num, y: num });
 const configValue = z.union([num, z.boolean(), z.string().max(64)]);
 
+const ms = z.number().int().min(0).max(WORKLOAD_LIMITS.timeMs);
 const workload = z.strictObject({
   profile: z.enum(PROFILES),
-  baseRps: num.min(0),
+  baseRps: num.min(0).max(WORKLOAD_LIMITS.baseRps),
   writeRatio: num.min(0).max(1),
-  clients: z.number().int().min(1),
-  clientTimeoutMs: num.positive(),
-  surge: z.strictObject({ factor: num.min(0), atMs: z.number().int().min(0), durationMs: z.number().int().min(0) }).nullable(),
+  clients: z.number().int().min(1).max(WORKLOAD_LIMITS.clients),
+  clientTimeoutMs: num.positive().max(WORKLOAD_LIMITS.timeMs),
+  surge: z.strictObject({ factor: num.min(0).max(WORKLOAD_LIMITS.surgeFactor), atMs: ms, durationMs: ms }).nullable(),
   params: z.record(key, num).refine((r) => Object.keys(r).length <= DESIGN_FILE_LIMITS.params, { params: { code: "too_big" } }),
-  trafficEndMs: z.number().int().min(0).optional(),
+  trafficEndMs: ms.optional(),
   arrivals: z.enum(ARRIVALS).optional(),
 });
 
@@ -29,6 +37,18 @@ const calibrationKeys = [
   "pgQpsPerInstance", "pgServiceMs", "pgQueueSeconds", "pgCostPerInstance", "pgFailoverMs", "pgMaxUtilizationForLatency",
   "edgeDelayHttpMs", "edgeDelayDbMs", "edgeDelayCacheMs", "edgeDelayMsgMs",
 ] as const;
+
+/**
+ * Calibration overrides in the ranges sim-core accepts (calibration.rs invalid_overrides), with
+ * sensible upper ends: rates are > 0, the utilisation limits lie in (0, 1), times are at most
+ * 10 minutes, everything else is >= 0 and at most 1e7.
+ */
+function calibrationField(k: (typeof calibrationKeys)[number]) {
+  if (k.endsWith("MaxUtilizationForLatency")) return num.gt(0).lt(1);
+  if (k === "webRpsPerVcpu" || k === "lbRpsPerReplica" || k === "pgQpsPerInstance") return num.positive().max(1e7);
+  if (k.endsWith("Ms")) return num.min(0).max(WORKLOAD_LIMITS.timeMs);
+  return num.min(0).max(1e7);
+}
 
 const schema = z.strictObject({
   designFormatVersion: z.literal(DESIGN_FORMAT_VERSION),
@@ -41,7 +61,7 @@ const schema = z.strictObject({
         kind: z.string().regex(/^[a-z0-9-]{1,40}$/),
         label: text,
         replicas: z.number().int().min(1).max(1000),
-        config: z.record(key, configValue),
+        config: z.record(key, configValue).refine((r) => Object.keys(r).length <= DESIGN_FILE_LIMITS.config, { params: { code: "too_big" } }),
         position: xy,
         groupId: id.nullable(),
       }),
@@ -52,8 +72,8 @@ const schema = z.strictObject({
     .array(z.strictObject({ id, label: text, position: xy, size: z.strictObject({ width: num.positive(), height: num.positive() }) }))
     .max(DESIGN_FILE_LIMITS.groups),
   workload,
-  faults: z.array(z.strictObject({ kind: z.enum(ALL_FAULT_KINDS), target: id.nullable(), atMs: z.number().int().min(0) })).max(DESIGN_FILE_LIMITS.faults),
-  calibration: z.strictObject(Object.fromEntries(calibrationKeys.map((k) => [k, num.optional()])) as Record<(typeof calibrationKeys)[number], z.ZodOptional<z.ZodNumber>>),
+  faults: z.array(z.strictObject({ kind: z.enum(ALL_FAULT_KINDS), target: id.nullable(), atMs: ms })).max(DESIGN_FILE_LIMITS.faults),
+  calibration: z.strictObject(Object.fromEntries(calibrationKeys.map((k) => [k, calibrationField(k).optional()])) as Record<(typeof calibrationKeys)[number], z.ZodOptional<z.ZodNumber>>),
   durationMs: z.number().int().min(1).max(600_000),
   seed: z.number().int().min(0).max(4294967295),
   locked: z.array(id).max(DESIGN_FILE_LIMITS.nodes),
@@ -79,6 +99,11 @@ const schema = z.strictObject({
         .optional(),
     })
     .nullable(),
+}).superRefine((d, ctx) => {
+  // Traffic cannot stop after the run ends.
+  if (d.workload.trafficEndMs !== undefined && d.workload.trafficEndMs > d.durationMs) {
+    ctx.addIssue({ code: "custom", path: ["workload", "trafficEndMs"], params: { code: "too_big" } });
+  }
 });
 
 export type FileIssue = { path: string; code: string };

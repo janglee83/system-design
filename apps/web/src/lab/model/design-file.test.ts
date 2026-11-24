@@ -72,4 +72,30 @@ describe("design file", () => {
     doc.nodes[1].kind = "quantum-cache";
     expect(parseDesignFile(JSON.stringify(doc)).ok).toBe(true);
   });
+
+  it("bounds every number a run's cost could depend on (review: import DoS)", () => {
+    type Doc = {
+      durationMs: number;
+      workload: { baseRps: number; clients: number; surge: unknown; trafficEndMs?: number };
+      calibration: Record<string, number>;
+      nodes: { config: Record<string, number> }[];
+    };
+    const base = JSON.parse(exportDesign(sample(), "0.1.0").text) as Doc;
+    const patch = (f: (d: Doc) => void) => {
+      const d = structuredClone(base);
+      f(d);
+      return codes(JSON.stringify(d));
+    };
+    expect(patch(() => undefined)).toEqual([]);
+    expect(patch((d) => (d.workload.baseRps = 1e6))).toEqual([]);
+    expect(patch((d) => (d.workload.baseRps = 1e6 + 1))).toEqual(["workload.baseRps|too_big"]);
+    expect(patch((d) => (d.workload.clients = 1e7 + 1))).toEqual(["workload.clients|too_big"]);
+    expect(patch((d) => (d.workload.surge = { factor: 101, atMs: 0, durationMs: 1000 }))).toEqual(["workload.surge.factor|too_big"]);
+    expect(patch((d) => (d.workload.trafficEndMs = d.durationMs + 1))).toEqual(["workload.trafficEndMs|too_big"]);
+    expect(patch((d) => (d.calibration = { webRpsPerVcpu: 0 }))).toEqual(["calibration.webRpsPerVcpu|too_small"]);
+    expect(patch((d) => (d.calibration = { lbMaxUtilizationForLatency: 1 }))).toEqual(["calibration.lbMaxUtilizationForLatency|too_big"]);
+    expect(patch((d) => (d.calibration = { webServiceMs: 1e9 }))).toEqual(["calibration.webServiceMs|too_big"]);
+    expect(patch((d) => (d.nodes[0]!.config = Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`k${i}`, 1]))))).toEqual(["nodes.0.config|too_big"]);
+  });
 });
+

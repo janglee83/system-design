@@ -19,8 +19,9 @@ const UNIT_OPEN: ReadonlySet<Field> = new Set(["lbMaxUtilizationForLatency", "pg
  * the engine's ranges are replaced by safe values just inside them.
  */
 export function calibrationBounds(f: Field): { min: number; max: number | null; step: number } {
+  // The upper ends match the design-file schema, so whatever is entered here exports and imports.
   if (UNIT_OPEN.has(f)) return { min: 0.05, max: 0.99, step: 0.01 };
-  if (POSITIVE.has(f)) return { min: 1, max: null, step: 100 };
-  if (f.endsWith("Ms")) return { min: 0, max: null, step: 0.5 };
-  return { min: 0, max: null, step: f.includes("Cost") ? 0.5 : 1 };
+  if (POSITIVE.has(f)) return { min: 1, max: 1e7, step: 100 };
+  if (f.endsWith("Ms")) return { min: 0, max: 600_000, step: 0.5 };
+  return { min: 0, max: 1e7, step: f.includes("Cost") ? 0.5 : 1 };
 }
