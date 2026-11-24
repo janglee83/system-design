@@ -13,9 +13,10 @@ export function designFromTemplate(id: TemplateId, metas: ReadonlyMap<string, Co
     const meta = metas.get(kind);
     if (meta) d = addNode(d, meta, { x, y: 64 }).design;
   };
+  // 172 px tiles with 160 px between them: room for an edge's traffic pill.
   place("client", 64);
-  place("web-server", 336);
-  place("postgres", 608);
+  place("web-server", 400);
+  place("postgres", 736);
   for (const [from, to] of [["client-1", "web-server-1"], ["web-server-1", "postgres-1"]] as const) {
     d = connect(d, from, to, metas).design;
   }
