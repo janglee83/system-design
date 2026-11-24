@@ -108,7 +108,14 @@ export class EngineClient {
         this.restart(); // a stuck worker would hold every later request behind it
       }, this.#timeoutMs);
       this.#pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timer });
-      this.#worker.postMessage({ id, request }, transfer);
+      try {
+        this.#worker.postMessage({ id, request }, transfer);
+      } catch (e) {
+        // The message never left (it could not be cloned): reject now and clear the timer. The
+        // worker itself is fine, so it is not restarted (review).
+        const p = this.#take(id);
+        p?.reject(e instanceof Error ? e : new Error(String(e)));
+      }
     });
   }
 

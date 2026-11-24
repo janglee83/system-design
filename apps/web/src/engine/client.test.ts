@@ -149,4 +149,27 @@ describe("EngineClient", () => {
     // Epochs are unique across clients too (a remounted Lab gets a new client).
     expect(new EngineClient(() => new FakeWorker()).epoch).toBeGreaterThan(client.epoch);
   });
+
+  it("rejects at once, without a timer or a restart, when postMessage throws (review)", async () => {
+    vi.useFakeTimers();
+    try {
+      let workers = 0;
+      const client = new EngineClient(() => {
+        workers++;
+        const w = new FakeWorker();
+        w.postMessage = () => {
+          throw new DOMException("could not be cloned", "DataCloneError");
+        };
+        return w;
+      });
+      const epoch = client.epoch;
+      await expect(client.request({ type: "engineVersion" })).rejects.toThrow(/could not be cloned/);
+      expect(vi.getTimerCount()).toBe(0); // no 30 s timer left behind
+      expect(client.epoch).toBe(epoch); // the worker was not restarted
+      expect(workers).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+
