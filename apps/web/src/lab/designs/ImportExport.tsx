@@ -55,11 +55,14 @@ export const ImportExport = forwardRef<ImportExportHandle>(function ImportExport
           const file = e.target.files?.[0];
           e.target.value = ""; // choosing the same file again still fires
           if (!file) return;
-          void readDesignFile(file).then((r) => {
-            if (!r.ok) setIssues(r.issues);
-            else if (doc.getState().dirty) setPending(r.design);
-            else load(r.design);
-          });
+          void readDesignFile(file)
+            .then((r) => {
+              if (!r.ok) setIssues(r.issues);
+              else if (doc.getState().dirty) setPending(r.design);
+              else load(r.design);
+            })
+            // A read that fails outright still ends in a translated message (review).
+            .catch(() => setIssues([{ path: "", code: "unreadable" }]));
         }}
       />
       <Dialog

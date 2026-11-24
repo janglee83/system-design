@@ -736,7 +736,9 @@
     "dangling_ref": "points to something that does not exist",
     "duplicate_id": "repeats an id that is already used",
     "line": "{path}: {reason}",
-    "imported": "Imported “{name}”."
+    "imported": "Imported “{name}”.",
+    "too_deep": "is nested too deeply",
+    "unreadable": "could not be read"
   },
   "templates": {
     "empty": "Empty",

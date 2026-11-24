@@ -736,7 +736,9 @@
     "dangling_ref": "trỏ tới thứ không tồn tại",
     "duplicate_id": "lặp lại một mã đã dùng",
     "line": "{path}: {reason}",
-    "imported": "Đã nhập “{name}”."
+    "imported": "Đã nhập “{name}”.",
+    "too_deep": "lồng nhau quá sâu",
+    "unreadable": "không đọc được"
   },
   "templates": {
     "empty": "Trống",

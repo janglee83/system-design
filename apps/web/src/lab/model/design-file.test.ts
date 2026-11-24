@@ -97,5 +97,16 @@ describe("design file", () => {
     expect(patch((d) => (d.calibration = { webServiceMs: 1e9 }))).toEqual(["calibration.webServiceMs|too_big"]);
     expect(patch((d) => (d.nodes[0]!.config = Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`k${i}`, 1]))))).toEqual(["nodes.0.config|too_big"]);
   });
+
+  it("refuses deeply nested files without walking them (review: deep-nesting import)", () => {
+    // 5,000 levels of arrays in the name: far past the 32-level limit.
+    const fileText = exportDesign(sample(), "0.1.0").text;
+    const text = fileText.replace('"name": "Shop"', `"name": ${"[".repeat(5000)}1${"]".repeat(5000)}`);
+    expect(text).not.toBe(fileText);
+    expect(() => parseDesignFile(text)).not.toThrow();
+    const r = parseDesignFile(text);
+    expect(r.ok).toBe(false);
+    expect(r.ok ? [] : r.issues.map((i) => i.code)).toEqual(["too_deep"]);
+  });
 });
 

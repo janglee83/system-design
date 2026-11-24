@@ -136,12 +136,23 @@ const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
  * JSON.parse keeps "__proto__" as an own key; refusing it outright is safer than relying on how
  * a validator copies records (Review Focus 7).
  */
-function forbiddenKey(v: unknown, path: string[]): string | null {
-  if (v === null || typeof v !== "object") return null;
-  for (const [k, child] of Object.entries(v)) {
-    if (FORBIDDEN_KEYS.has(k)) return [...path, k].join(".");
-    const found = forbiddenKey(child, [...path, k]);
-    if (found) return found;
+/** A design is never deeper than this; anything deeper is refused unwalked (review: deep nesting). */
+const MAX_DEPTH = 32;
+
+/**
+ * The first forbidden key (`__proto__`, `constructor`, `prototype`), or a value nested deeper than
+ * MAX_DEPTH. Iterative, so a hostile file cannot exhaust the stack.
+ */
+function forbiddenKey(root: unknown): { path: string; code: "invalid_key" | "too_deep" } | null {
+  const stack: { v: unknown; path: string[] }[] = [{ v: root, path: [] }];
+  while (stack.length > 0) {
+    const { v, path } = stack.pop()!;
+    if (v === null || typeof v !== "object") continue;
+    if (path.length > MAX_DEPTH) return { path: path.slice(0, 3).join("."), code: "too_deep" };
+    for (const [k, child] of Object.entries(v)) {
+      if (FORBIDDEN_KEYS.has(k)) return { path: [...path, k].join("."), code: "invalid_key" };
+      stack.push({ v: child, path: [...path, k] });
+    }
   }
   return null;
 }
@@ -152,7 +163,7 @@ function forbiddenKey(v: unknown, path: string[]): string | null {
  */
 export function validateDesign(raw: unknown): Design | null {
   try {
-    if (forbiddenKey(raw, [])) return null;
+    if (forbiddenKey(raw)) return null;
     const r = schema.safeParse(raw);
     if (!r.success) return null;
     const design: Partial<typeof r.data> = { ...r.data };
@@ -164,6 +175,15 @@ export function validateDesign(raw: unknown): Design | null {
 }
 
 export function parseDesignFile(textIn: string): { ok: true; design: Design } | { ok: false; issues: FileIssue[] } {
+  // Whatever the file holds, the user gets a translated reason, never an exception (review).
+  try {
+    return parseUnsafe(textIn);
+  } catch {
+    return { ok: false, issues: [{ path: "", code: "unreadable" }] };
+  }
+}
+
+function parseUnsafe(textIn: string): { ok: true; design: Design } | { ok: false; issues: FileIssue[] } {
   let raw: unknown;
   try {
     raw = JSON.parse(textIn);
@@ -173,8 +193,8 @@ export function parseDesignFile(textIn: string): { ok: true; design: Design } | 
   if (raw && typeof raw === "object" && "designFormatVersion" in raw && (raw as { designFormatVersion: unknown }).designFormatVersion !== DESIGN_FORMAT_VERSION) {
     return { ok: false, issues: [{ path: "designFormatVersion", code: "unsupported_version" }] };
   }
-  const forbidden = forbiddenKey(raw, []);
-  if (forbidden) return { ok: false, issues: [{ path: forbidden, code: "invalid_key" }] };
+  const forbidden = forbiddenKey(raw);
+  if (forbidden) return { ok: false, issues: [forbidden] };
   const r = schema.safeParse(raw);
   if (!r.success) {
     return {
