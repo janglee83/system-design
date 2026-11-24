@@ -57,10 +57,15 @@ test("on first open the canvas leaves room for the checklist", async ({ page }) 
   await page.goto("/vi/lab?template=webDb");
   const card = page.getByTestId("onboarding");
   await expect(card).toBeVisible();
-  await page.waitForTimeout(500); // the 200 ms fit
   const c = (await card.boundingBox())!;
-  for (const id of ["node-client-1", "node-web-server-1", "node-postgres-1"]) {
-    const b = (await page.getByTestId(id).boundingBox())!;
-    expect(b.y + b.height, id).toBeLessThanOrEqual(c.y + 1);
-  }
+  // Poll until the fit has landed with every tile above the card.
+  const covered = async () => {
+    const bad: string[] = [];
+    for (const id of ["node-client-1", "node-web-server-1", "node-postgres-1"]) {
+      const b = (await page.getByTestId(id).boundingBox())!;
+      if (b.y + b.height > c.y + 1) bad.push(id);
+    }
+    return bad;
+  };
+  await expect.poll(covered).toEqual([]);
 });

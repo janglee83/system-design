@@ -69,5 +69,25 @@ describe("useAutosave", () => {
     expect(setKv).toHaveBeenCalledTimes(1);
     expect(setKv.mock.calls[0]![0]).toBe("draft");
   });
+
+  it("writes the draft at once before a language switch, and only once", () => {
+    vi.useFakeTimers();
+    render(
+      <LabStoresProvider initial={emptyDesign()}>
+        <Auto />
+      </LabStoresProvider>,
+    );
+    act(() => {
+      api.getState().apply((d) => ({ ...d, seed: 4 }));
+    });
+    act(() => {
+      window.dispatchEvent(new Event("sd:before-locale-change"));
+    });
+    expect(setKv).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(setKv).toHaveBeenCalledTimes(1);
+  });
 });
 

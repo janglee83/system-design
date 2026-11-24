@@ -60,7 +60,9 @@ test("⌘K / Ctrl+K adds a component in the Lab and finds a challenge in Vietnam
   await page.getByRole("button", { name: /Tìm kiếm/ }).click();
   await page.getByRole("combobox", { name: "Tìm kiếm" }).fill("cua hang nho");
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/vi\/lab\?challenge=c-l0-first-launch/);
+  // The challenge's start design opened (the query is dropped once it is in place).
+  await expect(page).toHaveURL(/\/vi\/lab/);
+  await expect(page.getByTestId("node-users")).toBeVisible();
 });
 
 test("Design v2 tokens: the 2A accent in both themes", async ({ page }) => {
@@ -141,8 +143,41 @@ test("the Challenges page lists every milestone; a ready one opens its start in 
   const shop = page.locator("li", { hasText: "Mở bán cửa hàng nhỏ" });
   await expect(shop).toContainText("Chạy được trong Lab");
   await shop.getByRole("link", { name: "Vào Lab" }).click();
-  await expect(page).toHaveURL(/\/vi\/lab\?challenge=c-l0-first-launch/);
+  // The challenge's start design opened (the query is dropped once it is in place).
+  await expect(page).toHaveURL(/\/vi\/lab/);
+  await expect(page.getByTestId("node-users")).toBeVisible();
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
   await expect(page.locator('[data-testid^="node-"]')).toHaveCount(1);
   await expect(page.getByTestId("node-users")).toHaveAttribute("data-locked", "");
+});
+
+test("switching language and theme in the Lab keeps the design and translates engine text", async ({ page }) => {
+  await page.goto("/en/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  await page.getByRole("complementary", { name: "Inspector" }).getByRole("button", { name: "Add fault" }).click();
+  // Switch straight away: the pending draft is written before the Lab remounts.
+  await pickTheme(page, "Dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: "Language" }).click();
+  await page.getByRole("menuitemradio", { name: "Tiếng Việt" }).click();
+  await expect(page).toHaveURL(/\/vi\/lab/);
+  await expect(page.getByTestId("node-web-server-1")).toContainText("Máy chủ web 1");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const bar = page.getByTestId("run-bar");
+  await bar.getByRole("button", { name: /^Chạy mô phỏng/ }).click();
+  await expect(bar).toHaveAttribute("data-run-id", /\d+/);
+  await page.getByRole("tab", { name: /^Sự kiện/ }).click();
+  await expect(page.getByRole("row", { name: /Máy chủ web 1/ }).first()).toBeVisible();
+});
+
+test("after starting from a template, a reload keeps the user's edits", async ({ page }) => {
+  await page.goto("/en/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  await expect(page).toHaveURL(/\/en\/lab$/);
+  await page.getByRole("complementary", { name: "Inspector" }).getByRole("button", { name: "Add fault" }).click();
+  await expect(page.getByTestId("save-line")).toContainText("Unsaved changes");
+  await page.getByRole("button", { name: "Language" }).click();
+  await page.getByRole("menuitemradio", { name: "Tiếng Việt" }).click();
+  await expect(page).toHaveURL(/\/vi\/lab$/);
+  await expect(page.getByRole("complementary", { name: "Thuộc tính" })).not.toContainText("Chưa có sự cố nào");
 });

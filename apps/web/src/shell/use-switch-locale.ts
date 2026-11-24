@@ -12,6 +12,8 @@ export function useSwitchLocale(): [Locale, (next: Locale) => void] {
     // The same cookie settings the middleware uses.
     const { name, maxAge, sameSite } = LOCALE_COOKIE;
     document.cookie = `${name}=${next}; path=/; max-age=${maxAge}; samesite=${sameSite}`;
+    // The Lab writes its pending draft first (R33).
+    window.dispatchEvent(new Event("sd:before-locale-change"));
     const { search, hash } = window.location;
     router.replace(`${pathname}${search}${hash}`, { locale: next });
   };

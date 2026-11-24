@@ -34,8 +34,17 @@ export function useAutosave(): void {
         void flushDraft(design, doc);
       }, AUTOSAVE_MS);
     });
+    // A language switch (R33) writes a pending draft before the Lab remounts.
+    const onLocale = () => {
+      if (timer === undefined) return;
+      clearTimeout(timer);
+      timer = undefined;
+      void flushDraft(design, doc);
+    };
+    window.addEventListener("sd:before-locale-change", onLocale);
     return () => {
-      // Leaving the Lab (a language switch remounts it) writes a pending draft now instead of dropping it.
+      window.removeEventListener("sd:before-locale-change", onLocale);
+      // Leaving the Lab writes a pending draft now instead of dropping it.
       if (timer !== undefined) void flushDraft(design, doc);
       clearTimeout(timer);
       unsub();

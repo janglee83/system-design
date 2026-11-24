@@ -122,7 +122,7 @@ export function LabApp({
         <DesignsDialog />
         <SaveDialog />
         <Drafts restore={!initial && !template} />
-        <StartFrom template={template} notFound={notFound} />
+        <StartFrom template={template} fromChallenge={!!initial} notFound={notFound} />
         <LabCommands />
       </ReactFlowProvider>
     </LabStoresProvider>
@@ -281,7 +281,20 @@ function Drafts({ restore }: { restore: boolean }) {
 }
 
 /** `?template=` and the "no such challenge" notice, once per page load. */
-function StartFrom({ template, notFound }: { template?: TemplateId; notFound: boolean }) {
+/**
+ * Once the start design from `?template=` or `?challenge=` is in place, the URL drops the query:
+ * a reload or a language switch then restores the user's draft instead of starting over.
+ */
+function dropStartQuery() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("template") && !url.searchParams.has("challenge")) return;
+  url.searchParams.delete("template");
+  url.searchParams.delete("challenge");
+  url.searchParams.delete("mode");
+  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+}
+
+function StartFrom({ template, fromChallenge, notFound }: { template?: TemplateId; fromChallenge: boolean; notFound: boolean }) {
   const design = useDesignApi();
   const doc = useDocApi();
   const metas = useMetas();
@@ -292,7 +305,11 @@ function StartFrom({ template, notFound }: { template?: TemplateId; notFound: bo
     applied.current = true;
     design.getState().replace(designFromTemplate(template, metas));
     doc.getState().reset(null);
+    dropStartQuery();
   }, [template, metas, design, doc]);
+  useEffect(() => {
+    if (fromChallenge) dropStartQuery();
+  }, [fromChallenge]);
   useEffect(() => {
     if (notFound) toast(t("notFound"), "warn");
   }, [notFound, t]);

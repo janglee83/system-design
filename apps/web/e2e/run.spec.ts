@@ -154,14 +154,16 @@ test("where it broke shows the failing node and its neighbours inside the canvas
   const id = failing!.replace("node-", "");
   // The design's direct neighbours of the failing node.
   const neighbours: Record<string, string[]> = { "web-server-1": ["users", "postgres-1"], "postgres-1": ["web-server-1"], users: ["web-server-1"] };
-  await page.waitForTimeout(500); // the 300 ms viewport animation
   const canvas = (await page.getByTestId("lab-canvas").boundingBox())!;
   const strip = (await verdict.boundingBox())!;
-  for (const n of [id, ...neighbours[id]!]) {
-    const b = (await page.getByTestId(`node-${n}`).boundingBox())!;
-    expect(b.x, n).toBeGreaterThanOrEqual(canvas.x);
-    expect(b.x + b.width, n).toBeLessThanOrEqual(canvas.x + canvas.width);
-    expect(b.y, n).toBeGreaterThanOrEqual(strip.y + strip.height);
-    expect(b.y + b.height, n).toBeLessThanOrEqual(canvas.y + canvas.height);
-  }
+  // Poll until the viewport animation has landed with every node inside the area below the strip.
+  const outside = async () => {
+    const bad: string[] = [];
+    for (const n of [id, ...neighbours[id]!]) {
+      const b = (await page.getByTestId(`node-${n}`).boundingBox())!;
+      if (b.x < canvas.x || b.x + b.width > canvas.x + canvas.width || b.y < strip.y + strip.height || b.y + b.height > canvas.y + canvas.height) bad.push(n);
+    }
+    return bad;
+  };
+  await expect.poll(outside).toEqual([]);
 });

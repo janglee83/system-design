@@ -4,7 +4,9 @@ import { addAt, connectByDrag, runOnce, paletteItem } from "./helpers";
 test("open c-l0-first-launch from the challenges list, check the locked node, run", async ({ page }) => {
   await page.goto("/en/challenges");
   await page.locator("li", { hasText: "Opening a small online shop" }).getByRole("link", { name: "Open in the Lab" }).click();
-  await expect(page).toHaveURL(/\/en\/lab\?challenge=c-l0-first-launch/);
+  // The challenge's start design opened (the query is dropped once it is in place).
+  await expect(page).toHaveURL(/\/en\/lab/);
+  await expect(page.getByTestId("node-users")).toBeVisible();
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
 
   const users = page.getByTestId("node-users");

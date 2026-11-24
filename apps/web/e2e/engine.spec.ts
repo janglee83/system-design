@@ -40,7 +40,23 @@ test("while the engine boots, the canvas is busy and the boot card lists real st
 test("an engine error keeps the saved design on the canvas; editing still works; retry boots again", async ({ page, context }) => {
   await page.goto("/en/lab?template=webDb");
   await expect(page.getByTestId("node-postgres-1")).toBeVisible();
-  await page.waitForTimeout(1500); // the autosave writes the draft after 1 s
+  // Wait for the autosave to have written the draft (IndexedDB "sd-lab", kv "draft").
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const open = indexedDB.open("sd-lab");
+            open.onsuccess = () => {
+              const get = open.result.transaction("kv").objectStore("kv").get("draft");
+              get.onsuccess = () => resolve((get.result as { design?: { nodes?: unknown[] } } | undefined)?.design?.nodes?.length ?? 0);
+              get.onerror = () => resolve(0);
+            };
+            open.onerror = () => resolve(0);
+          }),
+      ),
+    )
+    .toBe(3);
   let block = true;
   await context.route(WASM, (route) => (block ? route.abort() : route.continue()));
   await page.goto("/en/lab");
