@@ -5,10 +5,44 @@ import { cn } from "@/ui/cn";
 import type { RunRecord } from "../store/run-store";
 import { useMetas } from "../use-metas";
 import { formatNumber } from "../format";
+import { filterTraces } from "../run/trace-model";
+import { useFollowRequest } from "../run/use-follow-request";
 import { buildLogs, type LogLevel } from "./logs";
 
 const LEVELS: LogLevel[] = ["info", "warn", "error"];
 const CHIP = { info: "bg-surface-2 text-info", warn: "bg-busy-soft text-busy", error: "bg-over-soft text-over" } as const;
+
+const OUTCOME = { delivered: "bg-ok-soft text-ok", rejected: "bg-over-soft text-over", timeout: "bg-busy-soft text-busy", unreachable: "bg-over-soft text-over" } as const;
+
+/** The run's sampled requests, slowest first; clicking one follows it on the canvas (design-system §7.4). */
+function Sampled({ run }: { run: RunRecord }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const follow = useFollowRequest();
+  const list = useMemo(() => filterTraces(run.traces, null).slice(0, 12), [run]);
+  if (list.length === 0) return null;
+  return (
+    <section>
+      <h3 className="section-label pb-1">{t("trace.sampled")}</h3>
+      <ul className="flex flex-col">
+        {list.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              data-testid="trace-row"
+              aria-label={t("trace.follow", { id: s.id })}
+              onClick={() => follow(run.traces.indexOf(s))}
+              className="flex w-full items-center gap-2 rounded-sm px-1 py-0.5 text-left text-caption hover:bg-surface-2"
+            >
+              <span className="num flex-1">{t("trace.row", { id: s.id, class: t(`trace.class.${s.class}`), latency: t("trace.ms", { ms: formatNumber(s.latencyMs, locale, 0) }) })}</span>
+              <span className={cn("rounded-full px-1.5", OUTCOME[s.outcome])}>{t(`traceOutcome.${s.outcome}`)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function LogsTab({ run }: { run: RunRecord }) {
   const t = useTranslations();
@@ -37,6 +71,7 @@ export function LogsTab({ run }: { run: RunRecord }) {
           </button>
         ))}
       </div>
+      <Sampled run={run} />
       <ol className="num text-caption">
         {lines
           .filter((l) => shown.has(l.level))

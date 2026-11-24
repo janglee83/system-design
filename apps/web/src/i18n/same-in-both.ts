@@ -1,2 +1,2 @@
 /** Keys whose text is legitimately identical in Vietnamese and English (names, units). */
-export const SAME_IN_BOTH: ReadonlySet<string> = new Set(["meta.title", "language.vi", "language.en", "canvasA11y.node", "importIssue.line", "lab.node.line.webServer"]);
+export const SAME_IN_BOTH: ReadonlySet<string> = new Set(["meta.title", "language.vi", "language.en", "canvasA11y.node", "importIssue.line", "lab.node.line.webServer", "trace.hop", "trace.row"]);

@@ -844,5 +844,22 @@
     "busy": "Busy (70% or more)",
     "overloaded": "Overloaded (rejecting or 95%+)",
     "down": "Down"
+  },
+  "trace": {
+    "title": "Follow a request",
+    "close": "Stop following",
+    "next": "Next request of the same kind",
+    "cause": "waited {wait} ms · served in {service} ms",
+    "hop": "{action} · {node}",
+    "sampled": "Sampled requests",
+    "row": "#{id} · {class} · {latency}",
+    "follow": "Follow request #{id}",
+    "class": {
+      "read": "read",
+      "write": "write"
+    },
+    "unavailable": "This request cannot be loaded: the simulator restarted. Run again.",
+    "delta": "+{ms} ms",
+    "ms": "{ms} ms"
   }
 }

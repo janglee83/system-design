@@ -844,5 +844,22 @@
     "busy": "Bận (từ 70%)",
     "overloaded": "Quá tải (từ chối hoặc từ 95%)",
     "down": "Ngừng chạy"
+  },
+  "trace": {
+    "title": "Theo một yêu cầu",
+    "close": "Ngừng theo dõi",
+    "next": "Yêu cầu tiếp theo cùng loại",
+    "cause": "chờ {wait} ms · xử lý {service} ms",
+    "hop": "{action} · {node}",
+    "sampled": "Yêu cầu mẫu",
+    "row": "#{id} · {class} · {latency}",
+    "follow": "Theo yêu cầu #{id}",
+    "class": {
+      "read": "đọc",
+      "write": "ghi"
+    },
+    "unavailable": "Không tải được yêu cầu này: bộ mô phỏng đã khởi động lại. Hãy chạy lại.",
+    "delta": "+{ms} ms",
+    "ms": "{ms} ms"
   }
 }

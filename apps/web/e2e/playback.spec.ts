@@ -83,3 +83,23 @@ test("request dots move while playing, beside a live chip; none under reduced mo
   await page.emulateMedia({ reducedMotion: "reduce" }); // listened to live
   await expect(page.locator("circle.dot")).toHaveCount(0);
 });
+
+test("clicking a sampled request follows it: path highlighted, trace card with hops, [ and ] step", async ({ page }) => {
+  await ranThreeTier(page);
+  await page.getByRole("tab", { name: "Nhật ký" }).click();
+  await page.getByTestId("trace-row").first().click();
+  const card = page.getByTestId("trace-card");
+  await expect(card).toBeVisible();
+  const hops = card.locator("li");
+  expect(await hops.count()).toBeGreaterThanOrEqual(2);
+  await expect(hops.first()).toHaveAttribute("aria-current", "step");
+  await expect(page.getByTestId("node-client-1")).toHaveAttribute("data-path", "on");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press("]");
+  await expect(hops.nth(1)).toHaveAttribute("aria-current", "step");
+  await page.keyboard.press("[");
+  await expect(hops.first()).toHaveAttribute("aria-current", "step");
+  await card.getByRole("button", { name: "Ngừng theo dõi" }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByTestId("node-client-1")).not.toHaveAttribute("data-path", /./);
+});

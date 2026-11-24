@@ -22,7 +22,8 @@ import { displayLabel } from "../labels";
 import type { XY } from "../model/design";
 import { moveGroup, moveNodes } from "../model/ops";
 import { issueCounts } from "../store/check-store";
-import { useCheck, useDesign, useDesignApi, useUi } from "../store/LabStores";
+import { useCheck, useDesign, useDesignApi, useTrace, useUi } from "../store/LabStores";
+import { tracePath } from "../run/trace-model";
 import { DRAG_MIME } from "../palette/Palette";
 import { useMetas } from "../use-metas";
 import { connectTarget } from "./edge-geometry";
@@ -151,6 +152,12 @@ export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; ov
   const baseRps = design.workload.baseRps;
   const pv = usePlaybackView();
   const playing = pv?.active ? pv : null;
+  const followed = useTrace((s) => s.trace);
+  const followedRun = useTrace((s) => s.runId);
+  const path = useMemo(
+    () => (followed && playing && followedRun === playing.run.id ? tracePath(followed, design) : null),
+    [followed, followedRun, playing, design],
+  );
   const nodeRole = t("nodeRole");
   const ctx = useMemo<AdapterContext>(
     () => ({
@@ -168,9 +175,10 @@ export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; ov
       live: playing?.live,
       edgeStates: playing?.edgeStates,
       edgeRates: playing?.edgeRates,
+      path,
       ...extra,
     }),
-    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, playing, extra],
+    [metas, selection, costs, counts, nodeRole, aria, drag, allowedKinds, baseRps, connecting, playing, path, extra],
   );
   // Previous React Flow objects, reused when unchanged (see reuseFlowNodes).
   const lastNodes = useRef<FlowNode[]>([]);

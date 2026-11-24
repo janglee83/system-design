@@ -2,6 +2,7 @@
 import { createContext, useContext, useState } from "react";
 import { useStore } from "zustand";
 import { useEngineStore } from "@/engine/EngineProvider";
+import { createTraceStore, type TraceState, type TraceStore } from "./trace-store";
 import type { Design } from "../model/design";
 import { createCheckStore, hasBlocking, type CheckState } from "./check-store";
 import { createDesignStore, type DesignState, type DesignStore } from "./design-store";
@@ -16,6 +17,7 @@ interface Stores {
   check: ReturnType<typeof createCheckStore>;
   runs: ReturnType<typeof createRunStore>;
   playback: ReturnType<typeof createPlaybackStore>;
+  trace: TraceStore;
   doc: ReturnType<typeof createDocStore>;
 }
 const Ctx = createContext<Stores | null>(null);
@@ -27,6 +29,7 @@ export function LabStoresProvider({ initial, children }: { initial?: Design; chi
     check: createCheckStore(),
     runs: createRunStore(),
     playback: createPlaybackStore(),
+    trace: createTraceStore(),
     doc: createDocStore(),
   }));
   return <Ctx.Provider value={stores}>{children}</Ctx.Provider>;
@@ -48,6 +51,8 @@ export const useRuns = <T,>(sel: (s: RunState) => T): T => useStore(useStores().
 export const useRunsApi = () => useStores().runs;
 export const usePlayback = <T,>(sel: (s: PlaybackState) => T): T => useStore(useStores().playback, sel);
 export const usePlaybackApi = () => useStores().playback;
+export const useTrace = <T,>(sel: (s: TraceState) => T): T => useStore(useStores().trace, sel);
+export const useTraceApi = () => useStores().trace;
 export const useDoc = <T,>(sel: (s: DocState) => T): T => useStore(useStores().doc, sel);
 export const useDocApi = () => useStores().doc;
 

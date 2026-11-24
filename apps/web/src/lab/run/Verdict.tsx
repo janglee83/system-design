@@ -13,7 +13,7 @@ import { formatMetric } from "../format";
 import { displayLabel, type Translate } from "../labels";
 import { NODE_SIZE } from "../model/design";
 import { currentRun } from "../store/run-store";
-import { useDesign, useDesignApi, usePlayback, useRuns } from "../store/LabStores";
+import { useDesign, useDesignApi, usePlayback, useRuns, useTrace } from "../store/LabStores";
 import { useMetas } from "../use-metas";
 import { focusViewport } from "./focus-viewport";
 import { verdictView, type GoalChip } from "./verdict-model";
@@ -44,7 +44,9 @@ export function Verdict({ onRunAgain }: { onRunAgain: () => void }) {
   // While the strip is open the design stays clear of it: fit leaving 96 px at the top (§7.3).
   // While playback plays, the live chip takes the top of the canvas.
   const playing = usePlayback((x) => x.playing);
-  const open = !!run && status !== "running" && closed !== run.id && !playing;
+  // Following a request (its trace card) also takes the top of the canvas.
+  const following = useTrace((x) => x.trace !== null);
+  const open = !!run && status !== "running" && closed !== run.id && !playing && !following;
   useEffect(() => {
     if (!open) return;
     const id = requestAnimationFrame(() => void flow.fitView({ duration: 200, maxZoom: 1, padding: { top: "96px", left: "48px", right: "48px", bottom: "48px" } }));

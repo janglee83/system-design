@@ -52,11 +52,12 @@ import { StatusStrip } from "./StatusStrip";
 import { UndoRedo } from "./UndoRedo";
 import { LiveChip } from "./run/LiveChip";
 import { PlaybackBar } from "./run/PlaybackBar";
+import { TraceCard } from "./run/TraceCard";
 import { usePlaybackLoop } from "./run/use-playback-loop";
 import { RunButton } from "./run/RunButton";
 import { Verdict } from "./run/Verdict";
 import { useRunDesign } from "./run/use-run-design";
-import { LabStoresProvider, useDesign, useDesignApi, useDocApi, usePlaybackApi, useRuns, useRunsApi, useUiApi } from "./store/LabStores";
+import { LabStoresProvider, useDesign, useDesignApi, useDocApi, usePlaybackApi, useRuns, useRunsApi, useTraceApi, useUiApi } from "./store/LabStores";
 import { useLiveValidation } from "./use-live-validation";
 import { useLabShortcuts } from "./use-shortcuts";
 import { useMetas } from "./use-metas";
@@ -159,7 +160,24 @@ function LabShortcuts() {
   const docActions = useDocActions();
   const runs = useRunsApi();
   const playback = usePlaybackApi();
+  const traceApi = useTraceApi();
   usePlaybackLoop();
+  const stepHop = (by: number) => {
+    const s = traceApi.getState();
+    if (!s.trace) return;
+    s.setHop(s.hop + by);
+    const h = traceApi.getState();
+    const step = h.trace?.steps[h.hop];
+    if (step) playback.getState().seek(step.tMs);
+  };
+  // A new run ends the follow of the previous one.
+  useEffect(
+    () =>
+      runs.subscribe((s, prev) => {
+        if (s.currentId !== prev.currentId) traceApi.getState().clear();
+      }),
+    [runs, traceApi],
+  );
   // The viewer's minimap choice from this browser, if they ever made one.
   useEffect(() => {
     const saved = readMinimapChoice();
@@ -187,6 +205,9 @@ function LabShortcuts() {
     toggleSnap: () => toggleSnap(ui),
     toggleMinimap: () => toggleMinimap(ui, api),
     playPause: () => playback.getState().toggle(),
+    // [ and ] step between the followed request's hops and move playback there (§7.4).
+    prevHop: () => stepHop(-1),
+    nextHop: () => stepHop(1),
     layout,
     group: () => groupSelection(api),
     ungroup: () => ungroupSelection(api),
@@ -219,6 +240,7 @@ function RunFeedback() {
   return (
     <>
       <LiveChip />
+      <TraceCard />
       <Verdict onRunAgain={run} />
     </>
   );
