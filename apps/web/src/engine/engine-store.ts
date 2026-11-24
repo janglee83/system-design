@@ -14,6 +14,8 @@ export interface EngineState {
   info: EngineInfo | null;
   error: string | null;
   client: EngineClient | null;
+  /** Boot milestones (design-system §9): the wasm core answered, the world parameters, the component list. */
+  boot: { core: boolean; calibration: boolean; components: boolean };
   /** The client's current epoch; runs from an older one cannot be inspected. */
   epoch: number;
   start(): void;
@@ -22,18 +24,25 @@ export interface EngineState {
   stop(): void;
 }
 
+const NO_BOOT = { core: false, calibration: false, components: false };
+
 export function createEngineStore(makeClient: () => EngineClient) {
   return createStore<EngineState>()((set, get) => {
     /** Bumped by every load and by stop(): only the latest load may write the result. */
     let generation = 0;
     async function load(client: EngineClient) {
       const gen = ++generation;
-      set({ status: "loading", error: null });
+      set({ status: "loading", error: null, boot: { ...NO_BOOT } });
+      const step = <T,>(p: Promise<T>, key: keyof EngineState["boot"]) =>
+        p.then((v) => {
+          if (gen === generation) set({ boot: { ...get().boot, [key]: true } });
+          return v;
+        });
       try {
         const [version, components, calibration, capabilities] = await Promise.all([
-          client.request({ type: "engineVersion" }),
-          client.request({ type: "listComponents" }),
-          client.request({ type: "defaultCalibration" }),
+          step(client.request({ type: "engineVersion" }), "core"),
+          step(client.request({ type: "listComponents" }), "components"),
+          step(client.request({ type: "defaultCalibration" }), "calibration"),
           client.request({ type: "capabilities" }),
         ]);
         if (gen !== generation) return; // superseded by a retry, or stopped
@@ -49,6 +58,7 @@ export function createEngineStore(makeClient: () => EngineClient) {
       info: null,
       error: null,
       client: null,
+      boot: { ...NO_BOOT },
       epoch: -1,
       start() {
         if (get().client) return;
@@ -71,7 +81,7 @@ export function createEngineStore(makeClient: () => EngineClient) {
       stop() {
         generation++;
         const client = get().client;
-        set({ client: null, status: "idle", info: null, error: null, epoch: -1 });
+        set({ client: null, status: "idle", info: null, error: null, epoch: -1, boot: { ...NO_BOOT } });
         client?.terminate();
       },
     };

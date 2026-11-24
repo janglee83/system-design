@@ -18,6 +18,45 @@ test("the engine loads in a worker from a hashed wasm asset", async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test("while the engine boots, the canvas is busy and the boot card lists real steps", async ({ page, context }) => {
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  await context.route(WASM, async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto("/vi/lab");
+  const boot = page.getByTestId("engine-boot");
+  await expect(boot).toBeVisible();
+  await expect(boot).toHaveAttribute("role", "status");
+  await expect(page.locator('section[data-tour="canvas"]')).toHaveAttribute("aria-busy", "true");
+  await expect(boot.locator("li")).toHaveText([/Tải lõi mô phỏng/, /Đọc tham số thế giới/, /Chuẩn bị khung vẽ/, /Mở thiết kế gần nhất/]);
+  release();
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  await expect(boot).toHaveCount(0);
+  await expect(page.locator('section[data-tour="canvas"]')).not.toHaveAttribute("aria-busy", /./);
+});
+
+test("an engine error keeps the saved design on the canvas; editing still works; retry boots again", async ({ page, context }) => {
+  await page.goto("/en/lab?template=webDb");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  await page.waitForTimeout(1500); // the autosave writes the draft after 1 s
+  let block = true;
+  await context.route(WASM, (route) => (block ? route.abort() : route.continue()));
+  await page.goto("/en/lab");
+  const card = page.getByRole("alert").filter({ hasText: "could not start" });
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+  await card.getByRole("button", { name: "Edit the design while it cannot run" }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "error");
+  await expect(page.getByTestId("run-bar").getByRole("button", { name: /^Run simulation/ })).toHaveAttribute("aria-disabled", "true");
+  block = false;
+  await page.reload();
+  await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
+  await expect(page.getByTestId("node-postgres-1")).toBeVisible();
+});
+
 test("a failed wasm load shows a retry banner, and retry recovers", async ({ page, context }) => {
   let block = true;
   await context.route(WASM, (route) => (block ? route.abort() : route.continue()));

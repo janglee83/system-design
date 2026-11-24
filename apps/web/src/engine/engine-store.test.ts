@@ -35,6 +35,21 @@ describe("engine store", () => {
     expect(s.info?.capabilities.faults).toContain("instance-down");
   });
 
+  it("records each boot milestone as its answer arrives, and starts over on retry", async () => {
+    const store = createEngineStore(() => new EngineClient(() => new FakeWorker()));
+    const seen: string[] = [];
+    store.subscribe((s) => seen.push(JSON.stringify(s.boot)));
+    expect(store.getState().boot).toEqual({ core: false, calibration: false, components: false });
+    store.getState().start();
+    const s = await settled(store);
+    expect(s.boot).toEqual({ core: true, calibration: true, components: true });
+    // Steps finish one at a time, never all at once from nothing.
+    expect(new Set(seen).size).toBeGreaterThan(2);
+    store.getState().retry();
+    expect(store.getState().boot).toEqual({ core: false, calibration: false, components: false });
+    await settled(store);
+  });
+
   it("ends in error when the worker cannot load the engine, and retry recovers", async () => {
     let broken = true;
     const store = createEngineStore(

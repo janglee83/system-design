@@ -18,8 +18,15 @@
     "inspector": "Inspector",
     "canvas": "Design canvas",
     "empty": {
-      "title": "Nothing here yet",
-      "body": "Drag a component onto the canvas, or press {shortcut} to search."
+      "title": "Build your first system",
+      "body": "Pick a starting point, or drag a component from the left onto the canvas.",
+      "suggested": "Suggested",
+      "emptyLine": "An empty canvas, built from scratch",
+      "webDbLine": "Three basic tiers, ready to run",
+      "challenges": "Start from a challenge",
+      "seeAll": "See all",
+      "more": "and {count} more challenges",
+      "footer": "or press {palette} to find a component · ? for shortcuts"
     },
     "legend": {
       "button": "Legend",
@@ -681,7 +688,7 @@
   },
   "templates": {
     "empty": "Empty",
-    "webDb": "Users → web server → database"
+    "webDb": "Users → Web server → PostgreSQL"
   },
   "palette2": {
     "open": "Search",
@@ -785,5 +792,23 @@
       "p99": "p99 latency"
     },
     "live": "Simulating {seconds} s"
+  },
+  "boot": {
+    "title": "Starting the simulator",
+    "sub": "The first time takes a few seconds…",
+    "core": "Load the simulation core",
+    "calibration": "Read the world parameters",
+    "canvas": "Prepare the canvas",
+    "draft": "Open your last design",
+    "done": "Done",
+    "waiting": "Waiting",
+    "working": "Working"
+  },
+  "engineError": {
+    "title": "The simulator could not start",
+    "cause": "The browser could not load the simulation core. This is usually a patchy connection or a browser that blocks WebAssembly.",
+    "safe": "The design “{name}” is still safe in this browser",
+    "edit": "Edit the design while it cannot run",
+    "details": "Technical details"
   }
 }

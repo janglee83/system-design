@@ -11,6 +11,10 @@ export interface UiState {
   designsOpen: boolean;
   /** The name prompt for a first save or a save-as. */
   saveDialog: "save" | "saveAs" | null;
+  /** The last design was looked for (and restored if there was one): the boot card's last step. */
+  draftChecked: boolean;
+  /** The engine error card was put aside to edit the design while the engine is down. */
+  errorDismissed: boolean;
   /** Incremented to ask the inspector to focus its first control (Enter on a node). */
   inspectorFocusTick: number;
   set(patch: Partial<Omit<UiState, "set" | "focusInspector">>): void;
@@ -26,6 +30,8 @@ export function createUiStore() {
     designsOpen: false,
     saveDialog: null,
     inspectorFocusTick: 0,
+    draftChecked: false,
+    errorDismissed: false,
     set: (patch) => set(patch),
     focusInspector: () => set({ inspectorFocusTick: get().inspectorFocusTick + 1 }),
   }));

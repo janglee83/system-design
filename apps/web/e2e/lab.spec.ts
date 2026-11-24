@@ -4,7 +4,7 @@ import { addAt, connectByDrag, connectToCard, openLab, paletteItem } from "./hel
 test("the Lab shows an empty canvas, with no minimap and no floating legend card", async ({ page }) => {
   await page.goto("/en/lab");
   await expect(page.getByTestId("engine-status")).toHaveAttribute("data-status", "ready");
-  await expect(page.getByText("Nothing here yet")).toBeVisible();
+  await expect(page.getByText("Build your first system")).toBeVisible();
   await expect(page.locator(".react-flow__minimap")).toHaveCount(0);
   await expect(page.getByText("Connection kinds in this design")).toHaveCount(0);
 });
@@ -278,5 +278,17 @@ test("arrowheads keep one on-screen size at every zoom, and C opens the connect 
   await page.getByTestId("node-web-server-1").click();
   await page.keyboard.press("c");
   await expect(page.getByRole("dialog", { name: /Connect Web server 1/ })).toBeVisible();
+});
+
+test("an empty Lab offers three starting points, and the three-tier one builds it", async ({ page }) => {
+  await openLab(page, "vi");
+  const empty = page.getByTestId("empty-lab");
+  await expect(empty.getByRole("button", { name: /^Trống/ })).toBeVisible();
+  await expect(empty.getByText("Bắt đầu từ thử thách")).toBeVisible();
+  await expect(empty.getByRole("button", { name: "Mở bán cửa hàng nhỏ" })).toBeVisible();
+  await empty.getByRole("button", { name: /^Người dùng → Máy chủ web → PostgreSQL/ }).click();
+  await expect(page.locator('[data-testid^="node-"]')).toHaveCount(3);
+  await expect(empty).toHaveCount(0);
+  await expect(page.getByTestId("design-counts")).toHaveText("3 thành phần · 2 kết nối");
 });
 

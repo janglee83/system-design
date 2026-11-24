@@ -32,13 +32,12 @@ import { reuseFlowEdges, reuseFlowNodes, toAbsolute, toFlowEdges, toFlowNodes, t
 import { useAddComponent } from "./use-add-component";
 import { flowAriaLabels, nodeAccessibleName } from "./aria";
 import { CanvasControls } from "./CanvasControls";
-import { formatCombo } from "../shortcuts";
-import { useIsMac } from "../use-shortcuts";
 
 const nodeTypes = { lab: LabNode, group: GroupNode };
 const edgeTypes = { lab: LabEdge };
 
-export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
+/** `overlay` (the empty Lab) sits inside the canvas element, so a palette drop over it still lands. */
+export function Canvas({ extra, overlay }: { extra?: Partial<AdapterContext>; overlay?: React.ReactNode }) {
   const t = useTranslations("lab");
   const design = useDesign((s) => s.design);
   const selection = useDesign((s) => s.selection);
@@ -226,7 +225,25 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
   );
 
   return (
-    <div data-testid="lab-canvas" role="region" aria-label={t("canvas")} className="relative h-full w-full bg-canvas">
+    <div
+      data-testid="lab-canvas"
+      role="region"
+      aria-label={t("canvas")}
+      className="relative h-full w-full bg-canvas"
+      // On the wrapper, not React Flow: drops over the overlay bubble here too.
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes(DRAG_MIME)) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }
+      }}
+      onDrop={(e) => {
+        const kind = e.dataTransfer.getData(DRAG_MIME);
+        if (!kind) return;
+        e.preventDefault();
+        add(kind, { x: e.clientX, y: e.clientY });
+      }}
+    >
       <EdgeMarkers />
       <ReactFlow
         nodes={nodes}
@@ -242,18 +259,6 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
         connectionLineComponent={GhostConnection}
         onNodeMouseEnter={(_e, n) => setHover(n.id)}
         onNodeMouseLeave={() => setHover(null)}
-        onDragOver={(e) => {
-          if (e.dataTransfer.types.includes(DRAG_MIME)) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "copy";
-          }
-        }}
-        onDrop={(e) => {
-          const kind = e.dataTransfer.getData(DRAG_MIME);
-          if (!kind) return;
-          e.preventDefault();
-          add(kind, { x: e.clientX, y: e.clientY });
-        }}
         snapToGrid={snap}
         snapGrid={[16, 16]}
         deleteKeyCode={null}
@@ -276,21 +281,10 @@ export function Canvas({ extra }: { extra?: Partial<AdapterContext> }) {
           {tAll("connect.hint")}
         </p>
       ) : null}
+      {overlay}
       <div className="absolute right-4 bottom-3.5">
         <CanvasControls />
       </div>
-      {design.nodes.length === 0 ? <EmptyState /> : null}
-    </div>
-  );
-}
-
-function EmptyState() {
-  const t = useTranslations("lab.empty");
-  const mac = useIsMac();
-  return (
-    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-      <p className="text-heading font-semibold">{t("title")}</p>
-      <p className="text-body text-text-2">{t("body", { shortcut: formatCombo("Mod+K", mac) })}</p>
     </div>
   );
 }

@@ -9,7 +9,6 @@ import type { SearchItem } from "@/shell/search";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { downloadText } from "@/ui/download";
 import { useEngineStart, useEngineStore } from "@/engine/EngineProvider";
-import { EngineErrorBanner } from "@/engine/EngineErrorBanner";
 import { TopBarPortal } from "@/shell/top-bar-slot";
 import { Canvas } from "./canvas/Canvas";
 import { ConnectDialog } from "./canvas/ConnectDialog";
@@ -42,7 +41,11 @@ import { Inspector } from "./inspector/Inspector";
 import { Palette } from "./palette/Palette";
 import { useKindPrices } from "./palette/use-kind-prices";
 import { BottomPanel } from "./panel/BottomPanel";
+import { EmptyLab } from "./EmptyLab";
+import { EngineBoot } from "./EngineBoot";
+import { EngineError } from "./EngineError";
 import { Problems } from "./Problems";
+import type { ChallengeStart } from "./templates";
 import { StatusStrip } from "./StatusStrip";
 import { UndoRedo } from "./UndoRedo";
 import { LiveChip } from "./run/LiveChip";
@@ -56,12 +59,15 @@ import { useMetas } from "./use-metas";
 
 export function LabApp({
   planned = [],
+  starts = [],
   initial,
   template,
   notFound = false,
 }: {
   /** Kinds the engine will support next (curriculum.json), shown as coming soon. */
   planned?: readonly string[];
+  /** Challenge starting designs for the empty Lab's template cards. */
+  starts?: readonly ChallengeStart[];
   initial?: Design;
   /** `?template=`: built once the engine's component list is known. */
   template?: TemplateId;
@@ -91,13 +97,7 @@ export function LabApp({
             <aside aria-label={t("palette")} className="row-span-2 min-h-0" data-tour="palette">
               <PalettePane planned={planned} />
             </aside>
-            <section className="relative min-h-0" data-tour="canvas">
-              <Canvas />
-              <div className="absolute top-3 left-1/2 -translate-x-1/2">
-                <EngineErrorBanner />
-              </div>
-              <RunFeedback />
-            </section>
+            <CanvasArea starts={starts} />
             <aside aria-label={t("inspector")} className="min-h-0 border-l border-border bg-bg" data-tour="inspector">
               <Inspector />
             </aside>
@@ -180,6 +180,23 @@ function LabShortcuts() {
   return null;
 }
 
+/** The canvas with its states: boot card, error card (design kept, greyed), empty Lab, run feedback (§9). */
+function CanvasArea({ starts }: { starts: readonly ChallengeStart[] }) {
+  const status = useEngineStore((s) => s.status);
+  const empty = useDesign((s) => s.design.nodes.length === 0);
+  const booting = status === "loading" || status === "idle";
+  return (
+    <section className="relative min-h-0" data-tour="canvas" aria-busy={booting || undefined}>
+      <div className={status === "error" ? "h-full opacity-45 grayscale" : "h-full"}>
+        <Canvas overlay={status === "ready" && empty ? <EmptyLab starts={starts} /> : null} />
+      </div>
+      <EngineBoot />
+      <EngineError />
+      <RunFeedback />
+    </section>
+  );
+}
+
 /** The live chip while running and the verdict when a run ends (design-system §7.1, §7.3). */
 function RunFeedback() {
   const run = useRunDesign();
@@ -201,11 +218,17 @@ function Drafts({ restore }: { restore: boolean }) {
   const design = useDesignApi();
   const doc = useDocApi();
   const t = useTranslations("designs");
+  const ui = useUiApi();
   useEffect(() => {
-    if (!restore) return;
+    if (!restore) {
+      ui.getState().set({ draftChecked: true });
+      return;
+    }
     let cancelled = false; // StrictMode runs this twice; only the live run restores
     void loadDraft().then((draft) => {
-      if (cancelled || !draft || draft.design.nodes.length === 0) return;
+      if (cancelled) return;
+      ui.getState().set({ draftChecked: true });
+      if (!draft || draft.design.nodes.length === 0) return;
       design.getState().replace(draft.design);
       doc.getState().reset(draft.savedId);
       toast(t("draftRestored"), "info");
@@ -213,7 +236,7 @@ function Drafts({ restore }: { restore: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [restore, design, doc, t]);
+  }, [restore, design, doc, ui, t]);
   return null;
 }
 

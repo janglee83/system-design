@@ -18,8 +18,15 @@
     "inspector": "Thuộc tính",
     "canvas": "Khung vẽ thiết kế",
     "empty": {
-      "title": "Chưa có gì ở đây",
-      "body": "Kéo một thành phần vào khung vẽ, hoặc bấm {shortcut} để tìm."
+      "title": "Dựng hệ thống đầu tiên của bạn",
+      "body": "Chọn một điểm bắt đầu, hoặc kéo thành phần từ bảng bên trái vào khung vẽ.",
+      "suggested": "Gợi ý",
+      "emptyLine": "Khung vẽ trống, tự dựng từ đầu",
+      "webDbLine": "Ba tầng cơ bản, sẵn sàng để chạy",
+      "challenges": "Bắt đầu từ thử thách",
+      "seeAll": "Xem tất cả",
+      "more": "và {count} thử thách khác",
+      "footer": "hoặc bấm {palette} để tìm thành phần · ? để xem phím tắt"
     },
     "legend": {
       "button": "Chú giải",
@@ -681,7 +688,7 @@
   },
   "templates": {
     "empty": "Trống",
-    "webDb": "Người dùng → máy chủ web → cơ sở dữ liệu"
+    "webDb": "Người dùng → Máy chủ web → PostgreSQL"
   },
   "palette2": {
     "open": "Tìm kiếm",
@@ -785,5 +792,23 @@
       "p99": "Độ trễ p99"
     },
     "live": "Đang mô phỏng {seconds} giây"
+  },
+  "boot": {
+    "title": "Đang khởi động bộ mô phỏng",
+    "sub": "Lần đầu mất vài giây…",
+    "core": "Tải lõi mô phỏng",
+    "calibration": "Đọc tham số thế giới",
+    "canvas": "Chuẩn bị khung vẽ",
+    "draft": "Mở thiết kế gần nhất",
+    "done": "Xong",
+    "waiting": "Đang chờ",
+    "working": "Đang làm"
+  },
+  "engineError": {
+    "title": "Không khởi động được bộ mô phỏng",
+    "cause": "Trình duyệt không tải được lõi mô phỏng. Thường là do mạng chập chờn hoặc trình duyệt chặn WebAssembly.",
+    "safe": "Thiết kế “{name}” vẫn an toàn trên trình duyệt này",
+    "edit": "Sửa thiết kế khi chưa chạy được",
+    "details": "Chi tiết kỹ thuật"
   }
 }
