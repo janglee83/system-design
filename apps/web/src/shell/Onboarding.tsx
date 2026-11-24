@@ -1,5 +1,6 @@
 "use client";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
@@ -38,6 +39,22 @@ export function Onboarding({ firstChallenge }: { firstChallenge: ChallengeStart 
     if (loaded) setDone(ticked);
   }, [loaded, ticked, setDone]);
 
+  // §10: on first open the canvas fit leaves room for the card (it sits over the bottom left).
+  const flow = useReactFlow();
+  const cardRef = useRef<HTMLElement>(null);
+  const fitted = useRef(false);
+  const visible = loaded && !hidden;
+  const hasNodes = nodes.length > 0;
+  useEffect(() => {
+    if (!visible || !hasNodes || fitted.current) return;
+    fitted.current = true;
+    const id = requestAnimationFrame(() => {
+      const h = cardRef.current?.getBoundingClientRect().height ?? 0;
+      void flow.fitView({ duration: 200, maxZoom: 1, padding: { top: "48px", left: "48px", right: "48px", bottom: `${Math.round(h + 32)}px` } });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [visible, hasNodes, flow]);
+
   if (!loaded || hidden) return null;
   const count = ticked.length;
   const complete = count === ONBOARDING_TASKS.length;
@@ -46,6 +63,7 @@ export function Onboarding({ firstChallenge }: { firstChallenge: ChallengeStart 
   return (
     <>
       <section
+        ref={cardRef}
         aria-label={t("label", { done: count })}
         data-testid="onboarding"
         className="pointer-events-auto absolute bottom-3.5 left-4 z-10 w-[320px] rounded-lg border border-border bg-surface shadow-3"
