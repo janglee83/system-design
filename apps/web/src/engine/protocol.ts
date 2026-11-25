@@ -1,0 +1,62 @@
+import type { Calibration, CalibrationOverrides, Capabilities, ComponentMeta, Goal, Graph, GraphLimits, Metrics, SimEvent, SimInput, TimelineHeader, Trace, TraceSummary, ValidationIssue, Verdict } from "@sd/sim";
+
+/** Runs the worker keeps handles for (trace, export), and runs the Lab lists in its history (R18). */
+export const MAX_KEPT_RUNS = 10;
+
+/** Messages the main thread sends to the engine worker (spec §6). */
+export type EngineRequest =
+  | { type: "engineVersion" }
+  | { type: "listComponents" }
+  | { type: "defaultCalibration" }
+  | { type: "capabilities" }
+  | { type: "validate"; graph: Graph; limits: GraphLimits | null; calibration: CalibrationOverrides }
+  /** `goals`: grade the run with the engine (a challenge's goals); no goals, no verdict. */
+  | { type: "run"; input: SimInput; goals?: Goal[] }
+  | { type: "trace"; runId: number; index: number }
+  | { type: "resultJson"; runId: number }
+  | { type: "dropRun"; runId: number };
+
+export interface ValidateResult {
+  issues: ValidationIssue[];
+  /** Monthly cost per node id; null when the engine rejects the node's config (R10). */
+  costs: Record<string, number | null>;
+}
+
+export interface RunResult {
+  runId: number;
+  metrics: Metrics;
+  events: SimEvent[];
+  timeline: { header: TimelineHeader; data: Float32Array };
+  traces: TraceSummary[];
+  /** The engine's grade against the request's goals, or null without goals. */
+  verdict: Verdict | null;
+  /** Time the worker spent in simulate() and copying results out. */
+  elapsedMs: number;
+}
+
+export interface ResultOf {
+  engineVersion: string;
+  listComponents: ComponentMeta[];
+  defaultCalibration: Calibration;
+  capabilities: Capabilities;
+  validate: ValidateResult;
+  run: RunResult;
+  trace: Trace;
+  resultJson: string;
+  dropRun: null;
+}
+
+export type EngineError =
+  | { kind: "validation"; issues: ValidationIssue[] }
+  | { kind: "input"; message: string }
+  | { kind: "load"; message: string }
+  | { kind: "internal"; message: string }
+  /** The wasm instance trapped (a panic or `unreachable`); the client replaces the worker. */
+  | { kind: "crash"; message: string };
+
+export interface Envelope {
+  id: number;
+  request: EngineRequest;
+}
+
+export type Reply = { id: number; ok: true; value: unknown } | { id: number; ok: false; error: EngineError };

@@ -15,8 +15,8 @@ TypeScript wrapper (`packages/`), and later the Next.js app (`apps/web`).
    it fail for the expected reason, implement the minimum, run it and see it pass, commit.
 3. Run every command inside the dev container: `./dev <command>` (for example
    `./dev cargo test -p sim-core`). Never install toolchains on the host.
-4. Commit after each task with the message given in the plan. End every commit message with
-   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Do not push unless told to.
+4. Commit after each task with the message given in the plan. Commit messages carry no
+   attribution trailers (owner rule). Do not push unless told to.
 5. When a threshold test fails, investigate before changing anything. Fix the engine or a
    constant in `calibration.rs` (with a comment explaining why). Never loosen a golden,
    parity or property test to make it pass; report to the user instead.

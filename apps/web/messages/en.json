@@ -1,0 +1,958 @@
+{
+  "meta": {
+    "title": "System Design Lab",
+    "description": "Build a system, run it, and watch where it breaks."
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "comingSoon": "Coming soon"
+  },
+  "lab": {
+    "title": "Lab",
+    "heading": "Lab workspace",
+    "palette": "Components",
+    "inspector": "Inspector",
+    "canvas": "Design canvas",
+    "empty": {
+      "title": "Build your first system",
+      "body": "Pick a starting point, or drag a component from the left onto the canvas.",
+      "suggested": "Suggested",
+      "emptyLine": "An empty canvas, built from scratch",
+      "webDbLine": "Three basic tiers, ready to run",
+      "challenges": "Start from a challenge",
+      "seeAll": "See all",
+      "more": "and {count} more challenges",
+      "footer": "or press {palette} to find a component · ? for shortcuts"
+    },
+    "legend": {
+      "button": "Legend",
+      "title": "Connection kinds in this design",
+      "count": "{count, plural, one {# line} other {# lines}}",
+      "unused": "not used"
+    },
+    "node": {
+      "replicas": "×{count}",
+      "locked": "Locked by the challenge",
+      "issues": "{count, plural, one {# problem} other {# problems}}",
+      "line": {
+        "client": "{rps} requests/s",
+        "webServer": "{cpu} vCPU · {memoryGb} GB",
+        "postgres": "1 primary · {replicas, plural, =0 {no read replicas} one {# read replica} other {# read replicas}}"
+      },
+      "cost": "${cost}/mo",
+      "free": "Free",
+      "noPrice": "No price yet",
+      "live": {
+        "down": "Down since {seconds} s",
+        "rejected": "Rejecting {count}",
+        "inFlight": "{count} in flight",
+        "load": "{percent}% load",
+        "sending": "Sending {rps} requests/s"
+      }
+    },
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "snap": "Snap to grid",
+    "canvasRole": "design canvas",
+    "nodeRole": "component",
+    "controls": "Canvas controls",
+    "autoLayout": "Tidy layout",
+    "groupAction": "Group",
+    "ungroupAction": "Ungroup",
+    "layoutFailed": "The layout could not be worked out. Your design is unchanged.",
+    "edgePopover": {
+      "title": "Selected connection",
+      "reverse": "Reverse",
+      "delete": "Delete",
+      "kind": "Kind"
+    },
+    "zoomLevel": "Zoom {percent}%",
+    "minimap": {
+      "show": "Show the minimap",
+      "hide": "Hide the minimap",
+      "label": "Overview map"
+    },
+    "edgeRate": "About {count} requests on this connection right now (estimated from the receiving side)",
+    "edgePill": "{count} on the way",
+    "inspectorWidth": "Inspector width"
+  },
+  "nav": {
+    "primary": "Main",
+    "wordmark": "SD Lab",
+    "lab": "Lab",
+    "learn": "Learn",
+    "challenges": "Challenges",
+    "leaderboard": "Leaderboard",
+    "home": "System Design Lab home"
+  },
+  "language": {
+    "label": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Follow the system"
+  },
+  "help": {
+    "label": "Help",
+    "about": "About this lab"
+  },
+  "about": {
+    "title": "About System Design Lab",
+    "body": "A practice bench for system design: build a design, run it on a simulator in your browser, and see what holds and what breaks. Everything runs on your machine.",
+    "appVersion": "App version {version}",
+    "engineVersion": "Simulator engine {version}"
+  },
+  "shell": {
+    "desktopNotice": "This lab is built for screens at least 1280 pixels wide. It still works here, but some panels will be cramped.",
+    "dismiss": "Dismiss"
+  },
+  "learn": {
+    "title": "Learn",
+    "placeholder": "Lessons arrive in the next update. Here is the path they will follow.",
+    "level": "Level {level}",
+    "minutes": "{n} min",
+    "lesson": "Lesson",
+    "description": "From zero: each level opens when you pass the previous level's exit check.",
+    "listView": "Show as a list",
+    "pathView": "Show as a path",
+    "levelCard": "{id} · {count} lessons",
+    "locked": "Pass the level {level} exit check first",
+    "preview": "Preview. {reason}",
+    "kind": {
+      "experiment": "Experiment",
+      "reading": "Reading"
+    },
+    "meta": "{kind} · {minutes} min",
+    "difficulty": "Difficulty {n} of 3",
+    "current": "Learning now",
+    "continue": "Continue",
+    "soon": "Coming soon",
+    "soonHint": "Lesson pages arrive in the next update.",
+    "outcomes": "After level {level}, you will",
+    "milestone": "{modes} modes · {rps} requests/s",
+    "ready": {
+      "ready": "Runs in the Lab",
+      "waiting": "Waiting for the simulator",
+      "noLab": "No Lab needed"
+    },
+    "openLab": "Open in the Lab",
+    "levels": "Levels",
+    "levelHeading": "{id} · {title}",
+    "continueSoon": "Continue · Coming soon"
+  },
+  "challenges": {
+    "title": "Challenges",
+    "placeholder": "Challenge play arrives soon. You can already open any challenge's starting design in the Lab.",
+    "open": "Open in the Lab",
+    "openMode": "Open the {mode} mode",
+    "modes": "Modes",
+    "level": "Level {level}",
+    "fromChallenge": "Starting design of “{title}” ({mode})",
+    "notFound": "That challenge or mode does not exist, so the Lab opened your last design.",
+    "description": "Each challenge is a milestone: build a system that meets its goals under real load.",
+    "progressTitle": "Progress",
+    "progressValue": "{done} / {total}",
+    "scoringTitle": "How it is scored",
+    "scoring": "Each run is checked against the goals of the mode you pick and its budget. Meet them all to pass.",
+    "prereqs": "Learn first:"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "placeholder": "Rankings of the cheapest passing designs will appear here once accounts exist."
+  },
+  "engine": {
+    "loading": "Starting the simulator…",
+    "ready": "Simulator {version}",
+    "failed": "The simulator could not start. Check your connection, then try again.",
+    "event": {
+      "db": {
+        "no-replica": "{node}: the primary failed and there is no replica to take over.",
+        "primary-down": "{node}: the primary failed; {replicas, plural, one {# replica} other {# replicas}} left.",
+        "promoted": "{node}: a replica was promoted to primary."
+      },
+      "fault": {
+        "no-target": "A fault found no matching component and was skipped.",
+        "traffic-surge": "Traffic jumped to {factor}×.",
+        "unsupported": "This fault is not simulated yet, so it was skipped."
+      },
+      "instance": {
+        "down": "{node}: one instance stopped; {remaining} still running."
+      },
+      "lb": {
+        "node-down": "{node}: a balancer node failed; {remaining} left."
+      },
+      "node": {
+        "overloaded": "{node} is overloaded and has started rejecting requests."
+      }
+    },
+    "validation": {
+      "calibration": {
+        "invalid": "World parameter “{field}” has an invalid value."
+      },
+      "client": {
+        "no-path": "{node} has no path to a server."
+      },
+      "config": {
+        "invalid": "{node}: “{field}” is outside the allowed range."
+      },
+      "edge": {
+        "not-accepted": "{target} does not accept {kind} connections.",
+        "unknown-node": "A connection points to a component that no longer exists."
+      },
+      "graph": {
+        "cycle": "The design loops back through {node}; requests would go round forever.",
+        "no-client": "Add a Users component so something sends requests."
+      },
+      "limits": {
+        "kind-not-allowed": "This challenge does not allow {node}.",
+        "too-many-instances": "The total number of instances is over the challenge limit.",
+        "too-many-nodes": "There are more components than the challenge allows."
+      },
+      "node": {
+        "duplicate-id": "Two components share the id {node}.",
+        "unknown-kind": "{node} is a component type the simulator does not know.",
+        "unreachable": "{node} gets no requests: nothing connects to it."
+      },
+      "workload": {
+        "invalid": "Traffic setting “{field}” is invalid."
+      }
+    }
+  },
+  "component": {
+    "client": "Users",
+    "lb": "Load balancer",
+    "web-server": "Web server",
+    "postgres": "PostgreSQL",
+    "mobile": "Mobile app",
+    "dns": "DNS",
+    "cdn": "CDN",
+    "api-gateway": "API gateway",
+    "rate-limiter": "Rate limiter",
+    "worker": "Background worker",
+    "scheduler": "Scheduler (cron)",
+    "read-replica": "Read replica",
+    "kv-store": "Key–value store",
+    "search": "Search index",
+    "redis": "Redis",
+    "memcached": "Memcached",
+    "queue": "Queue",
+    "rabbitmq": "RabbitMQ",
+    "stream": "Event stream",
+    "object-storage": "Object storage",
+    "third-party": "External API"
+  },
+  "componentDescription": {
+    "client": "Where requests come from: the people using your system.",
+    "lb": "Spreads incoming requests across the servers behind it so no single one is swamped.",
+    "web-server": "Runs your application code and answers HTTP requests. Add CPUs or copies to serve more.",
+    "postgres": "A relational database that keeps data safe. Read replicas share the reading load.",
+    "mobile": "People on phones, sending requests over mobile networks.",
+    "dns": "Turns a domain name into an address so people can reach your system.",
+    "cdn": "Keeps copies of static content close to people so it loads faster.",
+    "api-gateway": "One front door: checks who is calling, routes and combines the APIs behind it.",
+    "rate-limiter": "Turns away requests when one caller sends too many too quickly.",
+    "worker": "Does slow jobs in the background, taking work from a queue.",
+    "scheduler": "Runs jobs at set times, such as a report every night.",
+    "read-replica": "A read-only copy of the database that takes some of the reading load.",
+    "kv-store": "Stores data by key; very fast reads and writes, easy to split up.",
+    "search": "Finds text by keyword across a large amount of content.",
+    "redis": "An in-memory cache that takes reads off the database.",
+    "memcached": "A simple in-memory cache spread across several machines.",
+    "queue": "Holds work to be done later so people do not wait for it.",
+    "rabbitmq": "A message queue with routing and delivery receipts.",
+    "stream": "A durable log of events that many readers can replay.",
+    "object-storage": "Stores big files such as photos and video, cheaply and almost without limit.",
+    "third-party": "Someone else’s service your system calls, such as payments."
+  },
+  "category": {
+    "general": "General",
+    "compute": "Compute",
+    "data": "Data"
+  },
+  "role": {
+    "client": "Client",
+    "balancer": "Balancer",
+    "service": "Service",
+    "database": "Database"
+  },
+  "edgeKind": {
+    "http": "HTTP",
+    "db": "Database",
+    "cache": "Cache",
+    "msg": "Messaging"
+  },
+  "configField": {
+    "cpu": "vCPUs",
+    "memoryGb": "Memory (GB)",
+    "readReplicas": "Read replicas",
+    "algorithm": "Balancing method"
+  },
+  "configOption": {
+    "algorithm": {
+      "round-robin": "Take turns",
+      "least-conn": "Fewest open requests"
+    }
+  },
+  "override": {
+    "rpsPerInstance": "Requests/s per instance",
+    "serviceMs": "Service time (ms)",
+    "costPerMonth": "Cost per month ($)"
+  },
+  "calibration": {
+    "webRpsPerVcpu": "Web: requests/s per vCPU",
+    "webServiceMs": "Web: time to serve a request (ms)",
+    "webQueuePerGb": "Web: waiting requests per GB of memory",
+    "webCostPerVcpu": "Web: monthly cost of the first vCPU ($)",
+    "webCostPerExtraVcpu": "Web: monthly cost per extra vCPU ($)",
+    "lbRpsPerReplica": "Load balancer: requests/s per node",
+    "lbServiceMs": "Load balancer: time per request (ms)",
+    "lbQueueSeconds": "Load balancer: seconds of traffic it can hold",
+    "lbCostPerReplica": "Load balancer: monthly cost per node ($)",
+    "lbMaxUtilizationForLatency": "Load balancer: busy level where delays start",
+    "pgQpsPerInstance": "PostgreSQL: queries/s per instance",
+    "pgServiceMs": "PostgreSQL: time per query (ms)",
+    "pgQueueSeconds": "PostgreSQL: seconds of queries it can hold",
+    "pgCostPerInstance": "PostgreSQL: monthly cost per instance ($)",
+    "pgFailoverMs": "PostgreSQL: time to promote a replica (ms)",
+    "pgMaxUtilizationForLatency": "PostgreSQL: busy level where delays start",
+    "edgeDelayHttpMs": "Network delay on HTTP links (ms)",
+    "edgeDelayDbMs": "Network delay on database links (ms)",
+    "edgeDelayCacheMs": "Network delay on cache links (ms)",
+    "edgeDelayMsgMs": "Network delay on messaging links (ms)"
+  },
+  "profile": {
+    "read-heavy": "Mostly reads",
+    "write-heavy": "Mostly writes",
+    "mixed": "Mixed",
+    "chat": "Chat",
+    "feed": "Feed",
+    "jobs": "Background jobs"
+  },
+  "arrivals": {
+    "poisson": "Random (Poisson)",
+    "uniform": "Steady"
+  },
+  "fault": {
+    "traffic-surge-3x": "Traffic triples",
+    "instance-down": "A server goes down",
+    "instance-slow": "A server slows down",
+    "lb-node-down": "A load balancer node fails",
+    "cache-down": "The cache goes down",
+    "db-overloaded": "The database is overloaded",
+    "db-primary-down": "The database primary fails",
+    "db-replica-down": "A database replica fails",
+    "db-stalled": "The database stalls",
+    "broker-down": "The message broker goes down",
+    "object-storage-down": "Object storage goes down",
+    "kv-node-down": "A key-value node fails",
+    "third-party-down": "A third-party service goes down",
+    "third-party-slow": "A third-party service slows down"
+  },
+  "metric": {
+    "p50": "p50",
+    "p95": "p95",
+    "p99": "p99",
+    "availability": "Availability",
+    "throughputRps": "Throughput",
+    "costPerMonth": "Cost per month",
+    "spofCount": "Single points of failure",
+    "exposedBackends": "Exposed backends",
+    "peakBusy": "Peak busy",
+    "peakDbConnections": "Peak database connections",
+    "cacheOps": "Cache operations",
+    "requestsTotal": "Total requests",
+    "requestsOk": "Answered",
+    "requestsRejected": "Rejected",
+    "requestsTimedOut": "Timed out",
+    "requestsUnreachable": "Unreachable",
+    "duplicateIds": "Duplicate IDs",
+    "outOfOrderIds": "Out-of-order IDs",
+    "lostUpdates": "Lost updates",
+    "writeConflicts": "Write conflicts",
+    "duplicateWrites": "Duplicate writes",
+    "staleReads": "Stale reads",
+    "peakQueueDepth": "Longest queue",
+    "lostMessages": "Lost messages",
+    "statusFlaps": "Status flaps",
+    "staleOnline": "Stale online status",
+    "inboxWritesPerSec": "Inbox writes per second"
+  },
+  "timelineField": {
+    "inFlight": "In flight",
+    "queued": "Waiting",
+    "busy": "Busy",
+    "rejected": "Rejected",
+    "up": "Running"
+  },
+  "traceOutcome": {
+    "delivered": "Answered",
+    "rejected": "Rejected",
+    "timeout": "Timed out",
+    "unreachable": "Unreachable"
+  },
+  "traceAction": {
+    "send": "Sent",
+    "serve": "Served",
+    "reject": "Rejected",
+    "down": "Hit a stopped server"
+  },
+  "palette": {
+    "search": "Search components",
+    "add": "Add {name}",
+    "notAllowed": "This challenge does not allow this component.",
+    "noMatch": "No component matches “{query}”.",
+    "added": "Added {name}",
+    "soon": "Coming soon",
+    "locked": "Locked",
+    "price": "${price}",
+    "card": {
+      "status": "Status",
+      "price": "Price",
+      "accepts": "Accepts",
+      "ready": "Available",
+      "planned": "Coming soon",
+      "later": "Later",
+      "acceptsNone": "Accepts no connections",
+      "perMonth": "${price}/mo",
+      "soonNote": "Can’t be placed on the canvas yet. Lessons that use it open when the simulator supports it.",
+      "notAllowed": "This challenge doesn’t allow this component."
+    },
+    "rail": "Component types",
+    "running": "Stop the run to add components",
+    "close": "Close the drawer"
+  },
+  "connect": {
+    "title": "Connect {source} to…",
+    "description": "Pick where requests from {source} should go. Use the arrow keys, then Enter.",
+    "none": "There is nothing else to connect to yet.",
+    "refused": {
+      "not-accepted": "{target} does not take incoming connections.",
+      "duplicate": "These two are already connected.",
+      "self": "A component cannot connect to itself.",
+      "unknown-node": "That component no longer exists."
+    },
+    "hint": "Drop on a component to connect · Esc to cancel · or press C to pick from a list",
+    "drop": "Drop to connect · {kind}"
+  },
+  "problems": {
+    "none": "No problems",
+    "count": "{count, plural, one {# problem} other {# problems}}",
+    "title": "Problems",
+    "blocking": "Must fix before running",
+    "warning": "Worth a look",
+    "select": "Show on canvas",
+    "field": {
+      "replicas": "Replicas"
+    }
+  },
+  "inspector": {
+    "design": "Design",
+    "name": "Name",
+    "untitled": "Untitled design",
+    "label": "Label",
+    "replicas": "Replicas",
+    "settings": "Settings",
+    "cost": "Estimated monthly cost",
+    "costValue": "${cost}",
+    "advanced": "Advanced",
+    "advancedHint": "Override this one component; leave empty to use the world parameters.",
+    "lockedNotice": "The challenge locks this component. You can move it, but not change it.",
+    "edge": "Connection",
+    "edgeKind": "Kind",
+    "edgeKindNotAccepted": "{kind} (not accepted by {target})",
+    "multi": "{count} items selected",
+    "decrease": "Decrease {label}",
+    "increase": "Increase {label}",
+    "summary": {
+      "world": "Uses the world parameters",
+      "own": "{count, plural, one {# own value} other {# own values}}",
+      "breakdown": "{count, plural, one {# instance} other {# instances}} × ${each}",
+      "noConnections": "No connections",
+      "connections": "{incoming} in · {outgoing} out",
+      "workload": "{rps} requests/s · {writes}% writes",
+      "run": "{seconds} s · seed {seed}",
+      "faults": "{count, plural, =0 {No faults} one {# fault} other {# faults}}"
+    },
+    "connections": "Connections",
+    "connection": {
+      "in": "From {name}",
+      "out": "To {name}"
+    },
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "exportDesign": "Export design",
+    "runSettingsTitle": "Run settings",
+    "designSub": "The whole design"
+  },
+  "group": {
+    "untitled": "Group",
+    "rename": "Rename group",
+    "label": "Group name"
+  },
+  "workload": {
+    "traffic": "Traffic",
+    "runSettings": "Run settings",
+    "params": "Scenario parameters",
+    "paramKey": "Parameter name",
+    "paramValue": "Value",
+    "paramAdd": "Add parameter",
+    "paramRemove": "Remove {name}",
+    "paramIgnored": "This simulator does not read “{name}” yet; it is kept with the design.",
+    "surgeToggle": "Traffic surge",
+    "percent": "%",
+    "seconds": "s",
+    "field": {
+      "profile": "Traffic shape",
+      "baseRps": "Total requests per second",
+      "writeRatio": "Share of writes",
+      "clients": "Distinct clients",
+      "clientTimeoutMs": "Client gives up after (ms)",
+      "arrivals": "Arrival pattern",
+      "trafficEndMs": "Stop new traffic at (s)",
+      "durationMs": "Run length (s)",
+      "seed": "Random seed",
+      "surge": {
+        "factor": "Surge multiplier",
+        "atMs": "Surge starts at (s)",
+        "durationMs": "Surge lasts (s)"
+      }
+    }
+  },
+  "presets": {
+    "label": "Preset",
+    "choose": "Apply a preset…",
+    "save": "Save current traffic as a preset",
+    "saveTitle": "Save traffic preset",
+    "name": "Preset name",
+    "delete": "Delete preset {name}",
+    "builtIn": "Built in",
+    "yours": "Yours",
+    "quiet": "Quiet hours",
+    "lunch": "Lunch peak",
+    "flashSale": "Flash sale",
+    "writeStorm": "Write storm",
+    "unavailable": "Saving presets needs browser storage, which this window does not allow."
+  },
+  "faults": {
+    "title": "Faults",
+    "empty": "No faults. The run will be calm.",
+    "add": "Add fault",
+    "random": "Random fault",
+    "kind": "Fault",
+    "target": "Target",
+    "anyTarget": "Any matching (the simulator picks)",
+    "noTarget": "Affects all traffic",
+    "at": "At (s)",
+    "remove": "Remove fault",
+    "comingSoon": "Coming soon: the simulator does not model this fault yet.",
+    "noCandidate": "No supported fault matches this design yet."
+  },
+  "canvasA11y": {
+    "nodeDescription": "Press Enter or Space to select a component. Press Delete to remove it and Escape to cancel.",
+    "nodeDescriptionKeyboard": "Press Enter or Space to select a component, then move it with the arrow keys. Press Delete to remove it and Escape to cancel.",
+    "nodeMoved": "Moved the selected component {direction}. New position: x {x}, y {y}.",
+    "direction": {
+      "up": "up",
+      "down": "down",
+      "left": "left",
+      "right": "right"
+    },
+    "edgeDescription": "Press Enter or Space to select a connection, then Delete to remove it or Escape to cancel.",
+    "controls": "Canvas controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to screen",
+    "interactive": "Lock or unlock editing",
+    "minimap": "Overview map",
+    "handle": "Connection port",
+    "node": "{label}, {kind}",
+    "group": "Group {label}",
+    "edge": "{kind} connection from {source} to {target}",
+    "state": {
+      "busy": "Busy",
+      "overloaded": "Overloaded",
+      "down": "Down"
+    },
+    "selected": "selected",
+    "locked": "locked",
+    "issues": "{count, plural, one {# problem} other {# problems}}"
+  },
+  "world": {
+    "title": "World parameters",
+    "intro": "How fast and how expensive the simulated machines and network are. Changes apply to this design only.",
+    "changed": "{count, plural, one {# changed} other {# changed}}",
+    "reset": "Reset to default",
+    "resetAll": "Reset all",
+    "default": "Default {value}",
+    "group": {
+      "web": "Web servers",
+      "lb": "Load balancers",
+      "pg": "PostgreSQL",
+      "network": "Network"
+    },
+    "allDefault": "All defaults"
+  },
+  "run": {
+    "run": "Run",
+    "running": "Running…",
+    "blocked": "Fix the problems first",
+    "refused": "The simulator refused this setup. See the problems list.",
+    "failed": "The run failed: {message}",
+    "duration": "{seconds} s",
+    "history": "Run history",
+    "runLabel": "Run {id} · {time}",
+    "tookMs": "{ms} ms",
+    "unavailable": "Run again to inspect: the simulator restarted after this run.",
+    "stale": "run again to inspect",
+    "checking": "Still checking the design. Try again in a moment.",
+    "go": "Run simulation",
+    "more": "Run settings",
+    "stop": "Stop",
+    "progress": "Running",
+    "simulated": "{seconds} s simulated",
+    "why": {
+      "engine": "The simulator is starting",
+      "needsNodes": "Add Users and a server to run",
+      "problems": "{count, plural, one {# problem} other {# problems}} left to fix",
+      "checking": "Checking the design…"
+    },
+    "settings": {
+      "duration": "Duration",
+      "seed": "Random seed",
+      "faults": "{count, plural, =0 {No faults} one {# fault} other {# faults}}",
+      "open": "Open the design settings"
+    }
+  },
+  "panel": {
+    "label": "Results",
+    "tabs": {
+      "metrics": "Metrics",
+      "events": "Events",
+      "logs": "Logs",
+      "simulation": "Simulation"
+    },
+    "resize": "Resize the results panel",
+    "noRun": "No run yet",
+    "noRunBody": "Press Run to simulate this design. Results appear here.",
+    "vsPrevious": "vs previous run",
+    "better": "better",
+    "worse": "worse",
+    "breakdown": "What happened to the requests",
+    "series": "Over time",
+    "node": "Component",
+    "noComparison": "First run: nothing to compare yet.",
+    "points": "{value} pp",
+    "vsRun": "{delta} vs #{id}",
+    "pointsUnit": "pts",
+    "alerts": "{count, plural, one {# warning or error} other {# warnings or errors}}"
+  },
+  "events": {
+    "time": "Time",
+    "node": "Component",
+    "message": "What happened",
+    "empty": "No events in this run.",
+    "jump": "Jump to {time}",
+    "show": "Show on the canvas"
+  },
+  "logs": {
+    "level": {
+      "info": "Info",
+      "warn": "Warning",
+      "error": "Error"
+    },
+    "filter": "Show levels",
+    "started": "Run {id} started: {nodes, plural, one {# component} other {# components}}, {rps} requests/s for {seconds} s.",
+    "finished": "Run {id} finished in {ms} ms: {ok} answered, {failed} not answered.",
+    "warning": "Before the run: {text}"
+  },
+  "simulation": {
+    "input": "Input sent to the simulator",
+    "engine": "Simulator version {version}",
+    "export": "Export run (JSON)",
+    "copy": "Copy input",
+    "copied": "Input copied to the clipboard.",
+    "copyFailed": "Could not copy. Select the text and copy it by hand.",
+    "exportFailed": "The run could not be exported: {message}"
+  },
+  "designs": {
+    "menu": "Design",
+    "new": "New",
+    "open": "Open…",
+    "save": "Save",
+    "saveAs": "Save as…",
+    "import": "Import…",
+    "export": "Export",
+    "saved": "Saved “{name}”.",
+    "unsaved": "Unsaved changes",
+    "dialogTitle": "Your designs",
+    "dialogDescription": "Designs are kept in this browser. There is no limit on how many you keep.",
+    "empty": "No saved designs yet.",
+    "updated": "Updated {when}",
+    "nodes": "{count, plural, one {# component} other {# components}}",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{name}”? This cannot be undone.",
+    "copySuffix": "copy",
+    "nameLabel": "Design name",
+    "openAction": "Open “{name}”",
+    "storageUnavailable": "This browser is not letting the lab store data, so designs cannot be saved here.",
+    "draftRestored": "Picked up where you left off.",
+    "discard": "Your unsaved changes will be lost. Continue?",
+    "openConfirm": "Open"
+  },
+  "labCheck": {
+    "fault": {
+      "target-missing": "A fault targets {node}, which is no longer in the design. It will hit any matching component.",
+      "after-end": "A fault at {time} s comes after the run ends, so it never happens."
+    }
+  },
+  "importIssue": {
+    "title": "This file cannot be opened",
+    "description": "Fix these problems in the file, or export a fresh one from the lab.",
+    "root": "(whole file)",
+    "invalid_json": "is not valid JSON",
+    "unsupported_version": "uses a design format this lab does not know",
+    "invalid_type": "has the wrong type",
+    "too_big": "is too large or too long",
+    "too_small": "is too small or too short",
+    "invalid_format": "is not in the expected format",
+    "not_multiple_of": "is not a whole step",
+    "unrecognized_keys": "has fields this lab does not know",
+    "invalid_union": "does not match any allowed shape",
+    "invalid_key": "has an invalid name",
+    "invalid_element": "has an invalid entry",
+    "invalid_value": "is not one of the allowed values",
+    "custom": "is not valid",
+    "dangling_ref": "points to something that does not exist",
+    "duplicate_id": "repeats an id that is already used",
+    "line": "{path}: {reason}",
+    "imported": "Imported “{name}”.",
+    "too_deep": "is nested too deeply",
+    "unreadable": "could not be read"
+  },
+  "templates": {
+    "empty": "Empty",
+    "webDb": "Users → Web server → PostgreSQL"
+  },
+  "palette2": {
+    "open": "Search",
+    "placeholder": "Search commands, components, lessons, challenges…",
+    "hint": "{shortcut}",
+    "empty": "Nothing found for “{query}”.",
+    "group": {
+      "command": "Commands",
+      "component": "Components",
+      "lesson": "Lessons",
+      "challenge": "Challenges"
+    },
+    "cmd": {
+      "add": "Add {name}",
+      "run": "Run the design",
+      "fitView": "Fit the design to the screen",
+      "layout": "Tidy the layout",
+      "open": "Open a saved design",
+      "save": "Save the design",
+      "export": "Export the design file",
+      "import": "Import a design file",
+      "newEmpty": "New empty design",
+      "newWebDb": "New design: users → web server → database",
+      "minimap": "Toggle the minimap"
+    }
+  },
+  "designTitle": {
+    "saved": "Saved in this browser · {ago}",
+    "unsaved": "Unsaved changes",
+    "never": "Not saved yet",
+    "ran": "Run #{run} done · {ago}",
+    "justNow": "just now",
+    "rename": "Rename the design",
+    "nameField": "Design name"
+  },
+  "status": {
+    "label": "Status",
+    "engineReady": "Simulator {version} ready",
+    "engineLoading": "Starting the simulator…",
+    "engineError": "Simulator error",
+    "counts": "{nodes, plural, one {# component} other {# components}} · {edges, plural, one {# connection} other {# connections}}",
+    "autosave": "Autosaved in this browser",
+    "cost": "${cost}/mo"
+  },
+  "edit": {
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+  "paletteCategory": {
+    "entry": {
+      "short": "Entry",
+      "name": "Entry points",
+      "description": "Where requests come into the system."
+    },
+    "compute": {
+      "short": "Compute",
+      "name": "Compute",
+      "description": "Machines that run your code."
+    },
+    "data": {
+      "short": "Data",
+      "name": "Data",
+      "description": "Where data is kept for good."
+    },
+    "cache": {
+      "short": "Cache",
+      "name": "Caching",
+      "description": "Keeps answers ready so replies come faster."
+    },
+    "msg": {
+      "short": "Messages",
+      "name": "Messaging",
+      "description": "Moves work between parts of the system."
+    },
+    "storage": {
+      "short": "Files",
+      "name": "File storage",
+      "description": "Where big files are kept."
+    },
+    "external": {
+      "short": "External",
+      "name": "External services",
+      "description": "Services you do not run yourself."
+    }
+  },
+  "verdict": {
+    "fail": "Not yet · {met}/{total}",
+    "pass": "Passed · {met}/{total}",
+    "neutral": "Run #{run} done",
+    "why": "Where did it break?",
+    "again": "Run again",
+    "moreMet": "+{count} met",
+    "close": "Close the result",
+    "announceFail": "Not passed: {met} of {total} goals met.",
+    "announcePass": "Passed: all {total} goals met.",
+    "announceNeutral": "Run #{run} done.",
+    "calloutTitle": "This is where it broke",
+    "callout": "{goal}: measured {measured}, needed {op} {target}. {node} peaked at {busy}% busy.",
+    "goalLabel": {
+      "p50": "p50 latency",
+      "p95": "p95 latency",
+      "p99": "p99 latency"
+    },
+    "live": "Simulating {seconds} s",
+    "clock": "{now} / {total} s",
+    "eventsSoFar": "{count, plural, one {# event} other {# events}}",
+    "overloadedNow": "{count, plural, other {# overloaded}}"
+  },
+  "boot": {
+    "title": "Starting the simulator",
+    "sub": "The first time takes a few seconds…",
+    "core": "Load the simulation core",
+    "calibration": "Read the world parameters",
+    "canvas": "Prepare the canvas",
+    "draft": "Open your last design",
+    "done": "Done",
+    "waiting": "Waiting",
+    "working": "Working"
+  },
+  "engineError": {
+    "title": "The simulator could not start",
+    "cause": "The browser could not load the simulation core. This is usually a patchy connection or a browser that blocks WebAssembly.",
+    "safe": "The design “{name}” is still safe in this browser",
+    "edit": "Edit the design while it cannot run",
+    "details": "Technical details"
+  },
+  "playback": {
+    "play": "Play",
+    "pause": "Pause",
+    "speed": "Playback speed",
+    "speedValue": "{speed}×",
+    "time": "Playback time",
+    "timeValue": "{now} / {total} s",
+    "marker": "{time} s: {text}",
+    "bar": "Run playback",
+    "stale": "The design changed after this run. Run again to see it play."
+  },
+  "state": {
+    "title": "Component state",
+    "normal": "Normal",
+    "busy": "Busy (70% or more)",
+    "overloaded": "Overloaded (rejecting or 95%+)",
+    "down": "Down"
+  },
+  "trace": {
+    "title": "Follow a request",
+    "close": "Stop following",
+    "next": "Next request of the same kind",
+    "cause": "waited {wait} ms · served in {service} ms",
+    "hop": "{action} · {node}",
+    "sampled": "Sampled requests",
+    "row": "#{id} · {class} · {latency}",
+    "follow": "Follow request #{id}",
+    "class": {
+      "read": "read",
+      "write": "write"
+    },
+    "unavailable": "This request cannot be loaded: the simulator restarted. Run again.",
+    "delta": "+{ms} ms",
+    "ms": "{ms} ms",
+    "filter": "Filter by outcome",
+    "all": "All",
+    "request": "#{id} · {class}",
+    "col": {
+      "request": "Request",
+      "outcome": "Outcome",
+      "latency": "Took"
+    }
+  },
+  "onboarding": {
+    "title": "Get to know the Lab",
+    "label": "Get to know the Lab · {done}/5",
+    "progress": "{done}/5 tasks · about 3 minutes",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "showMe": "Show me",
+    "footer": "Reopen it any time from the ? button",
+    "hide": "Hide",
+    "doneTitle": "You know your way around",
+    "next": "Next: your first challenge · {title}",
+    "start": "Start",
+    "help": "Get to know the Lab",
+    "task": {
+      "addClient": "Add Users",
+      "connectWeb": "Add a Web server and connect it",
+      "addDatabase": "Add PostgreSQL to keep data",
+      "firstRun": "Run your first simulation",
+      "whereItBroke": "Open “Where did it break?” after a run"
+    },
+    "coach": {
+      "step": "Step {n}/4",
+      "skip": "Skip",
+      "next": "Next",
+      "done": "Done",
+      "addClient": {
+        "title": "Start with the users",
+        "text": "Open Entry and drag Users onto the canvas. That is where requests come from."
+      },
+      "connectWeb": {
+        "title": "Connect a server",
+        "text": "Add a Web server, then drag from the right-hand port of Users to the server's left-hand port."
+      },
+      "addDatabase": {
+        "title": "Add somewhere to keep data",
+        "text": "From Data, drag PostgreSQL in and connect the web server to it."
+      },
+      "firstRun": {
+        "title": "Give it a run",
+        "text": "Press Run simulation. In a few seconds you will see how the system copes."
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+# CI only: host directories over the caches, so actions/cache can save and restore them.
+services:
+  dev:
+    volumes:
+      - ${CI_CACHE:?set CI_CACHE}/pnpm-store:/pnpm-store
+      - ${CI_CACHE:?set CI_CACHE}/cargo-registry:/usr/local/cargo/registry
+      - ${CI_CACHE:?set CI_CACHE}/cargo-target:/work/target
+      - ${CI_CACHE:?set CI_CACHE}/next:/work/apps/web/.next

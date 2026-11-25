@@ -1,0 +1,64 @@
+"use client";
+import { validateDesign } from "../model/design-file";
+import { useEffect } from "react";
+import type { Design } from "../model/design";
+import type { DesignStore } from "../store/design-store";
+import type { DocStore } from "../store/doc-store";
+import { useDesignApi, useDocApi } from "../store/LabStores";
+import { getKv, setKv } from "./db";
+
+export const AUTOSAVE_MS = 1000;
+export interface Draft {
+  design: Design;
+  savedId: string | null;
+  at: number;
+}
+
+/** Writes the draft now (after a save, or before the locale changes, R33). Storage errors are ignored. */
+export function flushDraft(design: DesignStore, doc: DocStore): Promise<void> {
+  const draft: Draft = { design: design.getState().design, savedId: doc.getState().savedId, at: Date.now() };
+  return setKv("draft", draft).catch(() => {});
+}
+
+/** 1 s after the last change, keeps the design as the draft (R22); any change makes the doc dirty. */
+export function useAutosave(): void {
+  const design = useDesignApi();
+  const doc = useDocApi();
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsub = design.subscribe((s, prev) => {
+      if (s.design === prev.design) return;
+      doc.getState().markDirty();
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = undefined;
+        void flushDraft(design, doc);
+      }, AUTOSAVE_MS);
+    });
+    // A language switch (R33) writes a pending draft before the Lab remounts.
+    const onLocale = () => {
+      if (timer === undefined) return;
+      clearTimeout(timer);
+      timer = undefined;
+      void flushDraft(design, doc);
+    };
+    window.addEventListener("sd:before-locale-change", onLocale);
+    return () => {
+      window.removeEventListener("sd:before-locale-change", onLocale);
+      // Leaving the Lab writes a pending draft now instead of dropping it.
+      if (timer !== undefined) void flushDraft(design, doc);
+      clearTimeout(timer);
+      unsub();
+    };
+  }, [design, doc]);
+}
+
+/** The draft, if it is a valid design; a damaged one is ignored so the Lab still opens (review). */
+export const loadDraft = (): Promise<Draft | undefined> =>
+  getKv<Partial<Draft>>("draft")
+    .then((d) => {
+      const design = d ? validateDesign(d.design) : null;
+      if (!d || !design) return undefined;
+      return { design, savedId: typeof d.savedId === "string" ? d.savedId : null, at: typeof d.at === "number" ? d.at : 0 };
+    })
+    .catch(() => undefined);

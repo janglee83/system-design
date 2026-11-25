@@ -1,0 +1,121 @@
+/* Design v2 tokens (docs/design/design-system.md §1, 2A "Giấy & Mực"). Values live only here. */
+:root {
+  color-scheme: light;
+  --sd-bg: #F3F1EB;
+  --sd-canvas: #F9F7F2;
+  --sd-grid: #D8D2C4;
+  --sd-surface: #FFFFFF;
+  --sd-surface-2: #F4F1EA;
+  --sd-surface-3: #EAE6DC;
+  --sd-border: #E1DCD0;
+  --sd-border-strong: #8A8374;
+  --sd-text: #191C20;
+  --sd-text-2: #474C54;
+  --sd-text-3: #61666E;
+  --sd-accent: #0B6870;
+  --sd-accent-hover: #08545B;
+  --sd-accent-soft: #DDEEEE;
+  --sd-accent-text: #0B6870;
+  --sd-on-accent: #FFFFFF;
+  --sd-ok: #1D7849;
+  --sd-ok-soft: #DDF1E5;
+  --sd-busy: #9A5A00;
+  --sd-busy-soft: #FBEED5;
+  --sd-busy-line: #C47A0A;
+  --sd-over: #BF3328;
+  --sd-over-soft: #FBE2DE;
+  --sd-down: #5E636D;
+  --sd-down-soft: #ECECEE;
+  /* Not in §1.1: kept for info toasts, banners and log rows. */
+  --sd-info: #2E5BC9;
+  --sd-edge-http: #2F5FD0;
+  --sd-edge-db: #7F44C4;
+  --sd-edge-cache: #0B8460;
+  --sd-edge-msg: #B8387D;
+  --sd-cat-entry: #4F57C9;
+  --sd-cat-compute: #2C66C7;
+  --sd-cat-data: #7542B3;
+  --sd-cat-cache: #0B7A6E;
+  --sd-cat-msg: #B0397A;
+  --sd-cat-storage: #3D6C8A;
+  --sd-cat-external: #5D6470;
+  /* Focus on inverse surfaces (tooltips), §1.5. */
+  --sd-focus-inverse: #7FD3D8;
+  --sd-scrim: rgb(10 14 18 / 0.55);
+  --sd-shadow-1: 0 1px 2px rgb(25 28 32 / 0.06), 0 1px 1px rgb(25 28 32 / 0.04);
+  --sd-shadow-2: 0 6px 16px rgb(25 28 32 / 0.08), 0 2px 4px rgb(25 28 32 / 0.05);
+  --sd-shadow-3: 0 18px 40px rgb(25 28 32 / 0.16);
+  --sd-r-xs: 4px;
+  --sd-r-sm: 6px;
+  --sd-r-md: 8px;
+  --sd-r-lg: 12px;
+  --sd-r-xl: 16px;
+  --sd-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --sd-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --sd-t-fast: 120ms;
+  --sd-t-panel: 200ms;
+  --sd-t-overlay: 320ms;
+  --sd-t-fill: 600ms;
+  --sd-t-breathe: 1.6s;
+  --sd-dash-http: none;
+  --sd-dash-db: 7 4;
+  --sd-dash-cache: 2 4;
+  --sd-dash-msg: 9 4 2 4;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --sd-bg: #0E1215;
+  --sd-canvas: #0B0F12;
+  --sd-grid: #1E262D;
+  --sd-surface: #151B20;
+  --sd-surface-2: #1B2329;
+  --sd-surface-3: #232D35;
+  --sd-border: #283239;
+  --sd-border-strong: #5F6C78;
+  --sd-text: #E8ECEF;
+  --sd-text-2: #B2BCC5;
+  --sd-text-3: #8E99A4;
+  --sd-accent: #3FC3CB;
+  --sd-accent-hover: #66D2D8;
+  --sd-accent-soft: #0F3438;
+  --sd-accent-text: #5BD0D7;
+  --sd-on-accent: #041A1C;
+  --sd-ok: #4CC68B;
+  --sd-ok-soft: #12301F;
+  --sd-busy: #F2AA3E;
+  --sd-busy-soft: #34270F;
+  --sd-busy-line: #F2AA3E;
+  --sd-over: #FF6F62;
+  --sd-over-soft: #3B1916;
+  --sd-down: #848D98;
+  --sd-down-soft: #1D232A;
+  --sd-info: #7A9DFF;
+  --sd-edge-http: #7C9DFF;
+  --sd-edge-db: #BB94F5;
+  --sd-edge-cache: #45CC9E;
+  --sd-edge-msg: #F07FBB;
+  --sd-cat-entry: #9AA2FF;
+  --sd-cat-compute: #79A6FF;
+  --sd-cat-data: #BE97F6;
+  --sd-cat-cache: #45CFB8;
+  --sd-cat-msg: #F07FBB;
+  --sd-cat-storage: #8DB8D6;
+  --sd-cat-external: #A3ABB6;
+  --sd-focus-inverse: #7FD3D8;
+  --sd-scrim: rgb(0 0 0 / 0.6);
+  --sd-shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --sd-shadow-2: 0 8px 20px rgb(0 0 0 / 0.45);
+  --sd-shadow-3: 0 18px 44px rgb(0 0 0 / 0.6);
+}
+
+/* §1.4: every duration becomes 0. Read live by CSS; JS listens to the media query separately. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sd-t-fast: 0ms;
+    --sd-t-panel: 0ms;
+    --sd-t-overlay: 0ms;
+    --sd-t-fill: 0ms;
+    --sd-t-breathe: 0ms;
+  }
+}

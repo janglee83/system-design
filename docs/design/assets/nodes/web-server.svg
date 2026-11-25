@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Máy chủ web" data-kind="web-server" data-category="compute">
+  <title>Máy chủ web</title>
+  <rect x="8" y="6" width="48" height="15" rx="2.5" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="8" y="25" width="48" height="15" rx="2.5" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="15" cy="13.5" r="1.7" fill="currentColor"/>
+  <circle cx="21" cy="13.5" r="1.7" fill="currentColor"/>
+  <circle cx="15" cy="32.5" r="1.7" fill="currentColor"/>
+  <circle cx="21" cy="32.5" r="1.7" fill="currentColor"/>
+  <path d="M36 10v7M40 10v7M44 10v7M48 10v7M36 29v7M40 29v7M44 29v7M48 29v7M13 40v3M51 40v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

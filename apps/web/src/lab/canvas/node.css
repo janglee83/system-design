@@ -1,0 +1,337 @@
+/* Node tile 1A (design-system §5). Running states are styled here; Task 26 sets them. */
+.sd-node {
+  --k: var(--sd-cat-external);
+  position: relative;
+  isolation: isolate;
+  width: 172px;
+  height: 148px;
+  border-radius: var(--sd-r-lg);
+  box-shadow: var(--sd-shadow-1);
+  color: var(--sd-text);
+  transition: box-shadow var(--sd-t-fast) var(--sd-ease-out), opacity var(--sd-t-panel) var(--sd-ease-out);
+}
+.react-flow__node:hover .sd-node {
+  box-shadow: var(--sd-shadow-2);
+}
+
+/* Replicas: two copies stacked behind, +5/+5 and +10/+10, the second at 55 %. */
+.sd-node[data-replicas]::before,
+.sd-node[data-replicas]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--sd-r-lg);
+  border: 1px solid var(--sd-border);
+  background: var(--sd-surface);
+}
+.sd-node[data-replicas]::before {
+  transform: translate(5px, 5px);
+}
+.sd-node[data-replicas]::after {
+  transform: translate(10px, 10px);
+  opacity: 0.55;
+}
+
+.sd-node-art {
+  position: relative;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--sd-border);
+  border-bottom: 0;
+  border-radius: var(--sd-r-lg) var(--sd-r-lg) 0 0;
+  background: color-mix(in srgb, var(--k) 7%, var(--sd-surface));
+}
+/* Only the illustration (a direct child); the state chip's icon keeps its own small size. */
+.sd-node-art > svg {
+  position: relative;
+  width: 76px;
+  height: 57px;
+  color: var(--k);
+}
+.sd-node-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: color-mix(in srgb, var(--k) 16%, transparent);
+  transition: height var(--sd-t-fill) var(--sd-ease-out);
+}
+.sd-node-rep {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 0 5px;
+  border-radius: var(--sd-r-xs);
+  background: var(--sd-surface-3);
+  color: var(--sd-text-2);
+  font: 600 11px/16px var(--font-mono);
+}
+.sd-node-chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px 1px 5px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.sd-node-body {
+  height: 64px;
+  padding: 6px 12px;
+  border: 1px solid var(--sd-border);
+  border-top-color: color-mix(in srgb, var(--k) 22%, var(--sd-border));
+  border-radius: 0 0 var(--sd-r-lg) var(--sd-r-lg);
+  background: var(--sd-surface);
+}
+.sd-node-name {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-node-line {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--sd-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-node-line3 {
+  min-height: 16px;
+  font: 400 12px/16px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--sd-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges sit outside the corners with a canvas ring. */
+.sd-node-lock {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sd-surface-3);
+  color: var(--sd-text-2);
+  box-shadow: 0 0 0 2px var(--sd-canvas);
+}
+.sd-node-issues {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--sd-over);
+  color: var(--sd-canvas);
+  font: 700 11px/20px var(--font-mono);
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--sd-canvas);
+}
+.sd-node-issues[data-tone="warn"] {
+  background: var(--sd-busy-line);
+}
+
+/* Ports: a 10 px circle inside a 24 × 24 hit area, centred at y 42. */
+.react-flow__handle.sd-port {
+  top: 42px;
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.react-flow__handle.sd-port::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--sd-surface);
+  border: 1.5px solid var(--sd-border-strong);
+  opacity: 0;
+  transition: opacity var(--sd-t-fast) var(--sd-ease-out);
+}
+.react-flow__node:hover .sd-port::after,
+.react-flow__node:focus-visible .sd-port::after,
+.react-flow__node.selected .sd-port::after,
+.react-flow__handle.sd-port.connectingfrom::after,
+.react-flow__handle.sd-port.connectingto::after,
+.react-flow__handle.sd-port:hover::after {
+  opacity: 1;
+}
+
+/* Editing states. Selection is an outline (never a box-shadow); focus is dashed and further out. */
+.react-flow__node:focus-visible {
+  outline: none;
+}
+.sd-node[data-selected] {
+  outline: 2px solid var(--sd-accent-text);
+  outline-offset: 3px;
+  box-shadow: var(--sd-shadow-2);
+}
+.react-flow__node:focus-visible .sd-node {
+  outline: 2px dashed var(--sd-accent-text);
+  outline-offset: 7px;
+}
+.sd-node[data-locked] .sd-node-art,
+.sd-node[data-locked] .sd-node-body {
+  border-style: dashed;
+  border-color: var(--sd-border-strong);
+}
+.sd-node[data-disallowed] {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+.sd-node[data-path="on"] {
+  outline: 2px solid var(--sd-accent-text);
+  outline-offset: 3px;
+}
+.sd-node[data-path="off"] {
+  opacity: 0.28;
+  filter: grayscale(0.4);
+}
+
+/* Running states (Task 26). Each also has a chip with an icon and a word. */
+.sd-node[data-state="busy"] .sd-node-art {
+  background: var(--sd-busy-soft);
+}
+.sd-node[data-state="busy"] .sd-node-fill {
+  background: color-mix(in srgb, var(--sd-busy-line) 30%, transparent);
+}
+.sd-node[data-state="busy"] .sd-node-art,
+.sd-node[data-state="busy"] .sd-node-body {
+  border-color: var(--sd-busy-line);
+}
+.sd-node[data-state="busy"] .sd-node-chip {
+  background: var(--sd-busy-soft);
+  color: var(--sd-busy);
+}
+.sd-node[data-state="overloaded"] .sd-node-art {
+  background: var(--sd-over-soft);
+}
+.sd-node[data-state="overloaded"] .sd-node-fill {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--sd-over) 26%, transparent) 0 6px,
+    color-mix(in srgb, var(--sd-over) 14%, transparent) 6px 12px
+  );
+}
+.sd-node[data-state="overloaded"] .sd-node-art,
+.sd-node[data-state="overloaded"] .sd-node-body {
+  border-color: var(--sd-over);
+}
+.sd-node[data-state="overloaded"] {
+  box-shadow: 0 0 0 3px var(--sd-over-soft), var(--sd-shadow-2);
+  animation: sd-breathe var(--sd-t-breathe) ease-in-out infinite;
+}
+.sd-node[data-state="overloaded"] .sd-node-chip {
+  background: var(--sd-over-soft);
+  color: var(--sd-over);
+}
+.sd-node[data-state="down"] .sd-node-art {
+  background: var(--sd-down-soft);
+  border-style: dashed;
+  border-color: var(--sd-border-strong);
+}
+.sd-node[data-state="down"] .sd-node-art > svg {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+.sd-node[data-state="down"] .sd-node-body {
+  border-style: dashed;
+  border-color: var(--sd-border-strong);
+}
+.sd-node[data-state="down"] .sd-node-name {
+  color: var(--sd-text-2);
+}
+.sd-node[data-state="down"] .sd-node-chip {
+  background: var(--sd-down-soft);
+  color: var(--sd-down);
+}
+@keyframes sd-breathe {
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--sd-over) 10%, transparent), var(--sd-shadow-2);
+  }
+}
+/* Reduced motion: the breathe becomes a static 3 px halo (§1.4). */
+@media (prefers-reduced-motion: reduce) {
+  .sd-node[data-state="overloaded"] {
+    animation: none;
+  }
+}
+
+/* Connecting (design-system §6.2): valid targets glow, invalid ones dim; the hovered one has a tip. */
+.sd-node[data-target="valid"] {
+  outline: 2px solid var(--sd-accent-text);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px var(--sd-accent-soft), var(--sd-shadow-1);
+}
+.sd-node[data-target="valid"] .react-flow__handle.sd-port[data-handlepos="left"]::after {
+  inset: 5px;
+  opacity: 1;
+  background: var(--sd-accent-text);
+  border-color: var(--sd-surface);
+  box-shadow: 0 0 0 5px var(--sd-accent-soft);
+}
+.sd-node[data-target="invalid"] {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+.sd-node[data-target="source"] .react-flow__handle.sd-port[data-handlepos="right"]::after {
+  opacity: 1;
+  background: var(--sd-accent-text);
+  border-color: var(--sd-accent-text);
+}
+.sd-node-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  pointer-events: none;
+  background: var(--sd-accent);
+  color: var(--sd-on-accent);
+  box-shadow: var(--sd-shadow-2);
+}
+/* The reason on an invalid target: an inverse tip, readable over the dimmed tile. */
+.sd-node-tip[data-tone="invalid"] {
+  background: var(--sd-text);
+  color: var(--sd-surface);
+}
+.sd-node[data-target="invalid"]:has(.sd-node-tip) {
+  opacity: 1;
+}
+
+/* The load % in the live line takes the state colour (§5, line 3). */
+.sd-node-load {
+  font-weight: 600;
+  color: var(--sd-text);
+}
+.sd-node[data-state="busy"] .sd-node-load {
+  color: var(--sd-busy);
+}
+.sd-node[data-state="overloaded"] .sd-node-load {
+  color: var(--sd-over);
+}

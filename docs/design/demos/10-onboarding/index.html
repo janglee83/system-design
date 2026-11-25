@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 · Hướng dẫn lần đầu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/demo.css">
+<link rel="stylesheet" href="../shared/nodes.css">
+<link rel="stylesheet" href="../shared/app.css">
+<style>
+  html .app.L-a { grid-template-columns: 248px minmax(0, 1fr) 0 !important; }
+  html .app .playback { display: none !important; }
+  .spot { position: absolute; z-index: 20; border-radius: var(--r-md); box-shadow: 0 0 0 4px var(--accent-text), 0 0 0 9999px rgb(10 14 18 / .55); pointer-events: none; transition: all var(--t-overlay) var(--ease-out); }
+  .bubble { position: absolute; z-index: 21; width: 320px; padding: 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-3); }
+  .bubble .bstep { font: 600 12px var(--font-mono); color: var(--accent-text); margin-bottom: 4px; }
+  .bubble h4 { margin: 0 0 4px; font-size: 16px; } .bubble p { margin: 0 0 14px; font-size: 13.5px; color: var(--text-2); line-height: 20px; }
+  .bubble .row { display: flex; align-items: center; gap: 8px; } .bubble .dots { display: flex; gap: 5px; margin-right: auto; }
+  .bubble .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--surface-3); } .bubble .dots i.on { background: var(--accent-text); width: 18px; border-radius: 4px; }
+  .btn { height: 32px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .btn.pri { background: var(--accent); color: var(--on-accent); border-color: transparent; } .btn.ghost { border-color: transparent; color: var(--text-2); }
+  .toast { position: absolute; z-index: 21; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r-lg); background: var(--text); color: var(--bg); box-shadow: var(--shadow-3); font-size: 13.5px; white-space: nowrap; }
+  .toast .ok { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--ok); color: #fff; }
+  .toast a { color: inherit; opacity: .75; }
+  /* B checklist */
+  .check { position: absolute; z-index: 10; left: 16px; bottom: 14px; width: 320px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-3); overflow: hidden; }
+  .check .hd { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .check .hd > svg { width: 40px; height: 40px; transform: rotate(-90deg); } .check .hd b { display: block; font-size: 14px; } .check .hd small { color: var(--text-3); font-size: 12px; }
+  .item { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 9px 14px; font-size: 13.5px; }
+  .item .c { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; }
+  .item.done .c { background: var(--ok); border-color: var(--ok); color: #fff; } .item.done span.t { color: var(--text-3); text-decoration: line-through; }
+  .item.cur { background: var(--accent-soft); } .item.cur .c { border-color: var(--accent-text); }
+  .item a { font-size: 12.5px; color: var(--accent-text); font-weight: 600; }
+  .check .ft { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-3); display: flex; justify-content: space-between; }
+  .check.done .hd { border-bottom: 0; }
+  .next { padding: 12px 14px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+  .next small { display: block; color: var(--text-3); font-size: 12px; }
+  /* C modal slides */
+  .scrim { position: absolute; inset: 0; z-index: 20; background: rgb(10 14 18 / .5); }
+  .modal { position: absolute; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 560px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-3); overflow: hidden; }
+  .modal .art { height: 220px; display: grid; place-items: center; background: var(--canvas); background-image: radial-gradient(var(--grid) 1px, transparent 1.2px); background-size: 16px 16px; border-bottom: 1px solid var(--border); position: relative; }
+  .modal .art .lineup { display: flex; align-items: center; gap: 18px; } .modal .art .lineup span { display: grid; place-items: center; width: 92px; height: 72px; border-radius: var(--r-md); background: color-mix(in srgb, var(--k) 10%, var(--surface)); border: 1px solid var(--border); }
+  .modal .art .lineup i { width: 30px; border-top: 2px solid var(--e-http); } .modal .art .lineup i.db { border-top-style: dashed; border-color: var(--e-db); }
+  .modal .art .lineup span.over { border-color: var(--over); background: var(--over-soft); }
+  .modal .bd { padding: 18px 22px 20px; } .modal h3 { margin: 0 0 6px; font-size: 20px; } .modal p { margin: 0 0 16px; color: var(--text-2); }
+  .modal .row { display: flex; align-items: center; gap: 8px; } .modal .dots { display: flex; gap: 6px; margin-right: auto; } .modal .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-3); } .modal .dots i.on { background: var(--accent-text); width: 20px; border-radius: 4px; }
+  .tplbanner { position: absolute; z-index: 10; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2); font-size: 13.5px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="shell-frame"><div id="app" class="app L-a"></div></div>
+  <p style="max-width:900px;color:var(--text-2);font-size:13px;margin:16px auto 0">Ba thời điểm của lần đầu dùng Lab: vừa mở, giữa chừng (đã dựng xong, chuẩn bị chạy), và hoàn tất (vừa chạy lần đầu). Mọi cách đều bỏ qua được và mở lại được từ nút Trợ giúp.</p>
+</main>
+<script src="../shared/art.js"></script>
+<script src="../shared/data.js"></script>
+<script src="../shared/nodes.js"></script>
+<script src="../shared/app.js"></script>
+<script src="../shared/demo.js"></script>
+<script>
+const A = SDApp, ic = A.ic;
+const STEPS = [
+  ["Kéo Người dùng vào khung vẽ", "Mọi hệ thống bắt đầu từ người gửi yêu cầu. Kéo thẻ Người dùng sang khung vẽ, hoặc chọn rồi bấm Enter."],
+  ["Nối tới một máy chủ", "Kéo từ chấm bên phải của Người dùng tới Máy chủ web. Lab chỉ cho nối những gì hợp lệ."],
+  ["Chạy mô phỏng", "Bộ mô phỏng gửi 12.000 yêu cầu mỗi giây vào thiết kế của bạn, ngay trong trình duyệt. Phím tắt: ⌘↵."],
+  ["Đọc kết quả", "Kết luận nằm trên cùng: đạt mấy mục tiêu, gãy ở đâu. Bấm \"Hỏng ở đâu?\" để xem nguyên nhân."],
+];
+const dots = (n, cur) => Array.from({ length: n }, (_, i) => `<i class="${i === cur ? "on" : ""}"></i>`).join("");
+function bubble(i, pos) {
+  return `<div class="bubble" style="${pos}" role="dialog" aria-label="Hướng dẫn"><div class="bstep">Bước ${i + 1}/4</div><h4>${STEPS[i][0]}</h4><p>${STEPS[i][1]}</p>
+    <div class="row"><span class="dots">${dots(4, i)}</span><button class="btn ghost">Bỏ qua</button><button class="btn pri">${i === 3 ? "Xong" : "Tiếp"} ${ic("chevr", 14)}</button></div></div>`;
+}
+function checklist(state) {
+  const items = [["Thêm Người dùng"], ["Thêm một Máy chủ web và nối lại"], ["Thêm PostgreSQL để lưu dữ liệu"], ["Chạy mô phỏng lần đầu"], ["Mở \"Hỏng ở đâu?\" sau khi chạy"]];
+  const doneN = state === "start" ? 0 : state === "mid" ? 3 : 5;
+  const C = 2 * Math.PI * 16;
+  const ring = `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--surface-3)" stroke-width="5"/><circle cx="20" cy="20" r="16" fill="none" stroke="var(--ok)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(doneN / 5) * C} ${C}"/></svg>`;
+  if (state === "done") return `<div class="check done"><div class="hd">${ring}<div><b>Hoàn thành phần làm quen</b><small>5/5 việc · khoảng 3 phút</small></div><button class="u-btn" aria-label="Đóng">${ic("x", 14)}</button></div>
+    <div class="next"><div>Tiếp theo: thử thách đầu tiên<small>Mở bán cửa hàng nhỏ · 3.000 yêu cầu/giây · 300 $/tháng</small></div><button class="btn pri">Bắt đầu</button></div></div>`;
+  return `<div class="check"><div class="hd">${ring}<div><b>Làm quen với Lab</b><small>${doneN}/5 việc · khoảng 3 phút</small></div><button class="u-btn" aria-label="Thu gọn">${ic("chev", 14)}</button></div>
+    ${items.map(([t], i) => `<div class="item ${i < doneN ? "done" : i === doneN ? "cur" : ""}"><span class="c">${i < doneN ? ic("ok", 12) : ""}</span><span class="t">${t}</span>${i === doneN ? `<a href="#">Chỉ cho tôi</a>` : ""}</div>`).join("")}
+    <div class="ft"><span>Mở lại bất cứ lúc nào ở nút ${ic("help", 12)}</span><a href="#" style="color:var(--text-3)">Ẩn</a></div></div>`;
+}
+function modal(state) {
+  const slides = [
+    ["Một phòng thí nghiệm cho thiết kế hệ thống", "Bạn dựng hệ thống từ các khối có thật (máy chủ, cơ sở dữ liệu, cân bằng tải) rồi cho hàng nghìn người dùng ảo gõ cửa.", ["client", "web-server", "postgres"], -1],
+    ["Chạy thử, xem nó gãy ở đâu", "Mỗi lần chạy, Lab đo độ trễ, tỉ lệ trả lời được và chi phí, và chỉ ra khối nào quá tải.", ["client", "web-server", "postgres"], 2],
+    ["Sửa, chạy lại, so sánh", "Thêm máy, thêm bản sao, đổi cấu hình; mỗi lần chạy được so với lần trước. Bắt đầu bằng một thiết kế mẫu nhé.", ["client", "lb", "web-server", "postgres"], -1],
+  ];
+  const i = state === "start" ? 0 : 2;
+  const [h, p, ks, over] = slides[i];
+  return `<div class="scrim"></div><div class="modal" role="dialog" aria-label="Giới thiệu"><div class="art"><div class="lineup">${ks.map((k, j) => `${j ? `<i class="${k === "postgres" ? "db" : ""}"></i>` : ""}<span class="${j === over ? "over" : ""}" style="--k:${A.cat(k)}">${SDArt.svg(k, 64, 48)}</span>`).join("")}</div></div>
+    <div class="bd"><h3>${h}</h3><p>${p}</p><div class="row"><span class="dots">${dots(3, i)}</span><button class="btn ghost">Bỏ qua</button>${i === 2 ? `<button class="btn pri">Mở thiết kế mẫu ${ic("chevr", 14)}</button>` : `<button class="btn pri">Tiếp ${ic("chevr", 14)}</button>`}</div></div></div>`;
+}
+function draw(s) {
+  const app = document.getElementById("app");
+  const st = s.mode;
+  const built = st !== "start" || false;
+  app.innerHTML = A.topbar({ name: built ? "Cửa hàng trực tuyến" : "Thiết kế chưa đặt tên", saved: built ? "Đã lưu trên máy" : "Chưa có gì để lưu", problems: built ? 0 : 1, runDisabled: !built }) + A.palette() + `<div class="cv" id="cv">${A.zoom("right:16px;bottom:14px", "100%")}</div><div></div>` + A.playback + A.status({ counts: built ? "5 thành phần · 5 kết nối" : "0 thành phần", cost: built ? "430 $/tháng" : "0 $/tháng" });
+  const cv = document.getElementById("cv");
+  if (built && !(s.option === "c" && st === "mid")) A.drawCanvas(cv, st === "done" ? "running" : "editing", Object.assign({ extra: {}, noDots: true, rates: false }, s.option === "b" ? { padX: 340, offX: 165 } : {}));
+  if (s.option === "c" && st === "mid") A.drawCanvas(cv, "editing", { extra: {} });
+  const box = (el) => { const r = el.getBoundingClientRect(), b = app.getBoundingClientRect(); return { x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height }; };
+  if (s.option === "a") {
+    if (st === "start") {
+      const it = [...app.querySelectorAll(".pitem")].find((x) => x.textContent.includes("Người dùng")); const r = box(it);
+      app.insertAdjacentHTML("beforeend", `<div class="spot" style="left:${r.x - 4}px;top:${r.y - 4}px;width:${r.w + 8}px;height:${r.h + 8}px"></div>` + bubble(0, `left:${r.x + r.w + 20}px;top:${r.y - 6}px`));
+    } else if (st === "mid") {
+      const r = box(app.querySelector(".run"));
+      app.insertAdjacentHTML("beforeend", `<div class="spot" style="left:${r.x - 4}px;top:${r.y - 4}px;width:${r.w + 8}px;height:${r.h + 8}px"></div>` + bubble(2, `right:16px;top:${r.y + r.h + 16}px`));
+    } else {
+      app.insertAdjacentHTML("beforeend", `<div class="toast" role="status"><span class="ok">${ic("ok", 14)}</span><span><b>Xong lần chạy đầu tiên.</b> Bạn đã dựng và đo một hệ thống thật.</span><button class="btn pri" style="height:30px">Thử thách đầu tiên</button><a href="#">Đóng</a></div>`);
+    }
+  } else if (s.option === "b") {
+    cv.insertAdjacentHTML("beforeend", checklist(st));
+    if (st === "start") { const it = [...app.querySelectorAll(".pitem")].find((x) => x.textContent.includes("Người dùng")); it.classList.add("pulse"); it.style.boxShadow = "0 0 0 2px var(--accent-text)"; it.style.background = "var(--accent-soft)"; }
+  } else {
+    if (st === "done") cv.insertAdjacentHTML("beforeend", `<div class="tplbanner">${ic("info", 14)} Đây là thiết kế mẫu <b>Web 3 tầng</b>. Bấm Chạy để xem nó chịu tải ra sao. <button class="btn pri" style="height:28px">${ic("play", 12)} Chạy</button></div>`);
+    else app.insertAdjacentHTML("beforeend", modal(st));
+  }
+}
+Demo.init({
+  id: "10", title: "10 · Hướng dẫn lần đầu", modeLabel: "Thời điểm",
+  modes: [{ id: "start", label: "Vừa mở" }, { id: "mid", label: "Giữa chừng" }, { id: "done", label: "Hoàn tất" }],
+  options: [
+    { id: "a", name: "Chỉ dẫn gắn vào giao diện",
+      summary: "Bốn bước, mỗi bước làm tối màn hình trừ đúng chỗ cần thao tác (thẻ Người dùng, cổng nối, nút Chạy, kết luận) và một bong bóng giải thích. Bước tự chuyển khi người dùng làm xong việc.",
+      pros: ["Chỉ đúng chỗ, không thể lạc", "Ngắn: 4 bước"],
+      cons: ["Chặn thao tác khác trong lúc hướng dẫn", "Người đã biết thấy phiền (có Bỏ qua)"] },
+    { id: "b", name: "Danh sách việc cần làm", recommended: true,
+      summary: "Một thẻ nhỏ ở góc khung vẽ liệt kê 5 việc của lần đầu; việc nào xong tự đánh dấu, việc hiện tại có nút \"Chỉ cho tôi\" (mở đúng bong bóng của phương án A cho riêng bước đó). Xong cả 5 việc thì thẻ gợi ý thử thách đầu tiên.",
+      pros: ["Học bằng làm, không chặn gì (NN/g: hướng dẫn theo ngữ cảnh tốt hơn chuỗi slide)", "Tiến độ rõ, có cảm giác hoàn thành", "Dẫn thẳng vào thử thách đầu tiên (Mở bán cửa hàng nhỏ)"],
+      cons: ["Thẻ chiếm một góc khung vẽ (thu gọn được)", "Cần theo dõi 5 sự kiện trong ứng dụng"] },
+    { id: "c", name: "Giới thiệu 3 trang + thiết kế mẫu",
+      summary: "Lần đầu mở là một hộp thoại ba trang có hình vẽ, kết thúc bằng việc mở thiết kế mẫu Web 3 tầng với lời nhắc bấm Chạy.",
+      pros: ["Kể được \"Lab là gì\" trước khi bắt đầu", "Đẹp, dễ làm"],
+      cons: ["Người dùng hay bấm Bỏ qua ngay mà không đọc", "Không dạy thao tác thật"] },
+  ],
+  onChange: draw,
+});
+</script>
+</body>
+</html>

@@ -9,3 +9,10 @@ coverage/
 target/
 packages/sim/wasm/
 fixtures/parity/raw/
+apps/web/.next/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/src/engine/wasm-url.ts
+apps/web/public/engine/
+apps/web/tsconfig.tsbuildinfo

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Cổng API" data-kind="api-gateway" data-category="entry">
+  <title>Cổng API</title>
+  <path d="M10 42V15l22-9 22 9v27" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M21 42V27a11 11 0 0 1 22 0v15" fill="var(--sd-surface, #fff)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M4 42h56M29 14h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2 34h56M54 30l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48" fill="none" role="img" aria-label="Memcached (bộ nhớ đệm)" data-kind="memcached" data-category="cache">
+  <title>Memcached (bộ nhớ đệm)</title>
+  <rect x="4" y="8" width="56" height="13" rx="2.5" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="4" y="26" width="56" height="13" rx="2.5" fill="var(--sd-art-fill, color-mix(in srgb, currentColor 16%, var(--sd-surface, #fff)))" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M10 12.5h8M22 12.5h8M34 12.5h8M46 12.5h8M10 16.5h8M22 16.5h8M34 16.5h8M46 16.5h8M10 30.5h8M22 30.5h8M34 30.5h8M46 30.5h8M10 34.5h8M22 34.5h8M34 34.5h8M46 34.5h8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3"/>
+  <path d="M9 39v4M17 39v4M25 39v4M39 39v4M47 39v4M55 39v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
