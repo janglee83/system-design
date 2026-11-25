@@ -1,12 +1,11 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/ui/cn";
 import { NodeArt } from "./canvas/art/NodeArt";
 import { categoryColor, kindArt } from "./canvas/kinds";
 import { useDocActions } from "./designs/use-doc-actions";
-import { DRAG_MIME } from "./palette/PaletteDrawer";
+import { usePaletteDrag } from "./palette/use-palette-drag";
 import { formatCombo } from "./shortcuts";
 import { templateCards, type ChallengeStart } from "./templates";
 import { useIsMac } from "./use-shortcuts";
@@ -44,21 +43,7 @@ export function EmptyLab({ starts }: { starts: readonly ChallengeStart[] }) {
   const mac = useIsMac();
   const cards = templateCards(starts);
   // While a component is dragged from the palette, step aside so the drop reaches the canvas.
-  const [dragging, setDragging] = useState(false);
-  useEffect(() => {
-    const on = (e: DragEvent) => {
-      if (e.dataTransfer?.types.includes(DRAG_MIME)) setDragging(true);
-    };
-    const off = () => setDragging(false);
-    window.addEventListener("dragstart", on);
-    window.addEventListener("dragend", off);
-    window.addEventListener("drop", off);
-    return () => {
-      window.removeEventListener("dragstart", on);
-      window.removeEventListener("dragend", off);
-      window.removeEventListener("drop", off);
-    };
-  }, []);
+  const dragging = usePaletteDrag();
   const card = "flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 text-left shadow-1 transition-[box-shadow,transform] duration-(--sd-t-fast) hover:-translate-y-px hover:shadow-2";
   return (
     <div data-testid="empty-lab" className="pointer-events-none absolute inset-0 grid place-items-center overflow-y-auto p-6">

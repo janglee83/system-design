@@ -15,6 +15,7 @@ import { EventsTab } from "./EventsTab";
 import { LogsTab } from "./LogsTab";
 import { MetricsTab } from "./MetricsTab";
 import { SimulationTab } from "./SimulationTab";
+import { useOnboardingSlot } from "@/shell/onboarding-slot";
 
 const TABS: BottomTab[] = ["metrics", "events", "logs", "simulation"];
 const MIN = 160;
@@ -66,24 +67,31 @@ export function BottomPanel() {
             </div>
           ) : null}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="flex min-h-0 flex-1 gap-3 overflow-y-auto p-3">
+          {/* Until the first run the first-run checklist sits here, clear of the canvas (QA). */}
+          {run ? null : <OnboardingSlot />}
           {/* Every tab has its panel (aria-controls must point somewhere), with or without a run. */}
-          <TabsContent value="metrics" className="h-full">
+          <TabsContent value="metrics" className="h-full min-w-0 flex-1">
             {run ? <MetricsTab run={run} previous={previous} /> : <NoRun />}
           </TabsContent>
-          <TabsContent value="events" className="h-full">
+          <TabsContent value="events" className="h-full min-w-0 flex-1">
             {run ? <EventsTab run={run} /> : <NoRun />}
           </TabsContent>
-          <TabsContent value="logs" className="h-full">
+          <TabsContent value="logs" className="h-full min-w-0 flex-1">
             {run ? <LogsTab run={run} /> : <NoRun />}
           </TabsContent>
-          <TabsContent value="simulation" className="h-full">
+          <TabsContent value="simulation" className="h-full min-w-0 flex-1">
             {run ? <SimulationTab run={run} epoch={epoch} engineVersion={engineVersion} client={client} /> : <NoRun />}
           </TabsContent>
         </div>
       </Tabs>
     </section>
   );
+}
+
+function OnboardingSlot() {
+  const setSlot = useOnboardingSlot((s) => s.setSlot);
+  return <div ref={setSlot} data-testid="onboarding-slot" className="shrink-0 self-start empty:hidden" />;
 }
 
 function NoRun() {

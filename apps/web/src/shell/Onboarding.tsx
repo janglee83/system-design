@@ -3,6 +3,8 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { usePaletteDrag } from "@/lab/palette/use-palette-drag";
 import { useRouter } from "@/i18n/navigation";
 import { currentRun } from "@/lab/store/run-store";
 import { useDesign, useRuns, useUi } from "@/lab/store/LabStores";
@@ -12,11 +14,14 @@ import { cn } from "@/ui/cn";
 import { IconButton } from "@/ui/IconButton";
 import { CoachBubble, COACH_STEPS } from "./CoachBubble";
 import { ONBOARDING_TASKS, tickTasks, type OnboardingTask } from "./onboarding-model";
+import { useOnboardingSlot } from "./onboarding-slot";
 import { useOnboarding } from "./onboarding-store";
 
 /**
  * The first-run checklist (design-system §10): a card at the canvas's bottom left that ticks itself
- * from the design and the runs. Pointer events pass everywhere outside the card.
+ * from the design and the runs. Pointer events pass everywhere outside the card, and through it
+ * while a component is dragged. Until the first run it sits in the results panel instead, so it
+ * never covers the empty Lab's cards (QA).
  */
 export function Onboarding({ firstChallenge }: { firstChallenge: ChallengeStart | null }) {
   const t = useTranslations("onboarding");
@@ -30,6 +35,8 @@ export function Onboarding({ firstChallenge }: { firstChallenge: ChallengeStart 
   const [collapsed, setCollapsed] = useState(false);
   const [coach, setCoach] = useState<OnboardingTask | null>(null);
   const showMe = useRef<HTMLButtonElement>(null);
+  const dragging = usePaletteDrag();
+  const slot = useOnboardingSlot((s) => s.slot);
 
   useEffect(() => {
     if (!loaded) load();
@@ -49,24 +56,31 @@ export function Onboarding({ firstChallenge }: { firstChallenge: ChallengeStart 
     if (!visible || !hasNodes || fitted.current) return;
     fitted.current = true;
     const id = requestAnimationFrame(() => {
-      const h = cardRef.current?.getBoundingClientRect().height ?? 0;
+      // Only the corner card covers the canvas.
+      const h = cardRef.current?.dataset.placement === "corner" ? cardRef.current.getBoundingClientRect().height : 0;
       void flow.fitView({ duration: 200, maxZoom: 1, padding: { top: "48px", left: "48px", right: "48px", bottom: `${Math.round(h + 32)}px` } });
     });
     return () => cancelAnimationFrame(id);
   }, [visible, hasNodes, flow]);
 
   if (!loaded || hidden) return null;
+  // In the corner over an empty Lab (every node deleted after a run) it would cover the cards.
+  if (!slot && nodes.length === 0) return null;
   const count = ticked.length;
   const complete = count === ONBOARDING_TASKS.length;
   const current = ONBOARDING_TASKS.find((x) => !ticked.includes(x));
   const ring = 2 * Math.PI * 17;
-  return (
-    <>
+  const section = (
       <section
         ref={cardRef}
         aria-label={t("label", { done: count })}
         data-testid="onboarding"
-        className="pointer-events-auto absolute bottom-3.5 left-4 z-10 w-[320px] rounded-lg border border-border bg-surface shadow-3"
+        data-placement={slot ? "panel" : "corner"}
+        className={cn(
+          "z-10 w-[320px] rounded-lg border border-border bg-surface",
+          slot ? "shadow-1" : "absolute bottom-3.5 left-4 shadow-3",
+          dragging ? "pointer-events-none" : "pointer-events-auto",
+        )}
       >
         <header className="flex items-center gap-3 px-3 py-2.5">
           <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden className="shrink-0 -rotate-90">
@@ -122,6 +136,10 @@ export function Onboarding({ firstChallenge }: { firstChallenge: ChallengeStart 
           </>
         )}
       </section>
+  );
+  return (
+    <>
+      {slot ? createPortal(section, slot) : section}
       {coach ? (
         <CoachBubble
           task={coach}
